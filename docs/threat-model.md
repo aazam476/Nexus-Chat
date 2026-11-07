@@ -6,20 +6,21 @@ planned before 1.0, not before beta.
 
 ## 1. Assets
 
-| Asset | Where it exists in plaintext |
-|---|---|
-| Message bodies, edits, reactions, thread contents, link previews | Member devices only |
-| Attachments and their thumbnails | Member devices only |
-| Call audio, video, screen share | Participant devices only |
-| Identity keys (UMK, USK, device keys), history keys, backup key | Devices; the server holds only encrypted backups |
-| Passwords | Sent to the server over TLS at login and hashed with Argon2id ([ADR 0004](adr/0004-password-handling.md)); never stored in plaintext |
-| Search index | Devices; synced copies are encrypted with the backup key |
+| Asset                                                            | Where it exists in plaintext                                                                                                         |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Message bodies, edits, reactions, thread contents, link previews | Member devices only                                                                                                                  |
+| Attachments and their thumbnails                                 | Member devices only                                                                                                                  |
+| Call audio, video, screen share                                  | Participant devices only                                                                                                             |
+| Identity keys (UMK, USK, device keys), history keys, backup key  | Devices; the server holds only encrypted backups                                                                                     |
+| Passwords                                                        | Sent to the server over TLS at login and hashed with Argon2id ([ADR 0004](adr/0004-password-handling.md)); never stored in plaintext |
+| Search index                                                     | Devices; synced copies are encrypted with the backup key                                                                             |
 
 ## 2. What each party can see
 
 ### 2.1 Home instance and hosting instance (the "server")
 
 **Can see (metadata required to function):**
+
 - Accounts: username, display name, email, avatar, bio, status, custom
   status, login methods, sessions and device list, IP addresses of
   connections, last-seen times.
@@ -79,18 +80,18 @@ Sees TLS-protected traffic only, given HTTPS (see §5 for plain HTTP).
 
 ## 3. Attacker models
 
-| # | Attacker | Goal | Mitigations | Residual risk |
-|---|---|---|---|---|
-| A1 | Curious instance operator | Read messages | MLS + archive encryption; keys only on devices | Full metadata visibility (§2.1) |
-| A2 | Malicious instance operator | Inject a device or fake member into a conversation | Device certificates chained to the user's UMK; identity-change warnings; optional verification | A user who never verifies and is attacked at first contact (TOFU) |
-| A3 | Malicious operator | Serve a modified web client that steals keys | None technically complete for web. Native and desktop apps come from app stores and are not served by the instance | **Known limitation:** the web client trusts the instance that serves it. Documented; the native apps are recommended for high-risk users |
-| A4 | Malicious operator | Withhold or reorder messages, split the group | MLS epoch and transcript hash detect forks; clients warn on missing messages using per-sender counters in the plaintext | Denial of service is always possible |
-| A5 | Removed member | Read new messages | Epoch change on removal; server stops delivery | Window between removal and the next commit, during which the server already refuses delivery |
-| A6 | Compromised device | Read past and future messages | MLS PCS heals live messages after the device is removed; device revocation | History keys on that device expose history it could read. Inherent to history features |
-| A7 | Another instance (federation) | Impersonate users, spam | RFC 9421 signatures, home-instance authentication, allow/deny lists, rate limits | An open-federation instance can host abusive servers; users must join to be affected |
-| A8 | Rogue instance using the push relay | Push to devices registered with other instances | Instance-bound handles, request signatures, rate limits, blocklist | An instance can still push to its own users |
-| A9 | Stolen database or backup | Read content | Ciphertext only; Argon2id password hashes; backups need the user's recovery method | Offline password guessing against the Argon2id hash, and against the password-wrapped backup key for users who enable that method |
-| A10 | Abusive member | Forge a report against someone | Reports need the sender's signature plus a server receipt ([ADR 0010](adr/0010-abuse-reports.md)) | — |
+| #   | Attacker                            | Goal                                               | Mitigations                                                                                                             | Residual risk                                                                                                                            |
+| --- | ----------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Curious instance operator           | Read messages                                      | MLS + archive encryption; keys only on devices                                                                          | Full metadata visibility (§2.1)                                                                                                          |
+| A2  | Malicious instance operator         | Inject a device or fake member into a conversation | Device certificates chained to the user's UMK; identity-change warnings; optional verification                          | A user who never verifies and is attacked at first contact (TOFU)                                                                        |
+| A3  | Malicious operator                  | Serve a modified web client that steals keys       | None technically complete for web. Native and desktop apps come from app stores and are not served by the instance      | **Known limitation:** the web client trusts the instance that serves it. Documented; the native apps are recommended for high-risk users |
+| A4  | Malicious operator                  | Withhold or reorder messages, split the group      | MLS epoch and transcript hash detect forks; clients warn on missing messages using per-sender counters in the plaintext | Denial of service is always possible                                                                                                     |
+| A5  | Removed member                      | Read new messages                                  | Epoch change on removal; server stops delivery                                                                          | Window between removal and the next commit, during which the server already refuses delivery                                             |
+| A6  | Compromised device                  | Read past and future messages                      | MLS PCS heals live messages after the device is removed; device revocation                                              | History keys on that device expose history it could read. Inherent to history features                                                   |
+| A7  | Another instance (federation)       | Impersonate users, spam                            | RFC 9421 signatures, home-instance authentication, allow/deny lists, rate limits                                        | An open-federation instance can host abusive servers; users must join to be affected                                                     |
+| A8  | Rogue instance using the push relay | Push to devices registered with other instances    | Instance-bound handles, request signatures, rate limits, blocklist                                                      | An instance can still push to its own users                                                                                              |
+| A9  | Stolen database or backup           | Read content                                       | Ciphertext only; Argon2id password hashes; backups need the user's recovery method                                      | Offline password guessing against the Argon2id hash, and against the password-wrapped backup key for users who enable that method        |
+| A10 | Abusive member                      | Forge a report against someone                     | Reports need the sender's signature plus a server receipt ([ADR 0010](adr/0010-abuse-reports.md))                       | —                                                                                                                                        |
 
 ## 4. Known limitations (beta)
 

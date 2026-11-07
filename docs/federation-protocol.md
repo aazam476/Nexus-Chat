@@ -22,9 +22,9 @@ user who started the DM.
 
 ## 2. Addresses
 
-| Kind | Syntax | Example |
-|---|---|---|
-| User | `@username@domain` | `@alice@example.com` |
+| Kind   | Syntax                                                            | Example               |
+| ------ | ----------------------------------------------------------------- | --------------------- |
+| User   | `@username@domain`                                                | `@alice@example.com`  |
 | Server | `+name@domain` (recommended) or `name@domain` (spec) **[REVIEW]** | `+gaming@example.com` |
 
 The server name is a per-instance unique slug (`[a-z0-9_.-]{2,32}`) that the
@@ -43,8 +43,12 @@ recommended.
   "api_base": "https://chat.example.com/federation/v1",
   "client_base": "https://chat.example.com",
   "keys": [
-    { "keyid": "2026-11-ed25519-1", "alg": "ed25519",
-      "public_key": "base64url…", "not_after": "2027-11-01T00:00:00Z" }
+    {
+      "keyid": "2026-11-ed25519-1",
+      "alg": "ed25519",
+      "public_key": "base64url…",
+      "not_after": "2027-11-01T00:00:00Z"
+    }
   ],
   "voice": { "livekit_url": "wss://chat.example.com/livekit" }
 }
@@ -90,23 +94,23 @@ hosting instance trusts the home instance to vouch for its own users only:
 
 All under `api_base`, JSON bodies, idempotent by `Nexus-Request-Id`.
 
-| Method & path | Direction | Purpose |
-|---|---|---|
-| `GET /users/{username}` | any → home | Public profile, UMK public key |
-| `GET /users/{username}/devices` | any → home | Device list with certificates |
-| `POST /users/{username}/key-packages:claim` | hosting → home | Claim one key package per device |
-| `GET /servers/{name}` | any → hosting | Public server info (if discoverable) |
-| `POST /servers/{name}/join` | home → hosting | Join via invite code or public join |
-| `POST /servers/{name}/leave` | home → hosting | Leave |
-| `POST /conversations/{id}/messages` | home → hosting | Submit MLS message + archive copy for a remote user |
-| `POST /conversations/{id}/commits` | home → hosting | Submit commit/external commit + GroupInfo |
-| `GET /conversations/{id}/group-info` | home → hosting | For external joins |
-| `GET /conversations/{id}/archive?before=…` | home → hosting | Fetch archive copies (history) |
-| `POST /events` | hosting → home | Batched events for the home's users (messages, membership, moderation, typing, presence) |
-| `POST /voice/token` | home → hosting | LiveKit token or TURN credentials for a remote member |
-| `POST /attachments/{id}:download-url` | home → hosting | Short-lived signed URL for ciphertext download |
-| `POST /users/{username}/deleted` | home → all known peers | Account deletion: drop data |
-| `POST /reports` | home → hosting | User report about content in a hosted server |
+| Method & path                               | Direction              | Purpose                                                                                  |
+| ------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| `GET /users/{username}`                     | any → home             | Public profile, UMK public key                                                           |
+| `GET /users/{username}/devices`             | any → home             | Device list with certificates                                                            |
+| `POST /users/{username}/key-packages:claim` | hosting → home         | Claim one key package per device                                                         |
+| `GET /servers/{name}`                       | any → hosting          | Public server info (if discoverable)                                                     |
+| `POST /servers/{name}/join`                 | home → hosting         | Join via invite code or public join                                                      |
+| `POST /servers/{name}/leave`                | home → hosting         | Leave                                                                                    |
+| `POST /conversations/{id}/messages`         | home → hosting         | Submit MLS message + archive copy for a remote user                                      |
+| `POST /conversations/{id}/commits`          | home → hosting         | Submit commit/external commit + GroupInfo                                                |
+| `GET /conversations/{id}/group-info`        | home → hosting         | For external joins                                                                       |
+| `GET /conversations/{id}/archive?before=…`  | home → hosting         | Fetch archive copies (history)                                                           |
+| `POST /events`                              | hosting → home         | Batched events for the home's users (messages, membership, moderation, typing, presence) |
+| `POST /voice/token`                         | home → hosting         | LiveKit token or TURN credentials for a remote member                                    |
+| `POST /attachments/{id}:download-url`       | home → hosting         | Short-lived signed URL for ciphertext download                                           |
+| `POST /users/{username}/deleted`            | home → all known peers | Account deletion: drop data                                                              |
+| `POST /reports`                             | home → hosting         | User report about content in a hosted server                                             |
 
 Permissions are always enforced by the hosting instance. The home instance
 also enforces its own policy (for example, a suspended user is blocked
@@ -134,16 +138,16 @@ sequenceDiagram
 
 ## 8. Delivery guarantees and failure modes
 
-| Failure | Behaviour |
-|---|---|
-| Hosting instance unreachable | Home instance queues the user's request (durable, in Postgres) and retries with exponential backoff (1 s → 1 h cap) for 72 h, then marks it failed and tells the device. The UI shows the message as "pending" |
-| Home instance unreachable (for `/events`) | Hosting instance queues per destination, same backoff, 72 h. Older events are dropped and the home instance resyncs with `GET /conversations/{id}/events?after=` once it is back |
-| Out-of-order events | Each event carries a per-(hosting, conversation) sequence number; gaps trigger a resync fetch |
-| Epoch conflict | `409 epoch_conflict` passed back to the device, which re-syncs and retries |
-| Signature invalid / unknown key | `401`; the receiver re-fetches discovery once, then rejects |
-| Instance denied by policy | `403 federation_denied`; the sender stops retrying |
-| Domain change (§3.4 of the spec) | The instance publishes a signed `moved_to` in its old discovery document for 90 days. Peers update stored addresses after confirming the new domain's discovery lists the old key |
-| Clock skew | `created` must be within ±5 min; responses include `Date` so admins can see skew in logs |
+| Failure                                   | Behaviour                                                                                                                                                                                                      |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hosting instance unreachable              | Home instance queues the user's request (durable, in Postgres) and retries with exponential backoff (1 s → 1 h cap) for 72 h, then marks it failed and tells the device. The UI shows the message as "pending" |
+| Home instance unreachable (for `/events`) | Hosting instance queues per destination, same backoff, 72 h. Older events are dropped and the home instance resyncs with `GET /conversations/{id}/events?after=` once it is back                               |
+| Out-of-order events                       | Each event carries a per-(hosting, conversation) sequence number; gaps trigger a resync fetch                                                                                                                  |
+| Epoch conflict                            | `409 epoch_conflict` passed back to the device, which re-syncs and retries                                                                                                                                     |
+| Signature invalid / unknown key           | `401`; the receiver re-fetches discovery once, then rejects                                                                                                                                                    |
+| Instance denied by policy                 | `403 federation_denied`; the sender stops retrying                                                                                                                                                             |
+| Domain change (§3.4 of the spec)          | The instance publishes a signed `moved_to` in its old discovery document for 90 days. Peers update stored addresses after confirming the new domain's discovery lists the old key                              |
+| Clock skew                                | `created` must be within ±5 min; responses include `Date` so admins can see skew in logs                                                                                                                       |
 
 ## 9. Abuse controls
 

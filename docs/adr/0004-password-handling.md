@@ -11,15 +11,15 @@ as RFC 9807 in 2025) so the server never sees the password.
 
 ## Options
 
-| | Argon2id on the server | OPAQUE |
-|---|---|---|
-| Server sees password | Yes, briefly, over TLS | Never |
-| Offline attack after a DB leak | Argon2id-hard guessing | Still possible (OPAQUE does not prevent offline guessing after a leak, it only forces precomputation to happen after the leak) |
-| Go library | `golang.org/x/crypto/argon2` (BSD-3) | `github.com/bytemare/opaque` v0.18.0 (MIT, pre-1.0) |
-| Web/Electron library | — | `@serenity-kit/opaque` 1.1.0 (MIT, WASM build of the Rust `opaque-ke` crate) |
-| React Native library | — | `react-native-opaque` 0.3.1, last released October 2023, so effectively unmaintained |
-| Breached-password check | On the server, against a bundled list | Must move to the client (the server never sees the password), so the list ships in every app or is queried with k-anonymity, which leaks a hash prefix |
-| Cross-implementation interop (Go server ↔ Rust client) | n/a | Needs both sides at the same RFC version with identical configuration; must be proven with test vectors |
+|                                                        | Argon2id on the server                | OPAQUE                                                                                                                                                 |
+| ------------------------------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server sees password                                   | Yes, briefly, over TLS                | Never                                                                                                                                                  |
+| Offline attack after a DB leak                         | Argon2id-hard guessing                | Still possible (OPAQUE does not prevent offline guessing after a leak, it only forces precomputation to happen after the leak)                         |
+| Go library                                             | `golang.org/x/crypto/argon2` (BSD-3)  | `github.com/bytemare/opaque` v0.18.0 (MIT, pre-1.0)                                                                                                    |
+| Web/Electron library                                   | —                                     | `@serenity-kit/opaque` 1.1.0 (MIT, WASM build of the Rust `opaque-ke` crate)                                                                           |
+| React Native library                                   | —                                     | `react-native-opaque` 0.3.1, last released October 2023, so effectively unmaintained                                                                   |
+| Breached-password check                                | On the server, against a bundled list | Must move to the client (the server never sees the password), so the list ships in every app or is queried with k-anonymity, which leaks a hash prefix |
+| Cross-implementation interop (Go server ↔ Rust client) | n/a                                   | Needs both sides at the same RFC version with identical configuration; must be proven with test vectors                                                |
 
 ## Decision (proposed)
 

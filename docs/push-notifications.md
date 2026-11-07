@@ -8,12 +8,12 @@ none to give.
 
 ## 1. Delivery paths
 
-| Platform | Default (store apps) | Fully self-hosted option |
-|---|---|---|
-| iOS | Official relay → APNs | Not possible with the store app (see §6) |
-| Android | Official relay → FCM | UnifiedPush distributor (for example ntfy) |
-| Web | Web Push (VAPID, per instance) | Same: no relay needed |
-| Desktop (Electron) | The app's own WebSocket while it runs (including minimized to the tray), shown as native OS notifications. macOS (MAS build) can also use APNs through the official relay | Same WebSocket approach; needs no relay |
+| Platform           | Default (store apps)                                                                                                                                                      | Fully self-hosted option                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| iOS                | Official relay → APNs                                                                                                                                                     | Not possible with the store app (see §6)   |
+| Android            | Official relay → FCM                                                                                                                                                      | UnifiedPush distributor (for example ntfy) |
+| Web                | Web Push (VAPID, per instance)                                                                                                                                            | Same: no relay needed                      |
+| Desktop (Electron) | The app's own WebSocket while it runs (including minimized to the tray), shown as native OS notifications. macOS (MAS build) can also use APNs through the official relay | Same WebSocket approach; needs no relay    |
 
 **Spec deviation [REVIEW]:** spec §4.10 lists Web Push for desktop, but
 Electron does not implement the browser Push API, so Web Push can't wake a
@@ -62,8 +62,13 @@ federation) and a batch body:
 ```json
 {
   "pushes": [
-    { "handle": "h_…", "priority": "high", "collapse_id": "c_…",
-      "ttl_seconds": 3600, "payload": "base64url…" }
+    {
+      "handle": "h_…",
+      "priority": "high",
+      "collapse_id": "c_…",
+      "ttl_seconds": 3600,
+      "payload": "base64url…"
+    }
   ]
 }
 ```
@@ -73,13 +78,13 @@ requesting instance's key, and that key is neither blocked nor rate limited.
 Otherwise it returns a per-item error, so one bad handle doesn't fail the
 batch:
 
-| Error | Meaning |
-|---|---|
-| `handle_unknown` | Never existed or deleted. The instance drops it |
+| Error                   | Meaning                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `handle_unknown`        | Never existed or deleted. The instance drops it                                                                                       |
 | `handle_wrong_instance` | Bound to another instance. Same response timing as `handle_unknown`, so it cannot be used to probe which instance a handle belongs to |
-| `rate_limited` | With `retry_after` |
-| `payload_too_large` | Over the limit in §2.4 |
-| `instance_blocked` | Shown in the Admin panel with the operator's reason |
+| `rate_limited`          | With `retry_after`                                                                                                                    |
+| `payload_too_large`     | Over the limit in §2.4                                                                                                                |
+| `instance_blocked`      | Shown in the Admin panel with the operator's reason                                                                                   |
 
 ### 2.4 Payload format
 
@@ -108,12 +113,12 @@ type 0x03 "sync":    body = empty (badge or read-state change)
 
 ### 2.5 Rate limits
 
-| Scope | Default | Notes |
-|---|---|---|
-| Per device handle | 30 per minute, 600 per hour (burst 10) | Above APNs and FCM recommended limits for a single conversation burst; collapse IDs merge bursts |
-| Per instance | `max(20, active_handles / 50)` requests/s, burst ×5, capped at 2,000/s | Scales automatically with the instance's size; no admin steps |
-| Registration | 10 new handles per device IP per hour; 100 instance registrations per IP per day | Prevents mass handle creation |
-| Payload | 3,072 bytes | §2.4 |
+| Scope             | Default                                                                          | Notes                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Per device handle | 30 per minute, 600 per hour (burst 10)                                           | Above APNs and FCM recommended limits for a single conversation burst; collapse IDs merge bursts |
+| Per instance      | `max(20, active_handles / 50)` requests/s, burst ×5, capped at 2,000/s           | Scales automatically with the instance's size; no admin steps                                    |
+| Registration      | 10 new handles per device IP per hour; 100 instance registrations per IP per day | Prevents mass handle creation                                                                    |
+| Payload           | 3,072 bytes                                                                      | §2.4                                                                                             |
 
 Limits are applied with token buckets in memory. A 429 tells the instance to
 queue and coalesce (for example, one `sync` push instead of 30 message pushes).
@@ -141,12 +146,12 @@ blocked instance, rate limit, and the federation example above.
 
 ## 3. What the relay stores
 
-| Data | Storage | Retention |
-|---|---|---|
-| Instance records `{domain, public_key, status}` | Postgres | Until the operator deletes or blocks the instance |
-| Handles `{handle, instance_key, platform, app_id, push_token}` | Postgres, with `push_token` encrypted (AES-256-GCM, key from the relay's KMS or secret file) | Until cleanup (§2.6) |
-| Payloads | **RAM only**: never logged or written to disk, and the host runs without swap | Dropped after APNs/FCM accepts it or the TTL passes |
-| Logs | Aggregated counters only. No tokens, handles, payloads, or IPs beyond rate-limit memory | 30 days |
+| Data                                                           | Storage                                                                                      | Retention                                           |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Instance records `{domain, public_key, status}`                | Postgres                                                                                     | Until the operator deletes or blocks the instance   |
+| Handles `{handle, instance_key, platform, app_id, push_token}` | Postgres, with `push_token` encrypted (AES-256-GCM, key from the relay's KMS or secret file) | Until cleanup (§2.6)                                |
+| Payloads                                                       | **RAM only**: never logged or written to disk, and the host runs without swap                | Dropped after APNs/FCM accepts it or the TTL passes |
+| Logs                                                           | Aggregated counters only. No tokens, handles, payloads, or IPs beyond rate-limit memory      | 30 days                                             |
 
 Handles and tokens must persist across restarts; storing them is not storing
 content.

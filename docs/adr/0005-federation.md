@@ -10,24 +10,24 @@ Message Signatures (RFC 9421) and mTLS.
 
 ## Model options
 
-| Option | Description | Verdict |
-|---|---|---|
-| **Home-hosted** | A server lives on one instance, which is its delivery service. Remote users' home instances relay | **Accept.** Matches MLS's single-delivery-service design, gives one authority for commit ordering and permissions, and keeps storage in one place |
-| Full replication | Every participating instance stores the room (Matrix-style) | Reject. Needs a state-resolution algorithm, multiplies storage, and conflicts with "one DS orders MLS commits" |
-| Client connects to remote instance directly | Devices log in to every instance | Reject. Leaks device IPs to every instance and needs remote credentials |
+| Option                                      | Description                                                                                       | Verdict                                                                                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Home-hosted**                             | A server lives on one instance, which is its delivery service. Remote users' home instances relay | **Accept.** Matches MLS's single-delivery-service design, gives one authority for commit ordering and permissions, and keeps storage in one place |
+| Full replication                            | Every participating instance stores the room (Matrix-style)                                       | Reject. Needs a state-resolution algorithm, multiplies storage, and conflicts with "one DS orders MLS commits"                                    |
+| Client connects to remote instance directly | Devices log in to every instance                                                                  | Reject. Leaks device IPs to every instance and needs remote credentials                                                                           |
 
 The cost of home-hosted is availability: if the hosting instance is down,
 its servers are unavailable. That is accepted for beta and documented.
 
 ## Authentication options
 
-| | RFC 9421 HTTP signatures | mTLS |
-|---|---|---|
-| Works behind an admin's reverse proxy | Yes. Signatures travel in headers end to end | No. The proxy terminates TLS, so client certificates would need custom forwarding, which most basic setups can't do |
-| Works with an uploaded cert or a proxy alike | Yes | Only with an uploaded cert |
-| Key distribution | Ed25519 keys in `/.well-known/nexus-chat`, served over HTTPS | Needs a federation CA or pinning |
-| Per-request non-repudiation (for audit and reports) | Yes | No |
-| Library | `github.com/yaronf/httpsign` v0.6.2 (Apache-2.0) | Go standard library |
+|                                                     | RFC 9421 HTTP signatures                                     | mTLS                                                                                                                |
+| --------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Works behind an admin's reverse proxy               | Yes. Signatures travel in headers end to end                 | No. The proxy terminates TLS, so client certificates would need custom forwarding, which most basic setups can't do |
+| Works with an uploaded cert or a proxy alike        | Yes                                                          | Only with an uploaded cert                                                                                          |
+| Key distribution                                    | Ed25519 keys in `/.well-known/nexus-chat`, served over HTTPS | Needs a federation CA or pinning                                                                                    |
+| Per-request non-repudiation (for audit and reports) | Yes                                                          | No                                                                                                                  |
+| Library                                             | `github.com/yaronf/httpsign` v0.6.2 (Apache-2.0)             | Go standard library                                                                                                 |
 
 ## Decision (proposed)
 

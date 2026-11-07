@@ -13,14 +13,14 @@ step goes beyond what MLS defines, this document says so and explains why.
 
 ## 1. Building blocks
 
-| Purpose | Primitive | Source |
-|---|---|---|
-| Group key agreement, membership, message encryption | MLS, ciphersuite `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519` (0x0001) | MLS library ([ADR 0002](adr/0002-mls-library.md)) |
-| User identity / cross-signing | Ed25519 | libsodium (`react-native-libsodium`, `libsodium-wrappers-sumo`) |
-| History archive and attachments | AES-256-GCM | WebCrypto (`crypto.subtle`; `react-native-quick-crypto` on native) |
-| Key backup encryption | XChaCha20-Poly1305 (`crypto_secretbox` / `crypto_aead_xchacha20poly1305_ietf`) | libsodium |
-| Password-derived backup key | Argon2id (`crypto_pwhash`) | libsodium |
-| Media frames | LiveKit frame encryption (SFU), WebRTC encoded transforms (P2P) | LiveKit SDKs / browser |
+| Purpose                                             | Primitive                                                                      | Source                                                             |
+| --------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Group key agreement, membership, message encryption | MLS, ciphersuite `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519` (0x0001)       | MLS library ([ADR 0002](adr/0002-mls-library.md))                  |
+| User identity / cross-signing                       | Ed25519                                                                        | libsodium (`react-native-libsodium`, `libsodium-wrappers-sumo`)    |
+| History archive and attachments                     | AES-256-GCM                                                                    | WebCrypto (`crypto.subtle`; `react-native-quick-crypto` on native) |
+| Key backup encryption                               | XChaCha20-Poly1305 (`crypto_secretbox` / `crypto_aead_xchacha20poly1305_ietf`) | libsodium                                                          |
+| Password-derived backup key                         | Argon2id (`crypto_pwhash`)                                                     | libsodium                                                          |
+| Media frames                                        | LiveKit frame encryption (SFU), WebRTC encoded transforms (P2P)                | LiveKit SDKs / browser                                             |
 
 Ciphersuite 0x0001 is the mandatory-to-implement suite (RFC 9420 §17.1), so
 every compliant library supports it. A post-quantum hybrid suite (X-Wing) can
@@ -68,10 +68,10 @@ flowchart TB
 
 ### 3.1 What maps to a group
 
-| Conversation | MLS group |
-|---|---|
-| DM | One group containing all devices of both users |
-| Group DM | One group containing all devices of all members |
+| Conversation   | MLS group                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| DM             | One group containing all devices of both users                                            |
+| Group DM       | One group containing all devices of all members                                           |
 | Server channel | One group per **audience**: the set of members who hold `VIEW_CHANNEL` on it **[REVIEW]** |
 
 A large server with 40 channels, 35 of them visible to `@everyone`, gets one
@@ -115,7 +115,7 @@ leaf). MLS handles this with standard mechanisms:
   removes another user's leaf unless a valid directive backs it, so one
   member cannot silently remove others. Self-removal and removing one's own
   devices need no directive.
-- *Alternative considered:* making the server an MLS **external sender**
+- _Alternative considered:_ making the server an MLS **external sender**
   (RFC 9420 §12.1.8.1). It is the protocol-native option, but the server
   would then have to build and sign MLS `PublicMessage` proposals and so run
   an MLS implementation in Go, which no mature Go library supports today.
@@ -190,12 +190,12 @@ backup grows incrementally and a new device can fetch only what it needs.
 The backup key is stored on the server wrapped under each enabled unlock
 method:
 
-| Method | Wrapping key |
-|---|---|
-| Recovery phrase | 24-word BIP-39-style phrase (256 bits of entropy, above the spec's 128-bit minimum) → HKDF-SHA256 with a per-user salt → wrapping key. A slow hash adds nothing at 256 bits of entropy. The phrase is shown at signup and the app reminds the user until they confirm it |
-| Password | Argon2id(password, salt_backup, "nexus-chat backup v1") with parameters `opslimit=3, memlimit=256 MiB` (lowered to 64 MiB on devices that cannot allocate more, with the parameters stored alongside the blob). The salt and context are separate from login (login never uses this derivation) |
-| Passkey | WebAuthn PRF extension output → HKDF → wrapping key. Offered only where the authenticator and platform report PRF support |
-| Existing device | Device-to-device transfer during linking (§2); no server-side wrapped copy needed |
+| Method          | Wrapping key                                                                                                                                                                                                                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Recovery phrase | 24-word BIP-39-style phrase (256 bits of entropy, above the spec's 128-bit minimum) → HKDF-SHA256 with a per-user salt → wrapping key. A slow hash adds nothing at 256 bits of entropy. The phrase is shown at signup and the app reminds the user until they confirm it                        |
+| Password        | Argon2id(password, salt_backup, "nexus-chat backup v1") with parameters `opslimit=3, memlimit=256 MiB` (lowered to 64 MiB on devices that cannot allocate more, with the parameters stored alongside the blob). The salt and context are separate from login (login never uses this derivation) |
+| Passkey         | WebAuthn PRF extension output → HKDF → wrapping key. Offered only where the authenticator and platform report PRF support                                                                                                                                                                       |
+| Existing device | Device-to-device transfer during linking (§2); no server-side wrapped copy needed                                                                                                                                                                                                               |
 
 - **Changing the password** re-wraps the backup key client-side. A **password
   reset by email** cannot do this (the client does not know the old

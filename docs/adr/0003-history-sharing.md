@@ -14,12 +14,12 @@ messages from epochs before N. Nexus Chat needs history for three cases:
 
 ## Options
 
-| Option | How | Cost / risk |
-|---|---|---|
-| A. Re-encrypt on join | An existing member's device re-encrypts past messages for the newcomer | Proportional to history size for every join; needs a member online; impossible for large channels |
-| B. Keep MLS epoch secrets | Members export old epoch secret trees to newcomers | Hands over far more than needed (secrets that also decrypt handshake data); fragile; ties history to MLS internals |
+| Option                                                  | How                                                                                                                                               | Cost / risk                                                                                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. Re-encrypt on join                                   | An existing member's device re-encrypts past messages for the newcomer                                                                            | Proportional to history size for every join; needs a member online; impossible for large channels                                              |
+| B. Keep MLS epoch secrets                               | Members export old epoch secret trees to newcomers                                                                                                | Hands over far more than needed (secrets that also decrypt handshake data); fragile; ties history to MLS internals                             |
 | **C. Archive copy under exporter-derived history keys** | Each message also stored as AES-256-GCM under `MLS-Exporter("nexus-chat history v1", channelId‖epoch, 32)`; members share these keys when allowed | One extra small ciphertext per message (the live MLS copy is deleted after delivery, so long-term storage is ~1×); history keys are long-lived |
-| D. Server-readable history | — | Violates the E2EE requirement |
+| D. Server-readable history                              | —                                                                                                                                                 | Violates the E2EE requirement                                                                                                                  |
 
 ## Decision (proposed)
 

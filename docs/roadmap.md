@@ -6,23 +6,24 @@ fuzz, black-box, accessibility, worst-case UI). After each milestone,
 `docs/progress.md` is updated. Milestones marked **[REVIEW]** pause for
 maintainer review before the next one starts.
 
-| # | Milestone | Depends on |
-|---|---|---|
-| M0 | Foundation | — |
-| M1 | Deployable instance | M0 |
-| M2 | Accounts and client shell | M1 |
-| M3 | Crypto core **[REVIEW]** | M2 |
-| M4 | DMs and E2EE messaging | M3 |
-| M5 | Servers, channels, permissions | M4 |
-| M6 | Search | M5 |
-| M7 | Moderation and admin | M5 |
-| M8 | Push notifications | M4 |
-| M9 | Voice, video, screen share | M5 |
-| M10 | Federation | M5, M8, M9 |
-| M11 | Desktop and store distribution **[REVIEW]** | M9 |
-| M12 | Account lifecycle, hardening, beta release | all |
+| #   | Milestone                                   | Depends on |
+| --- | ------------------------------------------- | ---------- |
+| M0  | Foundation                                  | —          |
+| M1  | Deployable instance                         | M0         |
+| M2  | Accounts and client shell                   | M1         |
+| M3  | Crypto core **[REVIEW]**                    | M2         |
+| M4  | DMs and E2EE messaging                      | M3         |
+| M5  | Servers, channels, permissions              | M4         |
+| M6  | Search                                      | M5         |
+| M7  | Moderation and admin                        | M5         |
+| M8  | Push notifications                          | M4         |
+| M9  | Voice, video, screen share                  | M5         |
+| M10 | Federation                                  | M5, M8, M9 |
+| M11 | Desktop and store distribution **[REVIEW]** | M9         |
+| M12 | Account lifecycle, hardening, beta release  | all        |
 
 ## M0 — Foundation
+
 - Monorepo: pnpm workspaces + Turborepo, `apps/*`, `packages/*`, Go module
   in `apps/server` and `apps/push-relay`.
 - CI: build, `gofmt`, `golangci-lint`, ESLint/Prettier, `tsc --strict`,
@@ -39,6 +40,7 @@ maintainer review before the next one starts.
   fixture in a test job.
 
 ## M1 — Deployable instance
+
 - `infra/compose/docker-compose.yml` (server, postgres, livekit; `p2p`
   profile with coturn), `.env.example` with the two required variables.
 - Multi-arch images, cosign signing, SBOM, Trivy.
@@ -52,6 +54,7 @@ maintainer review before the next one starts.
   validation table tests; ZAP baseline scan against the stack.
 
 ## M2 — Accounts and client shell
+
 - Registration modes, username and profile rules, email verification,
   avatar cropping and resizing, status and custom status.
 - Password (Argon2id, breached-password list), passkeys, TOTP, security
@@ -66,6 +69,7 @@ maintainer review before the next one starts.
   signup/login on web; Maestro login flows; axe zero serious/critical.
 
 ## M3 — Crypto core **[REVIEW]**
+
 - `packages/crypto`: MLS wrapper, RFC 9420 test vectors on Node and Hermes,
   identity keys and cross-signing, device linking by QR and comparison code,
   key backup with phrase, password and passkey PRF, history keys, archive
@@ -79,6 +83,7 @@ maintainer review before the next one starts.
   numbers before building features on it.
 
 ## M4 — DMs and E2EE messaging
+
 - Friends, blocks, privacy settings, DMs, group DMs (name, icon, add, leave).
 - Every §4.5 feature: Markdown subset (parser fuzzed and property-tested),
   mentions, edit/delete, attachments with client thumbnails, reactions,
@@ -88,6 +93,7 @@ maintainer review before the next one starts.
   frame fuzzing; Markdown fuzzing.
 
 ## M5 — Servers, channels, permissions
+
 - Servers, categories, text and voice channels, drag-and-drop ordering,
   invites, join by address, roles, channel overrides, the full permission
   list in one module, `docs/permissions.md` with a worked example.
@@ -99,6 +105,7 @@ maintainer review before the next one starts.
   p95 < 300 ms).
 
 ## M6 — Search
+
 - Encrypted local FTS5 index, recent window, backfill (Wi-Fi + charging on
   mobile), encrypted index sync by channel and month, desktop full indexing.
 - Server-side metadata search (directory, channel names, members).
@@ -106,6 +113,7 @@ maintainer review before the next one starts.
   after interruption.
 
 ## M7 — Moderation and admin
+
 - Kick, ban with message deletion, timeout, audit log, reports with
   signature + server-receipt verification, instance admin panel (users,
   servers, registration, federation lists, stats).
@@ -113,6 +121,7 @@ maintainer review before the next one starts.
   Playwright admin flows.
 
 ## M8 — Push notifications
+
 - `apps/push-relay` with instance registration, handles, signed sends, rate
   limits, cleanup, blocklist.
 - Instance push service, Web Push (VAPID), UnifiedPush, iOS Notification
@@ -121,6 +130,7 @@ maintainer review before the next one starts.
   handle, deleted handle, and the federation example.
 
 ## M9 — Voice, video, screen share
+
 - Starts with two spikes: (a) P2P frame-encryption interop between web
   transforms and native `FrameCryptor`; (b) LiveKit E2EE with MLS-derived
   keys and epoch rotation.
@@ -132,12 +142,14 @@ maintainer review before the next one starts.
   modes; mode switch while in a call.
 
 ## M10 — Federation
+
 - Discovery, RFC 9421 signing, all v1 endpoints, outbound queues, remote
   key packages, remote voice tokens, cross-instance DMs, policy lists.
 - **Test:** two-instance Docker suite: remote user joins, chats, reacts,
   joins voice, gets banned; fuzzing of federation request parsing.
 
 ## M11 — Desktop and store distribution **[REVIEW]**
+
 - Electron native features: screen/window picker, system audio, tray,
   global push-to-talk, `safeStorage`.
 - MAS, MSIX and Flatpak builds; mobile builds per
@@ -149,6 +161,7 @@ maintainer review before the next one starts.
 - **Test:** Playwright for Electron, including the window/screen picker.
 
 ## M12 — Account lifecycle, hardening, beta release
+
 - Data export (assembled on device), account deletion with grace period,
   ownership transfer checks, federated deletion notices.
 - Remaining gates: ZAP, Trivy, full release gate, docs site (`pkgsite`),

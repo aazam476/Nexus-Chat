@@ -11,11 +11,11 @@ messages that were not reported.
 
 ## Options
 
-| Option | Mechanism | Assessment |
-|---|---|---|
+| Option                                                             | Mechanism                                                                                                                                                                               | Assessment                                                                                                  |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | A. Commitment-based franking (Facebook, Grubbs–Lu–Ristenpart 2017) | Sender embeds a random franking key and sends an HMAC commitment to the plaintext; the server MACs the commitment with context at delivery; a reporter reveals plaintext + franking key | Well studied, but adds a parallel commitment scheme to MLS that we would implement ourselves on top of HMAC |
-| **B. Sender signatures + server receipt** | MLS already signs every message's content with the sender's leaf key (RFC 9420 §6.1); our archive copy carries the same kind of signature. The server adds a signed receipt at delivery | Uses only signatures that already exist plus a server Ed25519 signature. No new construction |
-| C. Asymmetric message franking (Tyagi et al. 2019) | Designated-verifier signatures preserving deniability | Research grade; no vetted libraries |
+| **B. Sender signatures + server receipt**                          | MLS already signs every message's content with the sender's leaf key (RFC 9420 §6.1); our archive copy carries the same kind of signature. The server adds a signed receipt at delivery | Uses only signatures that already exist plus a server Ed25519 signature. No new construction                |
+| C. Asymmetric message franking (Tyagi et al. 2019)                 | Designated-verifier signatures preserving deniability                                                                                                                                   | Research grade; no vetted libraries                                                                         |
 
 ## Decision (proposed)
 

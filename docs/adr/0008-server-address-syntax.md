@@ -23,20 +23,20 @@ form collides with email addresses.
 
 ## Options
 
-| Syntax | Auto-linked as email? | Notes |
-|---|---|---|
-| `gaming@example.com` (spec) | Yes | Problems above |
-| **`+gaming@example.com`** | Most linkifiers skip a leading `+`, but some still link the part after it, which M5 measures | Parallels `@user@domain`; `+` reads as "group"; not used elsewhere in our syntax |
-| `#gaming@example.com` | No | `#` already means channel mentions, and is a URL fragment |
-| `~gaming@example.com` | Varies | Less familiar; `~` is awkward on mobile keyboards |
-| `gaming:example.com` | No | Matrix-like; doesn't match our user syntax |
+| Syntax                      | Auto-linked as email?                                                                        | Notes                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `gaming@example.com` (spec) | Yes                                                                                          | Problems above                                                                   |
+| **`+gaming@example.com`**   | Most linkifiers skip a leading `+`, but some still link the part after it, which M5 measures | Parallels `@user@domain`; `+` reads as "group"; not used elsewhere in our syntax |
+| `#gaming@example.com`       | No                                                                                           | `#` already means channel mentions, and is a URL fragment                        |
+| `~gaming@example.com`       | Varies                                                                                       | Less familiar; `~` is awkward on mobile keyboards                                |
+| `gaming:example.com`        | No                                                                                           | Matrix-like; doesn't match our user syntax                                       |
 
 ## Decision (proposed)
 
 Canonical server address: **`+gaming@example.com`**. Invite links
 (`https://example.com/join/…`) remain the main sharing path, since they
 are always clickable. The join box also accepts the bare `gaming@example.com`
-form and shows a confirmation ("Join server *Gaming* on example.com?"), so
+form and shows a confirmation ("Join server _Gaming_ on example.com?"), so
 the spec's form still works when typed.
 
 ## Consequences
