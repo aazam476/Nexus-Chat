@@ -90,6 +90,58 @@ export type SetupInstance = {
  */
 export type RegistrationMode = 'open' | 'invite_only' | 'closed';
 
+export type RegisterRequest = {
+    username: string;
+    displayName: string;
+    email: string;
+    password: string;
+    /**
+     * Required when registration is invite-only.
+     */
+    inviteCode?: string;
+    deviceName: string;
+};
+
+export type TokenRequest = {
+    token: string;
+};
+
+export type PasswordResetRequest = {
+    email: string;
+};
+
+export type CompletePasswordResetRequest = {
+    token: string;
+    password: string;
+};
+
+export type CreateInviteRequest = {
+    /**
+     * How many accounts may use the invite. Omit for no limit.
+     */
+    maxUses?: number;
+    /**
+     * When the invite stops working. Omit for never.
+     */
+    expiresAt?: string;
+};
+
+export type Invite = {
+    id: string;
+    maxUses?: number;
+    uses: number;
+    expiresAt?: string;
+    createdAt: string;
+};
+
+export type CreatedInvite = {
+    id: string;
+    /**
+     * The invite code. Shown only this once.
+     */
+    code: string;
+};
+
 export type LoginRequest = {
     /**
      * Username or email address.
@@ -186,6 +238,256 @@ export type LoginResponses = {
 };
 
 export type LoginResponse = LoginResponses[keyof LoginResponses];
+
+export type RegisterData = {
+    body: RegisterRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/register';
+};
+
+export type RegisterErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * Registration is not allowed (`registration_closed`, `invite_required` or `invalid_invite`).
+     */
+    403: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type RegisterError = RegisterErrors[keyof RegisterErrors];
+
+export type RegisterResponses = {
+    /**
+     * The account exists and is logged in.
+     */
+    201: LoginResult;
+};
+
+export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
+
+export type VerifyEmailData = {
+    body: TokenRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/verify-email';
+};
+
+export type VerifyEmailErrors = {
+    /**
+     * The token is invalid or expired (`invalid_token`), or the body is malformed (`bad_request`).
+     */
+    400: Error;
+};
+
+export type VerifyEmailError = VerifyEmailErrors[keyof VerifyEmailErrors];
+
+export type VerifyEmailResponses = {
+    /**
+     * The address is verified.
+     */
+    204: void;
+};
+
+export type VerifyEmailResponse = VerifyEmailResponses[keyof VerifyEmailResponses];
+
+export type ResendVerificationEmailData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/verify-email/resend';
+};
+
+export type ResendVerificationEmailErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The address is already verified (`already_verified`).
+     */
+    409: Error;
+    /**
+     * The instance cannot send email (`email_unavailable`); the message says why.
+     */
+    503: Error;
+};
+
+export type ResendVerificationEmailError = ResendVerificationEmailErrors[keyof ResendVerificationEmailErrors];
+
+export type ResendVerificationEmailResponses = {
+    /**
+     * A new link is on its way. Older links stop working.
+     */
+    202: unknown;
+};
+
+export type RequestPasswordResetData = {
+    body: PasswordResetRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password-reset';
+};
+
+export type RequestPasswordResetErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type RequestPasswordResetError = RequestPasswordResetErrors[keyof RequestPasswordResetErrors];
+
+export type RequestPasswordResetResponses = {
+    /**
+     * If the address has an account, a link is on its way.
+     */
+    202: unknown;
+};
+
+export type CompletePasswordResetData = {
+    body: CompletePasswordResetRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password-reset/complete';
+};
+
+export type CompletePasswordResetErrors = {
+    /**
+     * The token is invalid or expired (`invalid_token`), or the body is malformed (`bad_request`).
+     */
+    400: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type CompletePasswordResetError = CompletePasswordResetErrors[keyof CompletePasswordResetErrors];
+
+export type CompletePasswordResetResponses = {
+    /**
+     * The password is changed. Log in again.
+     */
+    204: void;
+};
+
+export type CompletePasswordResetResponse = CompletePasswordResetResponses[keyof CompletePasswordResetResponses];
+
+export type ListInvitesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/invites';
+};
+
+export type ListInvitesErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type ListInvitesError = ListInvitesErrors[keyof ListInvitesErrors];
+
+export type ListInvitesResponses = {
+    /**
+     * Every invite, newest first.
+     */
+    200: Array<Invite>;
+};
+
+export type ListInvitesResponse = ListInvitesResponses[keyof ListInvitesResponses];
+
+export type CreateInviteData = {
+    body: CreateInviteRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/invites';
+};
+
+export type CreateInviteErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type CreateInviteError = CreateInviteErrors[keyof CreateInviteErrors];
+
+export type CreateInviteResponses = {
+    /**
+     * The new invite.
+     */
+    201: CreatedInvite;
+};
+
+export type CreateInviteResponse = CreateInviteResponses[keyof CreateInviteResponses];
+
+export type DeleteInviteData = {
+    body?: never;
+    path: {
+        inviteId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/invites/{inviteId}';
+};
+
+export type DeleteInviteErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such invite (`invite_not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteInviteError = DeleteInviteErrors[keyof DeleteInviteErrors];
+
+export type DeleteInviteResponses = {
+    /**
+     * The invite no longer works.
+     */
+    204: void;
+};
+
+export type DeleteInviteResponse = DeleteInviteResponses[keyof DeleteInviteResponses];
 
 export type LogoutData = {
     body?: never;

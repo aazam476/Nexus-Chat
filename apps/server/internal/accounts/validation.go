@@ -55,7 +55,7 @@ func (validator *Validator) ValidateNewAccount(account NewAccount) (NewAccount, 
 	problems.Add("displayName", validateDisplayName(account.DisplayName))
 	email, err := normalizeEmail(account.Email)
 	problems.Add("email", err)
-	problems.Add("password", validator.checkPassword(account.Password))
+	problems.Add("password", validator.CheckPassword(account.Password))
 
 	if err := problems.Err(); err != nil {
 		return NewAccount{}, err
@@ -64,9 +64,9 @@ func (validator *Validator) ValidateNewAccount(account NewAccount) (NewAccount, 
 	return account, nil
 }
 
-// checkPassword applies the length rules first, so the breach list is only
+// CheckPassword applies the length rules first, so the breach list is only
 // searched for passwords that are otherwise acceptable.
-func (validator *Validator) checkPassword(plain string) error {
+func (validator *Validator) CheckPassword(plain string) error {
 	if err := password.CheckPolicy(plain); err != nil {
 		return err
 	}

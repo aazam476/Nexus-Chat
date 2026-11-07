@@ -5,25 +5,18 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
-
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
 )
 
-// userReader is the query the handler needs.
-type userReader interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (store.User, error)
-}
-
 // Handler serves the account endpoints.
 type Handler struct {
-	users userReader
+	users UserReader
 }
 
 // NewHandler returns a Handler reading accounts from users.
-func NewHandler(users userReader) *Handler {
+func NewHandler(users UserReader) *Handler {
 	return &Handler{users: users}
 }
 

@@ -14,11 +14,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts"
+	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/emails"
 	accountsstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens"
+	tokensstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password/breached"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passwordreset"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
 	sessionstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/session/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
@@ -28,7 +32,10 @@ import (
 	instanceconfigstore "github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/database"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
+	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
+	registrationstore "github.com/aazam476/nexus-chat/apps/server/internal/registration/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/secrets"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
 	setupstore "github.com/aazam476/nexus-chat/apps/server/internal/setup/store"
@@ -141,18 +148,55 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 		return httpserver.Features{}, err
 	}
 	healthService := health.NewService([]health.NamedChecker{{Name: "database", Checker: app.pool}})
-	accountQueries := accountsstore.New(app.pool)
 	app.sessions = session.NewService(sessionstore.New(app.pool), clock.System{})
+	authFeatures := app.buildAuthFeatures(authInputs{hasher: hasher, validator: validator, domain: configuration.Domain})
+	authFeatures.Health = health.NewHandler(healthService)
+	authFeatures.Setup = setup.NewHandler(setupService)
+	return authFeatures, nil
+}
+
+// authInputs are the shared pieces the account features are built from.
+type authInputs struct {
+	hasher    *password.Hasher
+	validator *accounts.Validator
+	domain    string
+}
+
+// buildAuthFeatures creates login, registration, verification and
+// password reset. Each limiter is per client IP.
+func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features {
+	system := clock.System{}
+	accountQueries := accountsstore.New(app.pool)
+	settings := instanceconfig.NewService(instanceconfigstore.New(app.pool), system, inputs.domain)
+	accountTokens := tokens.NewService(tokensstore.New(app.pool), system)
+	mailer := mail.NewConfigured(func(ctx context.Context) (mail.SMTPConfig, bool, error) {
+		var smtp mail.SMTPConfig
+		found, err := settings.Load(ctx, instanceconfig.KeySMTP, &smtp)
+		return smtp, found, err
+	}, system)
+	accountEmails := emails.NewService(accountTokens, mailer, settings)
 	logins := login.NewService(login.Dependencies{
-		Accounts: accountQueries, Hasher: hasher, Sessions: app.sessions,
-		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), clock.System{}), Clock: clock.System{},
+		Accounts: accountQueries, Hasher: inputs.hasher, Sessions: app.sessions,
+		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), system), Clock: system,
+	})
+	resets := passwordreset.NewService(passwordreset.Dependencies{
+		Accounts: accountQueries, Sessions: sessionstore.New(app.pool), Tokens: accountTokens, Mailer: accountEmails,
+		Validator: inputs.validator, Hasher: inputs.hasher, Limiter: ratelimit.New(ratelimit.PerMinute(5, 3), system),
+		Clock: system, Logger: app.logger,
+	})
+	registrations := registration.NewService(registration.Dependencies{
+		Accounts: registrationstore.NewRegistrar(app.pool), Validator: inputs.validator, Hasher: inputs.hasher,
+		Sessions: app.sessions, Emails: accountEmails, Settings: settings,
+		Limiter: ratelimit.New(ratelimit.PerMinute(5, 5), system), Clock: system, Logger: app.logger,
 	})
 	return httpserver.Features{
 		Accounts: accounts.NewHandler(accountQueries),
-		Auth:     auth.NewHandler(logins, app.sessions),
-		Health:   health.NewHandler(healthService),
-		Setup:    setup.NewHandler(setupService),
-	}, nil
+		Auth: auth.NewHandler(auth.HandlerDependencies{
+			Logins: logins, Sessions: app.sessions, Resets: resets,
+			Verifier: emails.NewVerifier(accountTokens, accountQueries, system), Emails: accountEmails, Users: accountQueries,
+		}),
+		Registration: registration.NewHandler(registrations, registration.NewInvites(registrationstore.New(app.pool), system), accountQueries),
+	}
 }
 
 func (app *application) prepareDatabase(ctx context.Context) error {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
 )
 
@@ -86,6 +87,41 @@ func (service *Service) send(ctx context.Context, user store.User, email kind) e
 	}
 	if err := service.sender.Send(ctx, message); err != nil {
 		return fmt.Errorf("sending %s email: %w", email.template, err)
+	}
+	return nil
+}
+
+// verificationStore marks addresses as verified.
+type verificationStore interface {
+	MarkEmailVerified(ctx context.Context, arg store.MarkEmailVerifiedParams) error
+}
+
+// tokenRedeemer is satisfied by *tokens.Service.
+type tokenRedeemer interface {
+	Redeem(ctx context.Context, purpose tokens.Purpose, token string) (uuid.UUID, error)
+}
+
+// Verifier confirms email addresses from verification links.
+type Verifier struct {
+	tokens tokenRedeemer
+	users  verificationStore
+	clock  clock.Clock
+}
+
+// NewVerifier returns a Verifier.
+func NewVerifier(redeemer tokenRedeemer, users verificationStore, clock clock.Clock) *Verifier {
+	return &Verifier{tokens: redeemer, users: users, clock: clock}
+}
+
+// Verify redeems a verification token and marks its owner's email verified.
+func (verifier *Verifier) Verify(ctx context.Context, token string) error {
+	userID, err := verifier.tokens.Redeem(ctx, tokens.VerifyEmail, token)
+	if err != nil {
+		return err
+	}
+	verifiedAt := verifier.clock.Now()
+	if err := verifier.users.MarkEmailVerified(ctx, store.MarkEmailVerifiedParams{ID: userID, EmailVerifiedAt: &verifiedAt}); err != nil {
+		return fmt.Errorf("marking email verified: %w", err)
 	}
 	return nil
 }

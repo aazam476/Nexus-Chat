@@ -2,3 +2,4 @@
 ./internal/auth/session
 ./internal/auth/login
 ./internal/auth
+./internal/auth/passwordreset

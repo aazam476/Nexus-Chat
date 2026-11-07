@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSetupStatusData, GetSetupStatusResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses } from './types.gen.js';
+import type { CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSetupStatusData, GetSetupStatusResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegisterData, RegisterErrors, RegisterResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -34,6 +34,113 @@ export const login = <ThrowOnError extends boolean = false>(options: Options<Log
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Create an account
+ *
+ * Creates an account and logs it in. Whether this is allowed depends on
+ * the instance's registration mode: `open`, `invite_only` (needs
+ * `inviteCode`) or `closed`. A verification email is sent if the
+ * instance has email set up.
+ *
+ */
+export const register = <ThrowOnError extends boolean = false>(options: Options<RegisterData, ThrowOnError>): RequestResult<RegisterResponses, RegisterErrors, ThrowOnError> => (options.client ?? client).post<RegisterResponses, RegisterErrors, ThrowOnError>({
+    url: '/api/v1/auth/register',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Confirm an email address
+ *
+ * Redeems the token from a verification email link.
+ */
+export const verifyEmail = <ThrowOnError extends boolean = false>(options: Options<VerifyEmailData, ThrowOnError>): RequestResult<VerifyEmailResponses, VerifyEmailErrors, ThrowOnError> => (options.client ?? client).post<VerifyEmailResponses, VerifyEmailErrors, ThrowOnError>({
+    url: '/api/v1/auth/verify-email',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Send the verification email again
+ */
+export const resendVerificationEmail = <ThrowOnError extends boolean = false>(options?: Options<ResendVerificationEmailData, ThrowOnError>): RequestResult<ResendVerificationEmailResponses, ResendVerificationEmailErrors, ThrowOnError> => (options?.client ?? client).post<ResendVerificationEmailResponses, ResendVerificationEmailErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/verify-email/resend',
+    ...options
+});
+
+/**
+ * Ask for a password reset link
+ *
+ * Emails a reset link if the address has an account. The response is
+ * the same either way, so it does not reveal who is registered.
+ *
+ */
+export const requestPasswordReset = <ThrowOnError extends boolean = false>(options: Options<RequestPasswordResetData, ThrowOnError>): RequestResult<RequestPasswordResetResponses, RequestPasswordResetErrors, ThrowOnError> => (options.client ?? client).post<RequestPasswordResetResponses, RequestPasswordResetErrors, ThrowOnError>({
+    url: '/api/v1/auth/password-reset',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Choose a new password
+ *
+ * Sets a new password using the token from the reset link, and logs
+ * out every session of the account. This restores login only; it does
+ * not restore encryption keys.
+ *
+ */
+export const completePasswordReset = <ThrowOnError extends boolean = false>(options: Options<CompletePasswordResetData, ThrowOnError>): RequestResult<CompletePasswordResetResponses, CompletePasswordResetErrors, ThrowOnError> => (options.client ?? client).post<CompletePasswordResetResponses, CompletePasswordResetErrors, ThrowOnError>({
+    url: '/api/v1/auth/password-reset/complete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List instance invites
+ */
+export const listInvites = <ThrowOnError extends boolean = false>(options?: Options<ListInvitesData, ThrowOnError>): RequestResult<ListInvitesResponses, ListInvitesErrors, ThrowOnError> => (options?.client ?? client).get<ListInvitesResponses, ListInvitesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/invites',
+    ...options
+});
+
+/**
+ * Create an instance invite
+ *
+ * The code is returned once and cannot be shown again.
+ */
+export const createInvite = <ThrowOnError extends boolean = false>(options: Options<CreateInviteData, ThrowOnError>): RequestResult<CreateInviteResponses, CreateInviteErrors, ThrowOnError> => (options.client ?? client).post<CreateInviteResponses, CreateInviteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/invites',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Revoke an instance invite
+ */
+export const deleteInvite = <ThrowOnError extends boolean = false>(options: Options<DeleteInviteData, ThrowOnError>): RequestResult<DeleteInviteResponses, DeleteInviteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteInviteResponses, DeleteInviteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/invites/{inviteId}',
+    ...options
 });
 
 /**

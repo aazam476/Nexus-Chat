@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
 )
 
@@ -84,4 +86,47 @@ func TestSendFailures(t *testing.T) {
 			assert.ErrorIs(t, err, failure)
 		})
 	}
+}
+
+type fakeRedeemer struct {
+	user uuid.UUID
+	err  error
+}
+
+func (fake fakeRedeemer) Redeem(_ context.Context, purpose tokens.Purpose, _ string) (uuid.UUID, error) {
+	if purpose != tokens.VerifyEmail {
+		return uuid.Nil, errors.New("wrong purpose")
+	}
+	return fake.user, fake.err
+}
+
+type fakeVerifications struct {
+	marked []store.MarkEmailVerifiedParams
+	err    error
+}
+
+func (fake *fakeVerifications) MarkEmailVerified(_ context.Context, arg store.MarkEmailVerifiedParams) error {
+	fake.marked = append(fake.marked, arg)
+	return fake.err
+}
+
+func TestVerify(t *testing.T) {
+	now := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
+	users := &fakeVerifications{}
+
+	require.NoError(t, NewVerifier(fakeRedeemer{user: alice.ID}, users, clock.Fixed{Time: now}).Verify(t.Context(), "token"))
+
+	require.Len(t, users.marked, 1)
+	assert.Equal(t, alice.ID, users.marked[0].ID)
+	assert.Equal(t, now, *users.marked[0].EmailVerifiedAt)
+}
+
+func TestVerifyFailures(t *testing.T) {
+	failure := errors.New("failure")
+
+	err := NewVerifier(fakeRedeemer{err: tokens.ErrInvalidToken}, &fakeVerifications{}, clock.Fixed{}).Verify(t.Context(), "x")
+	require.ErrorIs(t, err, tokens.ErrInvalidToken)
+
+	err = NewVerifier(fakeRedeemer{user: alice.ID}, &fakeVerifications{err: failure}, clock.Fixed{}).Verify(t.Context(), "x")
+	assert.ErrorIs(t, err, failure)
 }

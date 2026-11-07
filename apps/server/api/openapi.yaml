@@ -19,6 +19,8 @@ tags:
     description: Logging in and out, and managing sessions (spec §4.1).
   - name: users
     description: User accounts and profiles.
+  - name: admin
+    description: Instance administration. Every operation needs an instance admin.
 paths:
   /api/v1/auth/login:
     post:
@@ -58,6 +60,208 @@ paths:
               description: Seconds to wait before trying again.
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/register:
+    post:
+      operationId: register
+      summary: Create an account
+      description: |
+        Creates an account and logs it in. Whether this is allowed depends on
+        the instance's registration mode: `open`, `invite_only` (needs
+        `inviteCode`) or `closed`. A verification email is sent if the
+        instance has email set up.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: The account exists and is logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Registration is not allowed (`registration_closed`, `invite_required` or `invalid_invite`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/verify-email:
+    post:
+      operationId: verifyEmail
+      summary: Confirm an email address
+      description: Redeems the token from a verification email link.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+      responses:
+        "204":
+          description: The address is verified.
+        "400":
+          description: The token is invalid or expired (`invalid_token`), or the body is malformed (`bad_request`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/verify-email/resend:
+    post:
+      operationId: resendVerificationEmail
+      summary: Send the verification email again
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: A new link is on its way. Older links stop working.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: The address is already verified (`already_verified`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: The instance cannot send email (`email_unavailable`); the message says why.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/password-reset:
+    post:
+      operationId: requestPasswordReset
+      summary: Ask for a password reset link
+      description: |
+        Emails a reset link if the address has an account. The response is
+        the same either way, so it does not reveal who is registered.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "202":
+          description: If the address has an account, a link is on its way.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/password-reset/complete:
+    post:
+      operationId: completePasswordReset
+      summary: Choose a new password
+      description: |
+        Sets a new password using the token from the reset link, and logs
+        out every session of the account. This restores login only; it does
+        not restore encryption keys.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompletePasswordResetRequest"
+      responses:
+        "204":
+          description: The password is changed. Log in again.
+        "400":
+          description: The token is invalid or expired (`invalid_token`), or the body is malformed (`bad_request`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/admin/invites:
+    get:
+      operationId: listInvites
+      summary: List instance invites
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Every invite, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invite"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createInvite
+      summary: Create an instance invite
+      description: The code is returned once and cannot be shown again.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInviteRequest"
+      responses:
+        "201":
+          description: The new invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedInvite"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/admin/invites/{inviteId}:
+    delete:
+      operationId: deleteInvite
+      summary: Revoke an instance invite
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The invite no longer works.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such invite (`invite_not_found`).
           content:
             application/json:
               schema:
@@ -232,6 +436,12 @@ components:
       scheme: bearer
       description: "A session token from `POST /api/v1/auth/login`, sent as `Authorization: Bearer nxs_…`."
   responses:
+    Forbidden:
+      description: Only instance admins may do this (`forbidden`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Unauthorized:
       description: The request has no valid session token (`unauthorized`).
       content:
@@ -347,6 +557,91 @@ components:
       type: string
       enum: [open, invite_only, closed]
       description: Who may create accounts.
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [username, displayName, email, password, deviceName]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        inviteCode:
+          type: string
+          description: Required when registration is invite-only.
+        deviceName:
+          type: string
+    TokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+    PasswordResetRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+    CompletePasswordResetRequest:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+    CreateInviteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        maxUses:
+          type: integer
+          format: int32
+          minimum: 1
+          description: How many accounts may use the invite. Omit for no limit.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the invite stops working. Omit for never.
+    Invite:
+      type: object
+      additionalProperties: false
+      required: [id, uses, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        maxUses:
+          type: integer
+          format: int32
+        uses:
+          type: integer
+          format: int32
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    CreatedInvite:
+      type: object
+      additionalProperties: false
+      required: [id, code]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: The invite code. Shown only this once.
     LoginRequest:
       type: object
       additionalProperties: false

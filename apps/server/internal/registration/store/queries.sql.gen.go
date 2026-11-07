@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const consumeInvite = `-- name: ConsumeInvite :one
@@ -56,7 +55,7 @@ VALUES ($1, $2, $3, $4, $5, $6)
 type InsertInviteParams struct {
 	ID        uuid.UUID
 	CodeHash  []byte
-	CreatedBy pgtype.UUID
+	CreatedBy *uuid.UUID
 	MaxUses   *int32
 	ExpiresAt *time.Time
 	CreatedAt time.Time
@@ -80,7 +79,7 @@ SELECT id, created_by, max_uses, uses, expires_at, created_at FROM instance_invi
 
 type ListInvitesRow struct {
 	ID        uuid.UUID
-	CreatedBy pgtype.UUID
+	CreatedBy *uuid.UUID
 	MaxUses   *int32
 	Uses      int32
 	ExpiresAt *time.Time
