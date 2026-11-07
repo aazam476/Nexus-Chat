@@ -1,0 +1,16 @@
+# sqlc compiles the SQL in each feature's store/queries.sql into typed Go.
+# Run `go generate ./...` from apps/server after changing a query or migration.
+version: "2"
+sql:
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/instanceconfig/store/queries.sql
+    gen:
+      go:
+        package: store
+        out: internal/instanceconfig/store
+        sql_package: pgx/v5
+        output_files_suffix: .gen
+        output_db_file_name: db.gen.go
+        output_models_file_name: models.gen.go
+        emit_interface: false

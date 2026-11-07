@@ -1,0 +1,14 @@
+# Configuration for oapi-codegen. Run `go generate ./...` from apps/server.
+package: api
+output: api.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+  embedded-spec: false
+output-options:
+  skip-prune: false
+compatibility:
+  # Name enum constants after their type (HealthStateOk, not Ok) so values
+  # from different enums never collide.
+  always-prefix-enum-values: true

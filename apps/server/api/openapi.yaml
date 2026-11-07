@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: Nexus Chat Server API
+  version: 0.1.0
+  description: |
+    The HTTP API of a Nexus Chat instance. This file is the contract: Go
+    server interfaces and the TypeScript client are generated from it.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: /
+tags:
+  - name: health
+    description: Liveness and readiness probes used by Docker and orchestrators.
+paths:
+  /healthz:
+    get:
+      operationId: getLiveness
+      summary: Liveness probe
+      description: Returns 200 whenever the process is running and serving HTTP.
+      tags: [health]
+      responses:
+        "200":
+          description: The process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Readiness probe
+      description: |
+        Returns 200 when every dependency the server needs (currently the
+        database) is reachable, and 503 otherwise.
+      tags: [health]
+      responses:
+        "200":
+          description: The server is ready to take traffic.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: At least one dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      required: [status, checks]
+      properties:
+        status:
+          $ref: "#/components/schemas/HealthState"
+        checks:
+          type: array
+          description: One entry per dependency. Empty for the liveness probe.
+          items:
+            $ref: "#/components/schemas/HealthCheck"
+    HealthCheck:
+      type: object
+      additionalProperties: false
+      required: [name, status]
+      properties:
+        name:
+          type: string
+          description: Dependency name, for example `database`.
+          example: database
+        status:
+          $ref: "#/components/schemas/HealthState"
+    HealthState:
+      type: string
+      enum: [ok, unavailable]
