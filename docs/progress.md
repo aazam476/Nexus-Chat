@@ -34,6 +34,20 @@ platform support research, and ADRs 0001–0013. Decisions marked
 - Contributor docs: README, CONTRIBUTING, code standards, getting started,
   SECURITY, Code of Conduct, per-app READMEs, dependency register.
 
+### Decisions approved after Phase 0
+
+- Desktop notifications arrive over the app's live connection (no Web Push
+  in Electron).
+- One MLS group per channel audience.
+- Membership changes through signed directives.
+- Attachments above 64 MiB with streaming encryption, per-server limits, and
+  optional sender-side lossy compression (ADR 0014).
+
+Still open: the remaining §10 items (MLS library, history sharing, password
+handling, federation, push relay details, search, server address syntax,
+voice switching, reports, Mac App Store limits). Work continues on the
+recommended options; M2 uses Argon2id, which is the spec's baseline.
+
 ## Next
 
 **M1: Deployable instance.** Docker images, Compose file, setup wizard,

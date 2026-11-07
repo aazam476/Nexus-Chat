@@ -86,7 +86,9 @@ maintainer review before the next one starts.
 
 - Friends, blocks, privacy settings, DMs, group DMs (name, icon, add, leave).
 - Every §4.5 feature: Markdown subset (parser fuzzed and property-tested),
-  mentions, edit/delete, attachments with client thumbnails, reactions,
+  mentions, edit/delete, attachments with client thumbnails (streaming
+  encryption above 64 MiB, optional lossy compression, instance size
+  limit; ADR 0014), reactions,
   inline replies, typing, read state and jump to unread. Link previews on
   native and desktop; web preview proxy toggle.
 - **Test:** Playwright multi-user DM flows; reaction, reply flows; WebSocket
@@ -98,6 +100,8 @@ maintainer review before the next one starts.
   invites, join by address, roles, channel overrides, the full permission
   list in one module, `docs/permissions.md` with a worked example.
 - Channel audiences → MLS groups; `READ_HISTORY_BEFORE_JOIN` history bundles.
+- Per-server attachment limit and "compress media by default" setting
+  (ADR 0014).
 - Threads (follow/unfollow), custom emoji.
 - **Test:** exhaustive table-driven and property tests for permission
   resolution; Playwright permission-denial paths and thread flows; E2E

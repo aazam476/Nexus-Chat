@@ -68,11 +68,11 @@ flowchart TB
 
 ### 3.1 What maps to a group
 
-| Conversation   | MLS group                                                                                 |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| DM             | One group containing all devices of both users                                            |
-| Group DM       | One group containing all devices of all members                                           |
-| Server channel | One group per **audience**: the set of members who hold `VIEW_CHANNEL` on it **[REVIEW]** |
+| Conversation   | MLS group                                                                               |
+| -------------- | --------------------------------------------------------------------------------------- |
+| DM             | One group containing all devices of both users                                          |
+| Group DM       | One group containing all devices of all members                                         |
+| Server channel | One group per **audience**: the set of members who hold `VIEW_CHANNEL` on it (approved) |
 
 A large server with 40 channels, 35 of them visible to `@everyone`, gets one
 group for those 35 plus one per distinct restricted audience, instead of 40
@@ -235,13 +235,20 @@ members' own new devices and search.
 - A random 256-bit key per file, and a separate one per thumbnail.
 - **Files up to 64 MiB:** one-shot AES-256-GCM through WebCrypto with a
   random 96-bit nonce. This covers the default 25 MB limit.
-- **Larger files** (only if the admin raises the limit) can't be held in
-  memory on phones, so they need a streaming AEAD built on AES-256-GCM. We use
-  Tink's published `AES256_GCM_HKDF_1MB` streaming format (Apache-2.0
-  specification, with test vectors). Segment keys and nonces follow that spec
-  exactly, and CI checks our output against Tink's vectors. No other chunking
-  scheme is allowed. **[REVIEW]** The alternative is to cap attachments at
-  64 MiB and drop the streaming format entirely.
+- **Larger files** (approved; allowed whenever the limits below permit)
+  can't be held in memory on phones, so they need a streaming AEAD built on
+  AES-256-GCM. We use Tink's published `AES256_GCM_HKDF_1MB` streaming format
+  (Apache-2.0 specification, with test vectors). Segment keys and nonces
+  follow that spec exactly, and CI checks our output against Tink's vectors.
+  No other chunking scheme is allowed.
+- **Size limits** ([ADR 0014](adr/0014-attachment-limits-and-compression.md)):
+  the instance admin sets the instance maximum (default 25 MB). Each server
+  owner may set a lower limit for their server. DMs and group DMs use the
+  instance maximum. The server enforces limits on ciphertext size, which is
+  all it can see.
+- **Optional lossy compression** happens on the sender's device before
+  encryption, because nothing else ever sees the plaintext. Details and
+  defaults are in ADR 0014.
 - The key, nonce prefix, ciphertext SHA-256, MIME type, name, size,
   dimensions and thumbnail reference travel inside the message plaintext.
 - Custom emoji and server icons are public assets and are **not** encrypted.

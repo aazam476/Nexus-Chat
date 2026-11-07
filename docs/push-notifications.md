@@ -15,7 +15,7 @@ none to give.
 | Web                | Web Push (VAPID, per instance)                                                                                                                                            | Same: no relay needed                      |
 | Desktop (Electron) | The app's own WebSocket while it runs (including minimized to the tray), shown as native OS notifications. macOS (MAS build) can also use APNs through the official relay | Same WebSocket approach; needs no relay    |
 
-**Spec deviation [REVIEW]:** spec §4.10 lists Web Push for desktop, but
+**Spec deviation (approved):** spec §4.10 lists Web Push for desktop, but
 Electron does not implement the browser Push API, so Web Push can't wake a
 closed Electron app. The design above notifies while the app runs, which
 covers the usual tray-resident desktop use. Notifying while the app is fully
