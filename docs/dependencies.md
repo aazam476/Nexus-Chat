@@ -11,9 +11,25 @@ Dependabot proposes updates weekly.
 | `github.com/jackc/pgx/v5`     | v5.12.0 | MIT     | PostgreSQL driver and connection pool required by the spec; fastest maintained Go driver |
 | `github.com/pressly/goose/v3` | v3.29.0 | MIT     | Migrations embedded in the binary and applied on start, as the spec requires             |
 
+| `golang.org/x/crypto` | v0.58.0 | BSD-3-Clause | Argon2id password hashing (`argon2`), from the Go project |
+| `golang.org/x/time` | v0.16.0 | BSD-3-Clause | Token-bucket rate limiting (`rate`), from the Go project |
+| `github.com/google/uuid` | v1.6.0 | BSD-3-Clause | UUIDv7 identifiers; also the UUID type used by the generated API code |
+| `github.com/oapi-codegen/runtime` | v1.8.0 | Apache-2.0 | Small runtime support library required by the code `oapi-codegen` generates |
+
 Their own dependencies (`pgpassfile`, `pgservicefile`, `puddle`,
 `interpolate`, `go-retry`, `multierr`, `golang.org/x/sync`,
 `golang.org/x/text`) come with them and are covered by the license check.
+
+## Container images
+
+| Image                               | Pinned version                     | Why                                                               |
+| ----------------------------------- | ---------------------------------- | ----------------------------------------------------------------- |
+| `gcr.io/distroless/static-debian13` | by digest                          | Base of our images ([ADR 0015](adr/0015-container-deployment.md)) |
+| `golang`                            | 1.27.3-trixie, by digest           | Build stage only                                                  |
+| `postgres`                          | 18.6-alpine, by digest             | The database the spec requires                                    |
+| `livekit/livekit-server`            | v1.13.11, by digest                | SFU and built-in TURN (spec §2)                                   |
+| `coturn/coturn`                     | 4.18.0, by digest                  | TURN for P2P mode (`--profile p2p`)                               |
+| `caddy`, `nginx`, `traefik`         | 2.11.9, 1.30.6, v3.7.17, by digest | Release-gate tests of the reverse-proxy examples only             |
 
 ## Go: shipped in the push relay binary
 

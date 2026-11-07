@@ -42,16 +42,21 @@ maintainer review before the next one starts.
 ## M1 — Deployable instance
 
 - `infra/compose/docker-compose.yml` (server, postgres, livekit; `p2p`
-  profile with coturn), `.env.example` with the two required variables.
-- Multi-arch images, cosign signing, SBOM, Trivy.
-- Setup token, `/setup` wizard API and UI, instance settings, HTTP
-  default, certificate upload with validation and hot reload, expiry
-  warnings, `TRUSTED_PROXIES`, HTTPS warning banner.
+  profile with coturn), `.env.example` with the two required variables;
+  media server config generated from first-boot secrets.
+- Multi-arch images, cosign signing, SBOM and provenance, Trivy.
+- Setup token and setup API (first admin, instance name, domain,
+  registration mode); HTTPS from installed certificate files with
+  validation, hot reload and expiry warnings; `TRUSTED_PROXIES`.
 - `docs/self-hosting.md` with Nginx, Caddy and Traefik examples.
-- Release-gate job skeleton (clean VM → compose up → wizard smoke test),
-  on localhost and through an HTTPS proxy with a test CA.
+- Release gate: clean install from only `docker-compose.yml` and
+  `.env.example`, on localhost and through each of the three proxies.
 - **Test:** release gate passes in under 10 minutes; certificate
-  validation table tests; ZAP baseline scan against the stack.
+  validation table tests; contract tests for setup.
+- _Moved to M2_ (they need the client UI and admin sessions): the setup
+  wizard screens, certificate upload in the Admin panel, the HTTPS warning
+  banner, expiry emails, the browser-driven release gate, and the ZAP scan
+  (which needs pages to scan).
 
 ## M2 — Accounts and client shell
 
@@ -65,6 +70,9 @@ maintainer review before the next one starts.
   theme tokens, light/dark/system, i18n setup, `packages/ui` primitives,
   `motion.ts`, `break-ui` worst-case fixtures, axe checks, visual snapshots.
 - Electron shell that loads the web build (no native features yet).
+- From M1: setup wizard screens, Admin panel certificate upload with
+  expiry banner and email, the HTTPS warning on admin pages and the login
+  page, the Playwright release gate, and the ZAP baseline scan.
 - **Test:** auth at 100% branch coverage and ≥ 70% mutation; Playwright
   signup/login on web; Maestro login flows; axe zero serious/critical.
 

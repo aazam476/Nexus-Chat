@@ -216,10 +216,16 @@ flowchart TB
 flowchart LR
   User((Browser / app)) -->|443| RP[Admin's reverse proxy<br/>optional]
   RP -->|8080 HTTP| Server
-  User -->|8443 HTTPS<br/>uploaded cert| Server
-  User -->|7880 WSS via proxy or cert<br/>7881 TCP, 50000-60000 UDP<br/>3478 UDP, 5349 TLS TURN| LiveKit
+  User -->|8443 HTTPS<br/>installed cert| Server
+  User -->|7881 TCP, 7882 UDP media<br/>3478 UDP TURN| LiveKit
+  Server -->|7880 signaling, internal| LiveKit
   Server --> Postgres
 ```
+
+LiveKit signaling (port 7880) stays inside the Docker network and is
+reached through the server (from M9), so one certificate covers everything.
+Media uses LiveKit's single-port UDP mode, which avoids publishing a large
+port range.
 
 Ports, firewall rules and reverse-proxy examples are covered in
 `docs/self-hosting.md` (milestone M1).

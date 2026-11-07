@@ -19,6 +19,7 @@ consequences. "Proposed [REVIEW]" means it is waiting for maintainer approval.
 | [0012](0012-websocket-and-realtime-state.md)      | WebSocket library and in-memory state                | Proposed          |
 | [0013](0013-device-storage.md)                    | Encrypted storage on devices                         | Proposed          |
 | [0014](0014-attachment-limits-and-compression.md) | Attachment size limits and lossy compression         | Accepted          |
+| [0015](0015-container-deployment.md)              | Container images and deployment layout               | Accepted          |
 
 New records use the next number and the same headings: Context, Options,
 Decision, Consequences.
