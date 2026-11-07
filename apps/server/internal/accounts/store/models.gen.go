@@ -16,13 +16,26 @@ type InstanceSetting struct {
 	UpdatedAt time.Time
 }
 
+type Session struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	TokenHash  []byte
+	DeviceName string
+	UserAgent  string
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time
+}
+
 type User struct {
-	ID              uuid.UUID
-	Username        string
-	DisplayName     string
-	Email           string
-	EmailVerifiedAt *time.Time
-	PasswordHash    *string
-	IsInstanceAdmin bool
-	CreatedAt       time.Time
+	ID                uuid.UUID
+	Username          string
+	DisplayName       string
+	Email             string
+	EmailVerifiedAt   *time.Time
+	PasswordHash      *string
+	IsInstanceAdmin   bool
+	CreatedAt         time.Time
+	FailedLoginCount  int32
+	LoginBlockedUntil *time.Time
 }

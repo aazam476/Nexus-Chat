@@ -23,8 +23,53 @@ func (q *Queries) CountInstanceAdmins(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.IsInstanceAdmin,
+		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
+	)
+	return i, err
+}
+
+const getUserByLogin = `-- name: GetUserByLogin :one
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE username = lower($1) OR email = lower($1)
+`
+
+// Finds an account by username or email; both are stored in lower case.
+func (q *Queries) GetUserByLogin(ctx context.Context, login string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByLogin, login)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.IsInstanceAdmin,
+		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
+	)
+	return i, err
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at FROM users WHERE username = $1
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE username = $1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -39,6 +84,8 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.PasswordHash,
 		&i.IsInstanceAdmin,
 		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
 	)
 	return i, err
 }
@@ -70,5 +117,42 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 		arg.IsInstanceAdmin,
 		arg.CreatedAt,
 	)
+	return err
+}
+
+const recordFailedLogin = `-- name: RecordFailedLogin :exec
+UPDATE users SET failed_login_count = failed_login_count + 1, login_blocked_until = $2 WHERE id = $1
+`
+
+type RecordFailedLoginParams struct {
+	ID                uuid.UUID
+	LoginBlockedUntil *time.Time
+}
+
+func (q *Queries) RecordFailedLogin(ctx context.Context, arg RecordFailedLoginParams) error {
+	_, err := q.db.Exec(ctx, recordFailedLogin, arg.ID, arg.LoginBlockedUntil)
+	return err
+}
+
+const resetFailedLogins = `-- name: ResetFailedLogins :exec
+UPDATE users SET failed_login_count = 0, login_blocked_until = NULL WHERE id = $1
+`
+
+func (q *Queries) ResetFailedLogins(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, resetFailedLogins, id)
+	return err
+}
+
+const updatePasswordHash = `-- name: UpdatePasswordHash :exec
+UPDATE users SET password_hash = $2 WHERE id = $1
+`
+
+type UpdatePasswordHashParams struct {
+	ID           uuid.UUID
+	PasswordHash *string
+}
+
+func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
+	_, err := q.db.Exec(ctx, updatePasswordHash, arg.ID, arg.PasswordHash)
 	return err
 }

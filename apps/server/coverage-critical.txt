@@ -1,1 +1,4 @@
 ./internal/auth/password
+./internal/auth/session
+./internal/auth/login
+./internal/auth

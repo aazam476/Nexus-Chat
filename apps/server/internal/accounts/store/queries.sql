@@ -7,3 +7,19 @@ SELECT * FROM users WHERE username = $1;
 
 -- name: CountInstanceAdmins :one
 SELECT count(*) FROM users WHERE is_instance_admin;
+
+-- name: GetUserByLogin :one
+-- Finds an account by username or email; both are stored in lower case.
+SELECT * FROM users WHERE username = lower(sqlc.arg(login)) OR email = lower(sqlc.arg(login));
+
+-- name: RecordFailedLogin :exec
+UPDATE users SET failed_login_count = failed_login_count + 1, login_blocked_until = $2 WHERE id = $1;
+
+-- name: ResetFailedLogins :exec
+UPDATE users SET failed_login_count = 0, login_blocked_until = NULL WHERE id = $1;
+
+-- name: UpdatePasswordHash :exec
+UPDATE users SET password_hash = $2 WHERE id = $1;
+
+-- name: GetUserByID :one
+SELECT * FROM users WHERE id = $1;
