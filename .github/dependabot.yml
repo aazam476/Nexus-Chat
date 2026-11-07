@@ -11,6 +11,11 @@ updates:
     directory: /
     schedule: { interval: weekly }
     versioning-strategy: increase
+    ignore:
+      # TypeScript 7 lacks the API typescript-eslint and ts-jest need
+      # (docs/dependencies.md). Remove once both support it.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       javascript: { patterns: ["*"] }
   - package-ecosystem: github-actions
