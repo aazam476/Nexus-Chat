@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["jest"],
+    "noEmit": true
+  },
+  "include": ["src", "openapi-ts.config.ts", "jest.config.ts"]
+}
