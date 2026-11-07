@@ -1,0 +1,9 @@
+{
+  "name": "license-check-fixture",
+  "version": "1.0.0",
+  "description": "Fixture for CI: the license check must fail on this package because its dependency is GPL-3.0.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "gpl-package": "1.0.0"
+  }
+}

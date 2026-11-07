@@ -1,0 +1,18 @@
+# Keeps dependencies on their latest versions (spec §0.3). Updates arrive as
+# pull requests; CI must pass before they are merged.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories: [/apps/server, /apps/push-relay]
+    schedule: { interval: weekly }
+    groups:
+      go: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    versioning-strategy: increase
+    groups:
+      javascript: { patterns: ["*"] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

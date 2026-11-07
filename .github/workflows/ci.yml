@@ -1,0 +1,109 @@
+# Continuous integration. Every check that would otherwise live in a git
+# hook (format, lint, tests) runs here, and every job must pass on main.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOTOOLCHAIN: local
+  GOLANGCI_LINT_VERSION: v2.15.0
+  GOBCO_VERSION: v1.3.4
+  GO_LICENSES_VERSION: v2.0.1
+  GOVULNCHECK_VERSION: v1.9.0
+
+jobs:
+  go:
+    name: Go (${{ matrix.module }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [apps/server, apps/push-relay]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - name: Install Go tools
+        run: |
+          go install github.com/rillig/gobco@${GOBCO_VERSION}
+          go install github.com/google/go-licenses/v2@${GO_LICENSES_VERSION}
+          go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}
+      - name: Generated code is up to date
+        working-directory: ${{ matrix.module }}
+        run: |
+          go generate ./...
+          git diff --exit-code -- . || { echo "Run 'go generate ./...' and commit the result."; exit 1; }
+      - name: Lint and format
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: ${{ matrix.module }}
+      - name: Tests with race detector and coverage gates
+        # Database tests start PostgreSQL with Testcontainers (Docker is
+        # available on GitHub-hosted Ubuntu runners).
+        run: scripts/go-coverage.sh ${{ matrix.module }}
+      - name: License check
+        run: scripts/check-licenses.sh go ${{ matrix.module }}
+      - name: Vulnerability scan
+        working-directory: ${{ matrix.module }}
+        run: govulncheck ./...
+
+  javascript:
+    name: TypeScript
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generated code is up to date
+        run: |
+          pnpm generate
+          git diff --exit-code || { echo "Run 'pnpm generate' and commit the result."; exit 1; }
+      - name: Lint and format
+        run: pnpm lint
+      - name: Type check
+        run: pnpm typecheck
+      - name: Tests with coverage gates
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: License check
+        run: PATH="$PWD/node_modules/.bin:$PATH" scripts/check-licenses.sh js .
+      - name: License check rejects GPL (self-test)
+        run: |
+          if PATH="$PWD/node_modules/.bin:$PATH" scripts/check-licenses.sh js scripts/license-fixtures/gpl-dependency; then
+            echo "The license check accepted a GPL dependency; it is broken."
+            exit 1
+          fi
+      - name: Vulnerability scan
+        run: pnpm audit --audit-level high
+
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # scan the full history, not just the last commit
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/server/go.mod
+          cache: false
+      - run: go install github.com/zricethezav/gitleaks/v8@v8.30.1
+      - run: gitleaks git --redact --verbose .
