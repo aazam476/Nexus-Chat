@@ -1,0 +1,8 @@
+# Reverse proxy used by the release gate's HTTPS run. It is the same setup
+# as the Caddy example in docs/self-hosting.md, except that "tls internal"
+# makes Caddy issue a certificate from its own test CA instead of Let's
+# Encrypt (the CI machine has no public domain).
+nexus.test {
+	tls internal
+	reverse_proxy server:8080
+}

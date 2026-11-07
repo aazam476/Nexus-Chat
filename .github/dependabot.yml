@@ -21,3 +21,15 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directories: [/infra/docker]
+    schedule: { interval: weekly }
+  - package-ecosystem: docker-compose
+    directories:
+      [
+        /infra/compose,
+        /scripts/release-gate/caddy,
+        /scripts/release-gate/nginx,
+        /scripts/release-gate/traefik,
+      ]
+    schedule: { interval: weekly }

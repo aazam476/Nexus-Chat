@@ -1,0 +1,12 @@
+# Adds a Caddy reverse proxy in front of the instance for the release gate's
+# HTTPS run. Used together with the normal docker-compose.yml.
+services:
+  proxy:
+    image: caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro

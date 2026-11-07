@@ -20,6 +20,10 @@ env:
   GOBCO_VERSION: v1.3.4
   GO_LICENSES_VERSION: v2.0.1
   GOVULNCHECK_VERSION: v1.9.0
+  TRIVY_VERSION: 0.76.2
+  # SHA-256 of trivy_0.76.2_Linux-64bit.tar.gz from the official release.
+  # Pinned here so a replaced download cannot run in CI.
+  TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
 
 jobs:
   go:
@@ -93,6 +97,46 @@ jobs:
           fi
       - name: Vulnerability scan
         run: pnpm audit --audit-level high
+
+  images:
+    name: Images and release gate
+    runs-on: ubuntu-24.04
+    needs: [go]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build server image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/docker/server.Dockerfile
+          load: true
+          tags: ghcr.io/aazam476/nexus-chat-server:ci
+          cache-from: type=gha,scope=server
+          cache-to: type=gha,scope=server,mode=max
+      - name: Build push relay image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infra/docker/push-relay.Dockerfile
+          load: true
+          tags: ghcr.io/aazam476/nexus-chat-push-relay:ci
+          cache-from: type=gha,scope=push-relay
+          cache-to: type=gha,scope=push-relay,mode=max
+      - name: Install Trivy (checksum verified)
+        run: scripts/install-trivy.sh "$TRIVY_VERSION" "$TRIVY_SHA256"
+      - name: Scan images (fail on critical vulnerabilities)
+        run: |
+          for image in nexus-chat-server nexus-chat-push-relay; do
+            trivy image --exit-code 1 --severity CRITICAL --no-progress "ghcr.io/aazam476/$image:ci"
+          done
+      - name: Release gate over localhost
+        run: scripts/release-gate.sh plain ci
+      - name: Release gate through HTTPS reverse proxies
+        run: |
+          for proxy in caddy nginx traefik; do
+            scripts/release-gate.sh "$proxy" ci
+          done
 
   secrets:
     name: Secret scanning

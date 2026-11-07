@@ -1,0 +1,18 @@
+# Traefik routing for Nexus Chat, as in docs/self-hosting.md. Traefik
+# forwards WebSocket upgrades and sets X-Forwarded-For/-Proto by itself.
+http:
+  routers:
+    nexus-chat:
+      rule: "Host(`nexus.test`)"
+      entryPoints: [websecure]
+      service: nexus-chat
+      tls: {}
+  services:
+    nexus-chat:
+      loadBalancer:
+        servers:
+          - url: "http://server:8080"
+tls:
+  certificates:
+    - certFile: /certs/cert.pem
+      keyFile: /certs/key.pem
