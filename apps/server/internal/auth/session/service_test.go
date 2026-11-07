@@ -60,7 +60,7 @@ func (fake *fakeStore) ListSessionsForUser(_ context.Context, arg store.ListSess
 	}
 	var result []store.Session
 	for _, session := range fake.sessions {
-		if session.UserID == arg.UserID && session.ExpiresAt.After(arg.ExpiresAt) {
+		if session.UserID == arg.UserID && session.ExpiresAt.After(arg.Now) {
 			result = append(result, session)
 		}
 	}

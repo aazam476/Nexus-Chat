@@ -23,6 +23,28 @@ func (q *Queries) CountInstanceAdmins(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE email = lower($1)
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.IsInstanceAdmin,
+		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
+	)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE id = $1
 `
@@ -120,6 +142,20 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 	return err
 }
 
+const markEmailVerified = `-- name: MarkEmailVerified :exec
+UPDATE users SET email_verified_at = $2 WHERE id = $1 AND email_verified_at IS NULL
+`
+
+type MarkEmailVerifiedParams struct {
+	ID              uuid.UUID
+	EmailVerifiedAt *time.Time
+}
+
+func (q *Queries) MarkEmailVerified(ctx context.Context, arg MarkEmailVerifiedParams) error {
+	_, err := q.db.Exec(ctx, markEmailVerified, arg.ID, arg.EmailVerifiedAt)
+	return err
+}
+
 const recordFailedLogin = `-- name: RecordFailedLogin :exec
 UPDATE users SET failed_login_count = failed_login_count + 1, login_blocked_until = $2 WHERE id = $1
 `
@@ -140,6 +176,21 @@ UPDATE users SET failed_login_count = 0, login_blocked_until = NULL WHERE id = $
 
 func (q *Queries) ResetFailedLogins(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, resetFailedLogins, id)
+	return err
+}
+
+const setPassword = `-- name: SetPassword :exec
+UPDATE users SET password_hash = $2, failed_login_count = 0, login_blocked_until = NULL WHERE id = $1
+`
+
+type SetPasswordParams struct {
+	ID           uuid.UUID
+	PasswordHash *string
+}
+
+// Sets a new password and clears any login lockout.
+func (q *Queries) SetPassword(ctx context.Context, arg SetPasswordParams) error {
+	_, err := q.db.Exec(ctx, setPassword, arg.ID, arg.PasswordHash)
 	return err
 }
 

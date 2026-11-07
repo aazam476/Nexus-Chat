@@ -41,6 +41,15 @@ func (q *Queries) DeleteSession(ctx context.Context, arg DeleteSessionParams) (i
 	return result.RowsAffected(), nil
 }
 
+const deleteSessionsForUser = `-- name: DeleteSessionsForUser :exec
+DELETE FROM sessions WHERE user_id = $1
+`
+
+func (q *Queries) DeleteSessionsForUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteSessionsForUser, userID)
+	return err
+}
+
 const getSessionByTokenHash = `-- name: GetSessionByTokenHash :one
 SELECT id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at FROM sessions WHERE token_hash = $1
 `
@@ -96,12 +105,12 @@ SELECT id, user_id, token_hash, device_name, user_agent, created_at, last_seen_a
 `
 
 type ListSessionsForUserParams struct {
-	UserID    uuid.UUID
-	ExpiresAt time.Time
+	UserID uuid.UUID
+	Now    time.Time
 }
 
 func (q *Queries) ListSessionsForUser(ctx context.Context, arg ListSessionsForUserParams) ([]Session, error) {
-	rows, err := q.db.Query(ctx, listSessionsForUser, arg.UserID, arg.ExpiresAt)
+	rows, err := q.db.Query(ctx, listSessionsForUser, arg.UserID, arg.Now)
 	if err != nil {
 		return nil, err
 	}

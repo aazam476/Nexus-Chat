@@ -10,10 +10,13 @@ SELECT * FROM sessions WHERE token_hash = $1;
 UPDATE sessions SET last_seen_at = $2, expires_at = $3 WHERE id = $1;
 
 -- name: ListSessionsForUser :many
-SELECT * FROM sessions WHERE user_id = $1 AND expires_at > $2 ORDER BY last_seen_at DESC;
+SELECT * FROM sessions WHERE user_id = $1 AND expires_at > sqlc.arg(now) ORDER BY last_seen_at DESC;
 
 -- name: DeleteSession :execrows
 DELETE FROM sessions WHERE id = $1 AND user_id = $2;
 
 -- name: DeleteExpiredSessions :execrows
 DELETE FROM sessions WHERE expires_at <= $1;
+
+-- name: DeleteSessionsForUser :exec
+DELETE FROM sessions WHERE user_id = $1;

@@ -41,3 +41,17 @@ sql:
       go:
         <<: *go-options
         out: internal/auth/session/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/accounts/tokens/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/accounts/tokens/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/registration/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/registration/store

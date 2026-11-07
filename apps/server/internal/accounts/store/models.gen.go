@@ -8,7 +8,27 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AccountToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Purpose   string
+	TokenHash []byte
+	CreatedAt time.Time
+	ExpiresAt time.Time
+}
+
+type InstanceInvite struct {
+	ID        uuid.UUID
+	CodeHash  []byte
+	CreatedBy pgtype.UUID
+	MaxUses   *int32
+	Uses      int32
+	ExpiresAt *time.Time
+	CreatedAt time.Time
+}
 
 type InstanceSetting struct {
 	Key       string

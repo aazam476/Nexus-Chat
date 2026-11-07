@@ -110,7 +110,7 @@ func (service *Service) Authenticate(ctx context.Context, token string) (store.S
 
 // List returns the user's active sessions, most recently used first.
 func (service *Service) List(ctx context.Context, userID uuid.UUID) ([]store.Session, error) {
-	sessions, err := service.store.ListSessionsForUser(ctx, store.ListSessionsForUserParams{UserID: userID, ExpiresAt: service.clock.Now()})
+	sessions, err := service.store.ListSessionsForUser(ctx, store.ListSessionsForUserParams{UserID: userID, Now: service.clock.Now()})
 	if err != nil {
 		return nil, fmt.Errorf("listing sessions: %w", err)
 	}
