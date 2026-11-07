@@ -54,6 +54,7 @@ func startServer(t *testing.T) runningServer {
 		"DATABASE_URL=" + databasetest.NewDatabaseURL(t),
 		"DATA_DIR=" + t.TempDir(),
 		"HTTP_PORT=" + strconv.Itoa(port),
+		"HTTPS_PORT=" + strconv.Itoa(freePort(t)),
 	}
 	output := &lockedBuffer{}
 	command.Stdout, command.Stderr = output, output

@@ -57,12 +57,32 @@ func run(ctx context.Context, getenv config.Getenv, logOutput io.Writer) error {
 	}
 	defer app.close()
 
-	address := net.JoinHostPort("", strconv.Itoa(configuration.HTTPPort))
-	var listenConfig net.ListenConfig
-	listener, err := listenConfig.Listen(ctx, "tcp", address)
+	sockets, err := listen(ctx, configuration)
 	if err != nil {
-		return fmt.Errorf("listening on %s: %w", address, err)
+		return err
 	}
-	logger.InfoContext(ctx, "serving HTTP", slog.String("address", listener.Addr().String()))
-	return app.serve(ctx, listener)
+	logger.InfoContext(ctx, "serving",
+		slog.String("http", sockets.plain.Addr().String()),
+		slog.String("https", sockets.secure.Addr().String()),
+		slog.Bool("https_active", app.certificates.Active()))
+	return app.serve(ctx, sockets)
+}
+
+// listen opens the HTTP and HTTPS ports. The HTTPS port is always open; it
+// completes handshakes only once a valid certificate is installed, which
+// is what lets an admin enable HTTPS without restarting.
+func listen(ctx context.Context, configuration config.Config) (listeners, error) {
+	var listenConfig net.ListenConfig
+	plainAddress := net.JoinHostPort("", strconv.Itoa(configuration.HTTPPort))
+	plain, err := listenConfig.Listen(ctx, "tcp", plainAddress)
+	if err != nil {
+		return listeners{}, fmt.Errorf("listening on %s: %w", plainAddress, err)
+	}
+	secureAddress := net.JoinHostPort("", strconv.Itoa(configuration.HTTPSPort))
+	secure, err := listenConfig.Listen(ctx, "tcp", secureAddress)
+	if err != nil {
+		_ = plain.Close() // already failing; the listen error is the one to report
+		return listeners{}, fmt.Errorf("listening on %s: %w", secureAddress, err)
+	}
+	return listeners{plain: plain, secure: secure}, nil
 }

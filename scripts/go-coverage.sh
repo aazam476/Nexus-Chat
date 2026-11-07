@@ -7,7 +7,8 @@
 #     coverage-critical.txt (auth, permissions, crypto), if that file exists
 #
 # Generated code (*.gen.go), sqlc store packages (generated only) and test
-# helpers are excluded: they are either not ours or not shipped.
+# helper packages (named like databasetest) are excluded: they are either
+# not ours or not shipped.
 #
 # Usage: scripts/go-coverage.sh apps/server
 set -euo pipefail
@@ -20,14 +21,14 @@ cd "$module_directory"
 echo "== Tests with race detector and statement coverage"
 go test -race -count=1 -covermode=atomic -coverpkg=./... -coverprofile=coverage.raw.out ./...
 # Keep the mode line, drop generated files and test helpers.
-grep -v -E '\.gen\.go:|/databasetest/' coverage.raw.out > coverage.out
+grep -v -E '\.gen\.go:|/[a-z]+test/' coverage.raw.out > coverage.out
 statement_total=$(go tool cover -func=coverage.out | awk '/^total:/ { sub("%", "", $3); print $3 }')
 echo "Statement coverage: ${statement_total}% (minimum ${minimum_statement_coverage}%)"
 
 echo "== Branch coverage"
 # Packages that contain only generated code or test helpers are skipped.
 # gobco wants relative directories such as ./internal/config.
-packages=$(go list -f '{{.Dir}}' ./... | sed "s|^$PWD|.|" | grep -v -E '/internal/api$|/store$|/databasetest$|/test/')
+packages=$(go list -f '{{.Dir}}' ./... | sed "s|^$PWD|.|" | grep -v -E '/internal/api$|/store$|/[a-z]+test$|/test/')
 covered_total=0
 branches_total=0
 for package in $packages; do

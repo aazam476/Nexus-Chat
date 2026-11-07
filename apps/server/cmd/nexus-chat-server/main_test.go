@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/databasetest"
+	"github.com/aazam476/nexus-chat/apps/server/internal/tlsconfig"
 )
 
 // lockedBuffer is a bytes.Buffer safe to read while the server writes logs
@@ -61,6 +63,7 @@ func TestRunServesHealthAndShutsDownGracefully(t *testing.T) {
 		"DATABASE_URL": databasetest.NewDatabaseURL(t),
 		"DATA_DIR":     dataDirectory,
 		"HTTP_PORT":    strconv.Itoa(port),
+		"HTTPS_PORT":   strconv.Itoa(freePort(t)),
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	logs := &lockedBuffer{}
@@ -130,6 +133,7 @@ func TestRunFailsWhenPortIsTaken(t *testing.T) {
 		"DATABASE_URL": databasetest.NewDatabaseURL(t),
 		"DATA_DIR":     t.TempDir(),
 		"HTTP_PORT":    strconv.Itoa(occupied.Addr().(*net.TCPAddr).Port),
+		"HTTPS_PORT":   strconv.Itoa(freePort(t)),
 	})
 
 	err = run(context.Background(), getenv, &lockedBuffer{})
@@ -143,11 +147,13 @@ func TestServeReturnsListenerErrors(t *testing.T) {
 	app, err := newApplication(ctx, testConfiguration(t), discardLogger())
 	require.NoError(t, err)
 	defer app.close()
-	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	closed, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	require.NoError(t, listener.Close()) // Serve fails immediately on a closed listener.
+	require.NoError(t, closed.Close()) // Serve fails immediately on a closed listener.
+	working, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
 
-	err = app.serve(ctx, listener)
+	err = app.serve(ctx, listeners{plain: closed, secure: working})
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "serving HTTP")
@@ -188,6 +194,7 @@ func TestRunMainStopsOnSignal(t *testing.T) {
 		"DATABASE_URL": databasetest.NewDatabaseURL(t),
 		"DATA_DIR":     t.TempDir(),
 		"HTTP_PORT":    strconv.Itoa(port),
+		"HTTPS_PORT":   strconv.Itoa(freePort(t)),
 	})
 	result := make(chan int, 1)
 	go func() { result <- runMain(getenv, io.Discard, io.Discard) }()
@@ -203,4 +210,39 @@ func TestRunMainStopsOnSignal(t *testing.T) {
 	case <-time.After(shutdownTimeout + 2*time.Second):
 		t.Fatal("server did not stop on SIGTERM")
 	}
+}
+
+func TestRunFailsWhenHTTPSPortIsTaken(t *testing.T) {
+	occupied, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = occupied.Close() }()
+	getenv := testEnvironment(map[string]string{
+		"ADMIN_EMAIL":  "admin@example.com",
+		"DATABASE_URL": databasetest.NewDatabaseURL(t),
+		"DATA_DIR":     t.TempDir(),
+		"HTTP_PORT":    strconv.Itoa(freePort(t)),
+		"HTTPS_PORT":   strconv.Itoa(occupied.Addr().(*net.TCPAddr).Port),
+	})
+
+	err = run(context.Background(), getenv, &lockedBuffer{})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "listening on")
+}
+
+func TestBadCertificateAtStartupKeepsHTTPRunning(t *testing.T) {
+	configuration := testConfiguration(t)
+	configuration.Domain = "chat.example.com"
+	tlsDirectory := filepath.Join(configuration.DataDirectory, "tls")
+	require.NoError(t, os.MkdirAll(tlsDirectory, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(tlsDirectory, tlsconfig.CertificateFile), []byte("bad"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(tlsDirectory, tlsconfig.KeyFile), []byte("bad"), 0o600))
+	logs := &lockedBuffer{}
+
+	app, err := newApplication(t.Context(), configuration, slog.New(slog.NewJSONHandler(logs, nil)))
+
+	require.NoError(t, err)
+	defer app.close()
+	assert.False(t, app.certificates.Active())
+	assert.Contains(t, logs.String(), "HTTPS is off")
 }
