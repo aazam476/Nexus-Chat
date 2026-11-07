@@ -19,9 +19,13 @@ import (
 	"syscall"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/privileges"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		os.Exit(runHealthcheck(context.Background(), os.Getenv, os.Stderr))
+	}
 	os.Exit(runMain(os.Getenv, os.Stdout, os.Stderr))
 }
 
@@ -50,6 +54,9 @@ func run(ctx context.Context, getenv config.Getenv, logOutput io.Writer) error {
 		return err
 	}
 	logger := slog.New(slog.NewJSONHandler(logOutput, &slog.HandlerOptions{Level: configuration.LogLevel}))
+	if err := dropPrivileges(getenv, configuration.DataDirectory); err != nil {
+		return err
+	}
 
 	app, err := newApplication(ctx, configuration, logger)
 	if err != nil {
@@ -66,6 +73,17 @@ func run(ctx context.Context, getenv config.Getenv, logOutput io.Writer) error {
 		slog.String("https", sockets.secure.Addr().String()),
 		slog.Bool("https_active", app.certificates.Active()))
 	return app.serve(ctx, sockets)
+}
+
+// dropPrivileges switches from root to the user named in
+// NEXUS_DROP_PRIVILEGES, if set (the container image sets it), after taking
+// ownership of the data directory. See internal/platform/privileges.
+func dropPrivileges(getenv config.Getenv, dataDirectory string) error {
+	target, enabled, err := privileges.ParseTarget(getenv(privileges.EnvironmentVariable))
+	if err != nil || !enabled {
+		return err
+	}
+	return privileges.Drop(dataDirectory, target)
 }
 
 // listen opens the HTTP and HTTPS ports. The HTTPS port is always open; it

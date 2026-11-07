@@ -66,10 +66,11 @@ linters:
       - path: _test\.go
         linters: [funlen, forcetypeassert, gochecknoglobals, wrapcheck]
       # gosec in tests: fixtures contain fake passwords (G101), loosen file
-      # permissions on purpose (G302), and start the server binary (G204).
+      # permissions on purpose (G302), start the server binary (G204), and
+      # read files they wrote into their own temporary directories (G304).
       - path: _test\.go
         linters: [gosec]
-        text: "G101|G204|G302"
+        text: "G101|G204|G302|G304"
       # The databasetest helper keeps one shared container per test binary;
       # its doc comment explains why.
       - path: internal/platform/databasetest/

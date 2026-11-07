@@ -26,6 +26,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
 	setupstore "github.com/aazam476/nexus-chat/apps/server/internal/setup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/tlsconfig"
+	"github.com/aazam476/nexus-chat/apps/server/internal/voice"
 )
 
 // shutdownTimeout is how long in-flight requests get to finish after a stop
@@ -53,6 +54,12 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 	instanceSecrets, err := secrets.LoadOrCreate(secrets.DirectoryIn(configuration.DataDirectory))
 	if err != nil {
 		return nil, fmt.Errorf("loading instance secrets: %w", err)
+	}
+	if err := voice.WriteMediaConfig(configuration.DataDirectory, voice.MediaSecrets{
+		LiveKitAPIKey: instanceSecrets.LiveKitAPIKey, LiveKitAPISecret: instanceSecrets.LiveKitAPISecret,
+		TURNSecret: instanceSecrets.TURNSecret,
+	}); err != nil {
+		return nil, fmt.Errorf("writing media server configuration: %w", err)
 	}
 	pool, err := database.Open(ctx, configuration.DatabaseURL)
 	if err != nil {
