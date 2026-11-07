@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/accounts"
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
@@ -15,27 +17,35 @@ import (
 
 // Features holds the handler of every API feature.
 type Features struct {
-	Health *health.Handler
-	Setup  *setup.Handler
+	Accounts *accounts.Handler
+	Auth     *auth.Handler
+	Health   *health.Handler
+	Setup    *setup.Handler
 }
 
 // Options configures NewHandler.
 type Options struct {
 	Logger         *slog.Logger
 	TrustedProxies config.TrustedProxies
+	// Authenticator checks the session token of protected operations.
+	Authenticator Authenticator
 }
 
 // Every feature's handler type is called Handler, and two embedded fields
 // cannot share a name. These aliases give each one its own field name.
 type (
-	healthHandler = health.Handler
-	setupHandler  = setup.Handler
+	accountsHandler = accounts.Handler
+	authHandler     = auth.Handler
+	healthHandler   = health.Handler
+	setupHandler    = setup.Handler
 )
 
 // handlers combines the feature handlers into one value that implements
 // api.StrictServerInterface. Each embedded handler supplies the methods for
 // its own operations; the compiler reports any operation nobody implements.
 type handlers struct {
+	*accountsHandler
+	*authHandler
 	*healthHandler
 	*setupHandler
 }
@@ -47,8 +57,8 @@ var _ api.StrictServerInterface = handlers{}
 func NewHandler(features Features, options Options) http.Handler {
 	errorHandlers := errorResponder{logger: options.Logger}
 	strict := api.NewStrictHandlerWithOptions(
-		handlers{healthHandler: features.Health, setupHandler: features.Setup},
-		nil,
+		handlers{accountsHandler: features.Accounts, authHandler: features.Auth, healthHandler: features.Health, setupHandler: features.Setup},
+		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
 		api.StrictHTTPServerOptions{
 			RequestErrorHandlerFunc:  errorHandlers.badRequest,
 			ResponseErrorHandlerFunc: errorHandlers.internalError,

@@ -15,7 +15,127 @@ tags:
     description: Liveness and readiness probes used by Docker and orchestrators.
   - name: setup
     description: First-run setup of a fresh instance (spec §3.5).
+  - name: auth
+    description: Logging in and out, and managing sessions (spec §4.1).
+  - name: users
+    description: User accounts and profiles.
 paths:
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      summary: Log in with a password
+      description: |
+        Checks the username (or email) and password and starts a session.
+        After repeated wrong passwords the account is locked for a short,
+        growing time; the response then has code `login_delayed` and a
+        `Retry-After` header.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The username or password is wrong (`invalid_credentials`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many attempts from this address (`rate_limited`) or for this account (`login_delayed`).
+          headers:
+            Retry-After:
+              description: Seconds to wait before trying again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      summary: Log out
+      description: Ends the session used for this request.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Logged out.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/sessions:
+    get:
+      operationId: listSessions
+      summary: List my sessions
+      description: Every device where this account is logged in, most recently used first.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      summary: Revoke a session
+      description: Logs out one of my devices.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The session has ended.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such session for this account (`session_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/users/me:
+    get:
+      operationId: getCurrentUser
+      summary: My account
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The logged-in account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/v1/setup:
     get:
       operationId: getSetupStatus
@@ -106,7 +226,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "A session token from `POST /api/v1/auth/login`, sent as `Authorization: Bearer nxs_…`."
   responses:
+    Unauthorized:
+      description: The request has no valid session token (`unauthorized`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     BadRequest:
       description: The request body is not valid JSON or has the wrong shape (`bad_request`).
       content:
@@ -216,6 +347,71 @@ components:
       type: string
       enum: [open, invite_only, closed]
       description: Who may create accounts.
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [login, password, deviceName]
+      properties:
+        login:
+          type: string
+          description: Username or email address.
+        password:
+          type: string
+        deviceName:
+          type: string
+          description: Shown in the session list, for example "Firefox on Linux". 1–64 characters.
+    LoginResult:
+      type: object
+      additionalProperties: false
+      required: [token, session, user]
+      properties:
+        token:
+          type: string
+          description: "Session token. Send it as `Authorization: Bearer <token>`. It is shown only once."
+        session:
+          $ref: "#/components/schemas/Session"
+        user:
+          $ref: "#/components/schemas/CurrentUser"
+    Session:
+      type: object
+      additionalProperties: false
+      required: [id, deviceName, createdAt, lastSeenAt, expiresAt, current]
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+          description: True for the session making this request.
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required: [id, username, displayName, email, emailVerified, isInstanceAdmin]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        emailVerified:
+          type: boolean
+        isInstanceAdmin:
+          type: boolean
     SetupResult:
       type: object
       additionalProperties: false

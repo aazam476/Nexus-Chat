@@ -13,7 +13,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/accounts"
+	accountsstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
+	sessionstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/session/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/httpserver"
@@ -46,6 +52,7 @@ type application struct {
 	server       *http.Server
 	secureServer *http.Server
 	certificates *tlsconfig.Manager
+	sessions     *session.Service
 }
 
 // newApplication prepares everything the server needs before it accepts
@@ -76,7 +83,9 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 		app.close()
 		return nil, err
 	}
-	handler := httpserver.NewHandler(features, httpserver.Options{Logger: logger, TrustedProxies: configuration.TrustedProxies})
+	handler := httpserver.NewHandler(features, httpserver.Options{
+		Logger: logger, TrustedProxies: configuration.TrustedProxies, Authenticator: app.sessions,
+	})
 	app.server = httpserver.NewServer("", handler, logger)
 	app.secureServer = httpserver.NewServer("", handler, logger)
 	app.certificates = app.newCertificateManager(configuration)
@@ -125,9 +134,17 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 		return httpserver.Features{}, err
 	}
 	healthService := health.NewService([]health.NamedChecker{{Name: "database", Checker: app.pool}})
+	accountQueries := accountsstore.New(app.pool)
+	app.sessions = session.NewService(sessionstore.New(app.pool), clock.System{})
+	logins := login.NewService(login.Dependencies{
+		Accounts: accountQueries, Hasher: hasher, Sessions: app.sessions,
+		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), clock.System{}), Clock: clock.System{},
+	})
 	return httpserver.Features{
-		Health: health.NewHandler(healthService),
-		Setup:  setup.NewHandler(setupService),
+		Accounts: accounts.NewHandler(accountQueries),
+		Auth:     auth.NewHandler(logins, app.sessions),
+		Health:   health.NewHandler(healthService),
+		Setup:    setup.NewHandler(setupService),
 	}, nil
 }
 

@@ -96,10 +96,27 @@ func loadContract(t *testing.T) routers.Router {
 // the response body.
 func (server runningServer) call(t *testing.T, method string, path string, body string, wantStatus int) []byte { //nolint:revive // test helper; a parameter object would make every call site harder to read
 	t.Helper()
+	return server.callWithHeaders(t, requestSpec{method: method, path: path, body: body}, wantStatus)
+}
+
+// requestSpec describes one request made by callWithHeaders.
+type requestSpec struct {
+	method  string
+	path    string
+	body    string
+	headers map[string]string
+}
+
+func (server runningServer) callWithHeaders(t *testing.T, spec requestSpec, wantStatus int) []byte {
+	t.Helper()
+	method, path, body := spec.method, spec.path, spec.body
 	request, err := http.NewRequestWithContext(t.Context(), method, server.baseURL+path, strings.NewReader(body))
 	require.NoError(t, err)
 	if body != "" {
 		request.Header.Set("Content-Type", "application/json")
+	}
+	for name, value := range spec.headers {
+		request.Header.Set(name, value)
 	}
 	response, err := http.DefaultClient.Do(request)
 	require.NoError(t, err)
@@ -108,7 +125,7 @@ func (server runningServer) call(t *testing.T, method string, path string, body 
 	require.NoError(t, err)
 	require.Equal(t, wantStatus, response.StatusCode, "body: %s", responseBody)
 
-	server.validate(t, validationTarget{method: method, path: path, requestBody: body, response: response, responseBody: responseBody})
+	server.validate(t, validationTarget{method: method, path: path, requestBody: body, headers: spec.headers, response: response, responseBody: responseBody})
 	return responseBody
 }
 
@@ -116,6 +133,7 @@ type validationTarget struct {
 	method       string
 	path         string
 	requestBody  string
+	headers      map[string]string
 	response     *http.Response
 	responseBody []byte
 }
@@ -128,13 +146,18 @@ func (server runningServer) validate(t *testing.T, target validationTarget) {
 	if target.requestBody != "" {
 		routeRequest.Header.Set("Content-Type", "application/json")
 	}
+	for name, value := range target.headers {
+		routeRequest.Header.Set(name, value)
+	}
 	route, pathParameters, err := server.router.FindRoute(routeRequest)
 	require.NoError(t, err, "%s %s is not in the contract", target.method, target.path)
 
 	input := &openapi3filter.RequestValidationInput{Request: routeRequest, PathParams: pathParameters, Route: route}
-	// Requests that are invalid on purpose (to test 400 handling) are not
-	// validated; their responses still are.
-	if target.response.StatusCode != http.StatusBadRequest {
+	// Requests that are invalid on purpose (malformed bodies, missing
+	// tokens) are not validated; their responses still are. Security is
+	// checked by the server itself, so the validator skips it.
+	input.Options = &openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc}
+	if target.response.StatusCode != http.StatusBadRequest && target.response.StatusCode != http.StatusUnauthorized {
 		require.NoError(t, openapi3filter.ValidateRequest(context.Background(), input))
 	}
 	require.NoError(t, openapi3filter.ValidateResponse(context.Background(), &openapi3filter.ResponseValidationInput{

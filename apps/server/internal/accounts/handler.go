@@ -1,0 +1,54 @@
+package accounts
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+
+	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/api"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
+)
+
+// userReader is the query the handler needs.
+type userReader interface {
+	GetUserByID(ctx context.Context, id uuid.UUID) (store.User, error)
+}
+
+// Handler serves the account endpoints.
+type Handler struct {
+	users userReader
+}
+
+// NewHandler returns a Handler reading accounts from users.
+func NewHandler(users userReader) *Handler {
+	return &Handler{users: users}
+}
+
+// errNoPrincipal means a protected handler ran without authentication,
+// which the session middleware makes impossible; it is a programming error.
+var errNoPrincipal = errors.New("handler requires an authenticated request")
+
+// GetCurrentUser answers GET /api/v1/users/me.
+func (handler *Handler) GetCurrentUser(ctx context.Context, _ api.GetCurrentUserRequestObject) (api.GetCurrentUserResponseObject, error) {
+	principal, ok := session.PrincipalFrom(ctx)
+	if !ok {
+		return nil, errNoPrincipal
+	}
+	user, err := handler.users.GetUserByID(ctx, principal.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("loading current user: %w", err)
+	}
+	return api.GetCurrentUser200JSONResponse(CurrentUserResponse(user)), nil
+}
+
+// CurrentUserResponse converts an account row to its API form. Only the
+// account's owner may see this (it includes the email address).
+func CurrentUserResponse(user store.User) api.CurrentUser {
+	return api.CurrentUser{
+		Id: user.ID, Username: user.Username, DisplayName: user.DisplayName, Email: user.Email,
+		EmailVerified: user.EmailVerifiedAt != nil, IsInstanceAdmin: user.IsInstanceAdmin,
+	}
+}

@@ -90,6 +90,48 @@ export type SetupInstance = {
  */
 export type RegistrationMode = 'open' | 'invite_only' | 'closed';
 
+export type LoginRequest = {
+    /**
+     * Username or email address.
+     */
+    login: string;
+    password: string;
+    /**
+     * Shown in the session list, for example "Firefox on Linux". 1–64 characters.
+     */
+    deviceName: string;
+};
+
+export type LoginResult = {
+    /**
+     * Session token. Send it as `Authorization: Bearer <token>`. It is shown only once.
+     */
+    token: string;
+    session: Session;
+    user: CurrentUser;
+};
+
+export type Session = {
+    id: string;
+    deviceName: string;
+    createdAt: string;
+    lastSeenAt: string;
+    expiresAt: string;
+    /**
+     * True for the session making this request.
+     */
+    current: boolean;
+};
+
+export type CurrentUser = {
+    id: string;
+    username: string;
+    displayName: string;
+    email: string;
+    emailVerified: boolean;
+    isInstanceAdmin: boolean;
+};
+
 export type SetupResult = {
     adminUserId: string;
 };
@@ -111,6 +153,145 @@ export type HealthCheck = {
 };
 
 export type HealthState = 'ok' | 'unavailable';
+
+export type LoginData = {
+    body: LoginRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login';
+};
+
+export type LoginErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The username or password is wrong (`invalid_credentials`).
+     */
+    401: Error;
+    /**
+     * Too many attempts from this address (`rate_limited`) or for this account (`login_delayed`).
+     */
+    429: Error;
+};
+
+export type LoginError = LoginErrors[keyof LoginErrors];
+
+export type LoginResponses = {
+    /**
+     * Logged in.
+     */
+    200: LoginResult;
+};
+
+export type LoginResponse = LoginResponses[keyof LoginResponses];
+
+export type LogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout';
+};
+
+export type LogoutErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type LogoutError = LogoutErrors[keyof LogoutErrors];
+
+export type LogoutResponses = {
+    /**
+     * Logged out.
+     */
+    204: void;
+};
+
+export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
+
+export type ListSessionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/sessions';
+};
+
+export type ListSessionsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListSessionsError = ListSessionsErrors[keyof ListSessionsErrors];
+
+export type ListSessionsResponses = {
+    /**
+     * The sessions.
+     */
+    200: Array<Session>;
+};
+
+export type ListSessionsResponse = ListSessionsResponses[keyof ListSessionsResponses];
+
+export type RevokeSessionData = {
+    body?: never;
+    path: {
+        sessionId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/sessions/{sessionId}';
+};
+
+export type RevokeSessionErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such session for this account (`session_not_found`).
+     */
+    404: Error;
+};
+
+export type RevokeSessionError = RevokeSessionErrors[keyof RevokeSessionErrors];
+
+export type RevokeSessionResponses = {
+    /**
+     * The session has ended.
+     */
+    204: void;
+};
+
+export type RevokeSessionResponse = RevokeSessionResponses[keyof RevokeSessionResponses];
+
+export type GetCurrentUserData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me';
+};
+
+export type GetCurrentUserErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type GetCurrentUserError = GetCurrentUserErrors[keyof GetCurrentUserErrors];
+
+export type GetCurrentUserResponses = {
+    /**
+     * The logged-in account.
+     */
+    200: CurrentUser;
+};
+
+export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
 
 export type GetSetupStatusData = {
     body?: never;
