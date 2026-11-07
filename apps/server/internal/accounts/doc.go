@@ -6,5 +6,5 @@
 //     edits an account
 //   - store/: SQL queries compiled by sqlc
 //
-// Start reading at [ValidateNewAccount].
+// Start reading at [Validator.ValidateNewAccount].
 package accounts

@@ -30,22 +30,47 @@ type NewAccount struct {
 	Password    string
 }
 
+// PasswordChecker rejects known-bad passwords; *breached.List satisfies it.
+type PasswordChecker interface {
+	Check(password string) error
+}
+
+// Validator checks new account data.
+type Validator struct {
+	breached PasswordChecker
+}
+
+// NewValidator returns a Validator that also rejects passwords found by
+// breached.
+func NewValidator(breached PasswordChecker) *Validator {
+	return &Validator{breached: breached}
+}
+
 // ValidateNewAccount checks every field and returns the account with its
 // email normalized to lower case. On failure the error is a
 // *validation.Error naming each bad field.
-func ValidateNewAccount(account NewAccount) (NewAccount, error) {
+func (validator *Validator) ValidateNewAccount(account NewAccount) (NewAccount, error) {
 	var problems validation.Errors
 	problems.Add("username", validateUsername(account.Username))
 	problems.Add("displayName", validateDisplayName(account.DisplayName))
 	email, err := normalizeEmail(account.Email)
 	problems.Add("email", err)
-	problems.Add("password", password.CheckPolicy(account.Password))
+	problems.Add("password", validator.checkPassword(account.Password))
 
 	if err := problems.Err(); err != nil {
 		return NewAccount{}, err
 	}
 	account.Email = email
 	return account, nil
+}
+
+// checkPassword applies the length rules first, so the breach list is only
+// searched for passwords that are otherwise acceptable.
+func (validator *Validator) checkPassword(plain string) error {
+	if err := password.CheckPolicy(plain); err != nil {
+		return err
+	}
+	return validator.breached.Check(plain)
 }
 
 func validateUsername(username string) error {

@@ -20,6 +20,12 @@ Their own dependencies (`pgpassfile`, `pgservicefile`, `puddle`,
 `interpolate`, `go-retry`, `multierr`, `golang.org/x/sync`,
 `golang.org/x/text`) come with them and are covered by the license check.
 
+## Bundled data
+
+| Data                                                                                  | License | Why                                                                                                        |
+| ------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| Common breached passwords (from SecLists `Pwdb_top-1000000.txt`, 10+ characters only) | MIT     | Breached-password check required by spec §4.1; see `apps/server/internal/auth/password/breached/README.md` |
+
 ## Container images
 
 | Image                               | Pinned version                     | Why                                                               |

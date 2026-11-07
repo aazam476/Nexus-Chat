@@ -18,6 +18,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password/breached"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
 	sessionstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/session/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
@@ -122,8 +123,14 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 	if err != nil {
 		return httpserver.Features{}, err
 	}
+	breachedPasswords, err := breached.Load()
+	if err != nil {
+		return httpserver.Features{}, err
+	}
+	validator := accounts.NewValidator(breachedPasswords)
 	setupService := setup.NewService(setup.Dependencies{
 		Store:             setupstore.New(app.pool),
+		Validator:         validator,
 		Hasher:            hasher,
 		Limiter:           ratelimit.New(ratelimit.PerMinute(10, 5), clock.System{}),
 		Clock:             clock.System{},

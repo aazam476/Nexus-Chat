@@ -58,7 +58,7 @@ func started(t *testing.T, fake *fakeStore, change func(*Dependencies)) (*Servic
 	t.Helper()
 	var logs bytes.Buffer
 	dependencies := Dependencies{
-		Store: fake, Hasher: fakeHasher{}, Limiter: fakeLimiter{},
+		Store: fake, Validator: accounts.NewValidator(noBreaches{}), Hasher: fakeHasher{}, Limiter: fakeLimiter{},
 		Clock: clock.Fixed{Time: testTime}, Logger: slog.New(slog.NewTextHandler(&logs, nil)),
 	}
 	if change != nil {
@@ -84,5 +84,10 @@ func validRequest(token string) Request {
 }
 
 var errBoom = errors.New("boom")
+
+// noBreaches accepts every password.
+type noBreaches struct{}
+
+func (noBreaches) Check(string) error { return nil }
 
 func errAlreadyCompleteFromStore() error { return store.ErrAlreadyComplete }

@@ -51,13 +51,19 @@ type attemptLimiter interface {
 	Allow(key string) bool
 }
 
+// accountValidator is satisfied by *accounts.Validator.
+type accountValidator interface {
+	ValidateNewAccount(account accounts.NewAccount) (accounts.NewAccount, error)
+}
+
 // Dependencies are the collaborators a Service needs.
 type Dependencies struct {
-	Store   setupStore
-	Hasher  passwordHasher
-	Limiter attemptLimiter
-	Clock   clock.Clock
-	Logger  *slog.Logger
+	Store     setupStore
+	Validator accountValidator
+	Hasher    passwordHasher
+	Limiter   attemptLimiter
+	Clock     clock.Clock
+	Logger    *slog.Logger
 	// EnvironmentDomain is DOMAIN from .env; when set, setup cannot change it.
 	EnvironmentDomain string
 }
@@ -170,7 +176,7 @@ func (service *Service) checkToken(token string) error {
 
 func (service *Service) validate(request Request) (accounts.NewAccount, error) {
 	var problems validation.Errors
-	admin, err := accounts.ValidateNewAccount(request.Admin)
+	admin, err := service.dependencies.Validator.ValidateNewAccount(request.Admin)
 	var accountProblems *validation.Error
 	if errors.As(err, &accountProblems) {
 		problems.Merge("admin.", accountProblems)

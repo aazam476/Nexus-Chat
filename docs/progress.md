@@ -88,5 +88,3 @@ default-deny authentication checked against the OpenAPI contract.
 - Moved from M1 to M2 (they need the client UI or admin sessions): setup
   wizard screens, certificate upload in the Admin panel, the HTTPS warning
   banner, expiry emails, the browser-driven release gate, and the ZAP scan.
-- The breached-password check (spec §4.1) is not in place yet; it comes
-  with registration in M2, together with the bundled list's license review.

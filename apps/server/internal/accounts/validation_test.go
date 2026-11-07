@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -10,12 +11,24 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/validation"
 )
 
+// stubBreached treats one password as breached.
+type stubBreached struct{}
+
+func (stubBreached) Check(password string) error {
+	if password == "password123" {
+		return errors.New("this password appears in lists of leaked passwords")
+	}
+	return nil
+}
+
+var testValidator = NewValidator(stubBreached{})
+
 func validAccount() NewAccount {
 	return NewAccount{Username: "alice", DisplayName: "Alice", Email: "Alice@Example.com", Password: "correct horse battery"}
 }
 
 func TestValidateNewAccountNormalizesEmail(t *testing.T) {
-	account, err := ValidateNewAccount(validAccount())
+	account, err := testValidator.ValidateNewAccount(validAccount())
 
 	require.NoError(t, err)
 	assert.Equal(t, "alice@example.com", account.Email)
@@ -40,13 +53,14 @@ func TestValidateNewAccountFieldRules(t *testing.T) {
 		{"email with name", func(a *NewAccount) { a.Email = "Alice <alice@example.com>" }, "email"},
 		{"email too long", func(a *NewAccount) { a.Email = strings.Repeat("a", 250) + "@example.com" }, "email"},
 		{"password too short", func(a *NewAccount) { a.Password = "short" }, "password"},
+		{"password breached", func(a *NewAccount) { a.Password = "password123" }, "password"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			account := validAccount()
 			test.change(&account)
 
-			_, err := ValidateNewAccount(account)
+			_, err := testValidator.ValidateNewAccount(account)
 
 			var validationError *validation.Error
 			require.ErrorAs(t, err, &validationError)
@@ -64,13 +78,13 @@ func TestValidateNewAccountAcceptsBoundaryValues(t *testing.T) {
 		Password:    "0123456789",
 	}
 
-	_, err := ValidateNewAccount(account)
+	_, err := testValidator.ValidateNewAccount(account)
 
 	assert.NoError(t, err)
 }
 
 func TestValidationErrorListsEveryField(t *testing.T) {
-	_, err := ValidateNewAccount(NewAccount{})
+	_, err := testValidator.ValidateNewAccount(NewAccount{})
 
 	var validationError *validation.Error
 	require.ErrorAs(t, err, &validationError)
