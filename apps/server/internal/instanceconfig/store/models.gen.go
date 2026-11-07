@@ -5,11 +5,24 @@
 package store
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type InstanceSetting struct {
 	Key       string
 	Value     []byte
-	UpdatedAt pgtype.Timestamptz
+	UpdatedAt time.Time
+}
+
+type User struct {
+	ID              uuid.UUID
+	Username        string
+	DisplayName     string
+	Email           string
+	EmailVerifiedAt *time.Time
+	PasswordHash    *string
+	IsInstanceAdmin bool
+	CreatedAt       time.Time
 }

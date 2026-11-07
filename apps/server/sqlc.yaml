@@ -6,7 +6,7 @@ sql:
     schema: internal/platform/database/migrations
     queries: internal/instanceconfig/store/queries.sql
     gen:
-      go:
+      go: &go-options
         package: store
         out: internal/instanceconfig/store
         sql_package: pgx/v5
@@ -14,3 +14,23 @@ sql:
         output_db_file_name: db.gen.go
         output_models_file_name: models.gen.go
         emit_interface: false
+        # Plain Go types read more easily than pgtype wrappers: nullable
+        # columns become pointers (*string, *time.Time).
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: uuid
+            go_type: github.com/google/uuid.UUID
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/accounts/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/accounts/store
