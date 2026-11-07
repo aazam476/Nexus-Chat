@@ -1,0 +1,85 @@
+# golangci-lint configuration shared by every Go module in the repository.
+# The limits mirror docs/contributing/code-standards.md; CI fails on any issue.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - forcetypeassert
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocyclo
+    - gosec
+    - nakedret
+    - noctx
+    - nonamedreturns
+    - revive
+    - testifylint
+    - usetesting
+    - wrapcheck
+  settings:
+    funlen:
+      # Code standards §8.1: functions are at most 40 lines.
+      lines: 40
+      statements: -1
+      ignore-comments: true
+    gocyclo:
+      min-complexity: 10
+    nakedret:
+      max-func-lines: 0
+    revive:
+      rules:
+        # Every exported identifier has a doc comment (§8.2).
+        - name: exported
+          arguments: [checkPrivateReceivers, sayRepetitiveInsteadOfStutters]
+        - name: package-comments
+        # At most 4 parameters; use a parameter object beyond that (§8.1).
+        - name: argument-limit
+          arguments: [4]
+        # Files are at most 300 lines (§8.1).
+        - name: file-length-limit
+          arguments: [{ max: 300, skipComments: true, skipBlankLines: true }]
+        # Nesting is at most 3 levels (§8.1).
+        - name: max-control-nesting
+          arguments: [3]
+    wrapcheck:
+      # Errors from our own packages are already wrapped with context.
+      ignore-package-globs:
+        - github.com/aazam476/nexus-chat/*
+  exclusions:
+    generated: strict
+    rules:
+      # Test-only exceptions:
+      # - Table-driven tests are long because of their data rows, not logic.
+      # - Tests may assert types they just created and keep small fixtures
+      #   at package level.
+      # - Test helpers return errors from libraries unwrapped on purpose, so
+      #   failures show the original message.
+      - path: _test\.go
+        linters: [funlen, forcetypeassert, gochecknoglobals, wrapcheck]
+      # gosec in tests: fixtures contain fake passwords (G101), loosen file
+      # permissions on purpose (G302), and start the server binary (G204).
+      - path: _test\.go
+        linters: [gosec]
+        text: "G101|G204|G302"
+      # The databasetest helper keeps one shared container per test binary;
+      # its doc comment explains why.
+      - path: internal/platform/databasetest/
+        linters: [gochecknoglobals]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/aazam476/nexus-chat

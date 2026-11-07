@@ -1,0 +1,23 @@
+# Dependencies and build output
+node_modules/
+dist/
+.turbo/
+
+# Test and coverage output
+coverage/
+coverage.out
+coverage.raw.out
+*.test
+gobco-*
+
+# Local environment and data
+.env
+data/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+
+# The license-check fixture's node_modules is test data and must be committed.
+!scripts/license-fixtures/**/node_modules/

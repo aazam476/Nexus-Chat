@@ -1,0 +1,6 @@
+# Generated or vendored files; formatting them would only create noise.
+pnpm-lock.yaml
+**/generated/**
+**/coverage/**
+**/dist/**
+LICENSE
