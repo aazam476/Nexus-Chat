@@ -48,10 +48,31 @@ handling, federation, push relay details, search, server address syntax,
 voice switching, reports, Mac App Store limits). Work continues on the
 recommended options; M2 uses Argon2id, which is the spec's baseline.
 
+### M1: Deployable instance
+
+- `docker compose up -d` with only `.env` (two required values) brings up
+  server, PostgreSQL and LiveKit; `--profile p2p` adds coturn. LiveKit and
+  coturn configs are generated from first-boot secrets.
+- Setup: one-time token in the logs, `POST /api/v1/setup` creates the first
+  admin (Argon2id) and saves name, domain and registration mode in one
+  transaction; rate limited per client IP.
+- HTTPS from certificate files in `DATA_DIR/tls`: validated (key, chain,
+  validity, domain), hot-reloaded, expiry warnings at 30/7/1 days.
+- `TRUSTED_PROXIES`: real client IP and scheme behind proxies.
+- Images: distroless, privilege drop after taking ownership of `/data`,
+  built-in healthcheck; release workflow with multi-arch builds, SBOM and
+  provenance attestations, keyless cosign signatures; Trivy gate.
+- Release gate in CI: clean install from `docker-compose.yml` and
+  `.env.example`, on localhost and behind Caddy, Nginx and Traefik (each
+  example in `docs/self-hosting.md` is the tested file).
+- Coverage at completion: server 95.6% statements / 91.7% branches.
+
 ## Next
 
-**M1: Deployable instance.** Docker images, Compose file, setup wizard,
-HTTPS by certificate upload or reverse proxy, release-gate job.
+**M2: Accounts and client shell** (in progress). Done so far: sessions
+(hashed tokens, sliding 90-day expiry, list and revoke), password login with
+per-IP rate limits and progressive per-account delays, `GET /users/me`, and
+default-deny authentication checked against the OpenAPI contract.
 
 ## Known issues
 
@@ -63,4 +84,9 @@ HTTPS by certificate upload or reverse proxy, release-gate job.
   checker uses the same allowlist logic from `go-licenses` but has no GPL
   fixture of its own, because that would need a GPL module in `go.mod`.
 - Fuzz and property-based tests start with the first untrusted-input
-  parsers (M2/M4); M0 has none.
+  parsers (M2/M4); there are none yet.
+- Moved from M1 to M2 (they need the client UI or admin sessions): setup
+  wizard screens, certificate upload in the Admin panel, the HTTPS warning
+  banner, expiry emails, the browser-driven release gate, and the ZAP scan.
+- The breached-password check (spec §4.1) is not in place yet; it comes
+  with registration in M2, together with the bundled list's license review.
