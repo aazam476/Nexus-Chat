@@ -1,0 +1,6 @@
+# Only the Go sources are needed in the image build context.
+**/node_modules
+**/coverage*
+**/.turbo
+.git
+data
