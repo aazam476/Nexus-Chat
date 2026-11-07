@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,6 +19,17 @@ import (
 type fakeSettingsStore struct {
 	values map[string][]byte
 	err    error
+}
+
+func (fake *fakeSettingsStore) GetSetting(_ context.Context, key string) (store.InstanceSetting, error) {
+	if fake.err != nil {
+		return store.InstanceSetting{}, fake.err
+	}
+	value, ok := fake.values[key]
+	if !ok {
+		return store.InstanceSetting{}, pgx.ErrNoRows
+	}
+	return store.InstanceSetting{Key: key, Value: value}, nil
 }
 
 func (fake *fakeSettingsStore) InsertSettingIfMissing(_ context.Context, arg store.InsertSettingIfMissingParams) (store.InstanceSetting, error) {
@@ -35,9 +47,9 @@ var firstInstant = time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
 func TestRecordFirstBootStoresTheCurrentTimeOnce(t *testing.T) {
 	settings := &fakeSettingsStore{values: map[string][]byte{}}
 
-	first, err := NewService(settings, clock.Fixed{Time: firstInstant}).RecordFirstBoot(context.Background())
+	first, err := NewService(settings, clock.Fixed{Time: firstInstant}, "").RecordFirstBoot(context.Background())
 	require.NoError(t, err)
-	later, err := NewService(settings, clock.Fixed{Time: firstInstant.Add(time.Hour)}).RecordFirstBoot(context.Background())
+	later, err := NewService(settings, clock.Fixed{Time: firstInstant.Add(time.Hour)}, "").RecordFirstBoot(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, firstInstant, first)
@@ -47,7 +59,7 @@ func TestRecordFirstBootStoresTheCurrentTimeOnce(t *testing.T) {
 func TestRecordFirstBootWrapsStoreErrors(t *testing.T) {
 	settings := &fakeSettingsStore{err: errors.New("connection refused")}
 
-	_, err := NewService(settings, clock.Fixed{Time: firstInstant}).RecordFirstBoot(context.Background())
+	_, err := NewService(settings, clock.Fixed{Time: firstInstant}, "").RecordFirstBoot(context.Background())
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "recording first boot time")
@@ -57,8 +69,58 @@ func TestRecordFirstBootWrapsStoreErrors(t *testing.T) {
 func TestRecordFirstBootRejectsCorruptStoredValue(t *testing.T) {
 	settings := &fakeSettingsStore{values: map[string][]byte{firstBootKey: []byte(`"not a time"`)}}
 
-	_, err := NewService(settings, clock.Fixed{Time: firstInstant}).RecordFirstBoot(context.Background())
+	_, err := NewService(settings, clock.Fixed{Time: firstInstant}, "").RecordFirstBoot(context.Background())
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "decoding stored first boot time")
+}
+
+func TestDomainAndBaseURL(t *testing.T) {
+	stored := &fakeSettingsStore{values: map[string][]byte{KeyInstanceDomain: []byte(`"stored.example.com"`)}}
+	empty := &fakeSettingsStore{values: map[string][]byte{}}
+
+	domain, err := NewService(stored, clock.Fixed{}, "").Domain(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "stored.example.com", domain)
+
+	base, err := NewService(stored, clock.Fixed{}, "env.example.com").BaseURL(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "https://env.example.com", base, "DOMAIN from .env wins")
+
+	_, err = NewService(empty, clock.Fixed{}, "").BaseURL(t.Context())
+	require.ErrorIs(t, err, ErrNoDomain)
+
+	_, err = NewService(&fakeSettingsStore{err: errors.New("down")}, clock.Fixed{}, "").BaseURL(t.Context())
+	assert.ErrorContains(t, err, "down")
+}
+
+func TestRegistrationMode(t *testing.T) {
+	mode, err := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "").RegistrationMode(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "invite_only", mode, "the safe default")
+
+	open := &fakeSettingsStore{values: map[string][]byte{KeyRegistrationMode: []byte(`"open"`)}}
+	mode, err = NewService(open, clock.Fixed{}, "").RegistrationMode(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "open", mode)
+}
+
+func TestLoadRejectsCorruptValues(t *testing.T) {
+	corrupt := &fakeSettingsStore{values: map[string][]byte{"some.key": []byte(`{`)}}
+	var target map[string]any
+
+	_, err := NewService(corrupt, clock.Fixed{}, "").Load(t.Context(), "some.key", &target)
+
+	assert.ErrorContains(t, err, "decoding setting some.key")
+}
+
+func TestInstanceName(t *testing.T) {
+	name, err := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "").InstanceName(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "Nexus Chat", name)
+
+	named := &fakeSettingsStore{values: map[string][]byte{KeyInstanceName: []byte(`"Example"`)}}
+	name, err = NewService(named, clock.Fixed{}, "").InstanceName(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "Example", name)
 }

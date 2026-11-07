@@ -159,7 +159,7 @@ func (app *application) prepareDatabase(ctx context.Context) error {
 	if err := database.Migrate(ctx, app.pool, app.logger); err != nil {
 		return err
 	}
-	settings := instanceconfig.NewService(instanceconfigstore.New(app.pool), clock.System{})
+	settings := instanceconfig.NewService(instanceconfigstore.New(app.pool), clock.System{}, "")
 	firstBoot, err := settings.RecordFirstBoot(ctx)
 	if err != nil {
 		return err

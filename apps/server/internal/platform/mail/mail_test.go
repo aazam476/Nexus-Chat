@@ -3,6 +3,7 @@ package mail
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"mime/quotedprintable"
 	"net"
@@ -202,4 +203,20 @@ func freePort(t *testing.T) int {
 	port := listener.Addr().(*net.TCPAddr).Port
 	require.NoError(t, listener.Close())
 	return port
+}
+
+func TestConfiguredUsesCurrentSettings(t *testing.T) {
+	server := startFakeServer(t)
+	config := SMTPConfig{Host: "127.0.0.1", Port: server.port(), Security: SecurityNone, From: "chat@example.com"}
+	found := false
+	configured := NewConfigured(func(context.Context) (SMTPConfig, bool, error) { return config, found, nil }, clock.Fixed{Time: sentAt})
+	message := Message{To: "a@example.com", Subject: "Hi", Text: "Hello"}
+
+	require.ErrorIs(t, configured.Send(t.Context(), message), ErrNotConfigured)
+
+	found = true
+	require.NoError(t, configured.Send(t.Context(), message))
+
+	failing := NewConfigured(func(context.Context) (SMTPConfig, bool, error) { return SMTPConfig{}, false, errors.New("down") }, clock.Fixed{})
+	assert.ErrorContains(t, failing.Send(t.Context(), message), "reading SMTP settings")
 }

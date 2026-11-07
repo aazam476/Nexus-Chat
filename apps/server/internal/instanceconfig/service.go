@@ -3,8 +3,11 @@ package instanceconfig
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
@@ -18,18 +21,73 @@ const firstBootKey = "instance.first_boot_at"
 // Defining it here (where it is used) lets tests pass a small fake.
 type settingsStore interface {
 	InsertSettingIfMissing(ctx context.Context, arg store.InsertSettingIfMissingParams) (store.InstanceSetting, error)
+	GetSetting(ctx context.Context, key string) (store.InstanceSetting, error)
 }
+
+// ErrNoDomain means the instance has no public domain yet, so it cannot
+// build links for emails.
+var ErrNoDomain = errors.New("the instance has no public domain; set DOMAIN or set it in the Admin panel")
 
 // Service reads and writes instance settings.
 type Service struct {
 	settings settingsStore
 	clock    clock.Clock
+	// environmentDomain is DOMAIN from .env, which overrides the stored one.
+	environmentDomain string
 }
 
 // NewService returns a Service backed by settings and using clock for the
-// current time.
-func NewService(settings settingsStore, clock clock.Clock) *Service {
-	return &Service{settings: settings, clock: clock}
+// current time. environmentDomain is DOMAIN from .env (may be empty).
+func NewService(settings settingsStore, clock clock.Clock, environmentDomain string) *Service {
+	return &Service{settings: settings, clock: clock, environmentDomain: environmentDomain}
+}
+
+// Load decodes the JSON setting key into target. found is false if the
+// setting has never been set.
+func (service *Service) Load(ctx context.Context, key string, target any) (bool, error) {
+	setting, err := service.settings.GetSetting(ctx, key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("reading setting %s: %w", key, err)
+	}
+	if err := json.Unmarshal(setting.Value, target); err != nil {
+		return false, fmt.Errorf("decoding setting %s: %w", key, err)
+	}
+	return true, nil
+}
+
+// Domain returns the public domain: DOMAIN from .env if set, otherwise the
+// one saved in setup or the Admin panel, otherwise "".
+func (service *Service) Domain(ctx context.Context) (string, error) {
+	if service.environmentDomain != "" {
+		return service.environmentDomain, nil
+	}
+	var domain string
+	_, err := service.Load(ctx, KeyInstanceDomain, &domain)
+	return domain, err
+}
+
+// BaseURL returns the instance's public HTTPS address, for links in
+// emails, or ErrNoDomain.
+func (service *Service) BaseURL(ctx context.Context) (string, error) {
+	domain, err := service.Domain(ctx)
+	if err != nil {
+		return "", err
+	}
+	if domain == "" {
+		return "", ErrNoDomain
+	}
+	return "https://" + domain, nil
+}
+
+// RegistrationMode returns "open", "invite_only" or "closed". An instance
+// that never saved a mode is invite-only, the safe default.
+func (service *Service) RegistrationMode(ctx context.Context) (string, error) {
+	mode := "invite_only"
+	_, err := service.Load(ctx, KeyRegistrationMode, &mode)
+	return mode, err
 }
 
 // RecordFirstBoot stores the current time as the first boot time if none is
@@ -51,4 +109,11 @@ func (service *Service) RecordFirstBoot(ctx context.Context) (time.Time, error) 
 		return time.Time{}, fmt.Errorf("decoding stored first boot time: %w", err)
 	}
 	return firstBoot, nil
+}
+
+// InstanceName returns the name set in setup, or "Nexus Chat".
+func (service *Service) InstanceName(ctx context.Context) (string, error) {
+	name := "Nexus Chat"
+	_, err := service.Load(ctx, KeyInstanceName, &name)
+	return name, err
 }

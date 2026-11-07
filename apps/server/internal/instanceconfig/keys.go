@@ -13,4 +13,6 @@ const (
 	// KeySetupCompletedAt is when setup finished (JSON timestamp). Its
 	// presence is what marks setup as complete.
 	KeySetupCompletedAt = "setup.completed_at"
+	// KeySMTP is the mail server configuration (JSON mail.SMTPConfig).
+	KeySMTP = "smtp"
 )

@@ -1,0 +1,9 @@
+Confirm your email address for {{.InstanceName}}
+Hi {{.DisplayName}},
+
+Please confirm that this is your email address by opening this link:
+
+{{.Link}}
+
+The link works once and expires in 48 hours. If you did not create an
+account on {{.InstanceName}}, you can ignore this email.
