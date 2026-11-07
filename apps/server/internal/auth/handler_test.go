@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
-	"strings"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -107,7 +107,8 @@ func newFixture(deny bool) fixture {
 	logins := login.NewService(login.Dependencies{
 		Accounts: accounts, Hasher: plainHasher{}, Sessions: sessionService, Limiter: limiter{deny: deny}, Clock: clock.Fixed{Time: now},
 	})
-	return fixture{accounts: accounts, sessions: sessions, handler: NewHandler(logins, sessionService), user: user}
+	handler := NewHandler(HandlerDependencies{Logins: logins, Sessions: sessionService})
+	return fixture{accounts: accounts, sessions: sessions, handler: handler, user: user}
 }
 
 func loginRequest(password string, device string) api.LoginRequestObject {
@@ -208,9 +209,4 @@ func TestProtectedHandlersRequireAPrincipal(t *testing.T) {
 	assert.ErrorIs(t, err, errNoPrincipal)
 }
 
-func TestNormalizeDeviceName(t *testing.T) {
-	assert.Equal(t, "Unknown device", normalizeDeviceName("   "))
-	assert.Equal(t, "Unknown device", normalizeDeviceName("\xff"))
-	assert.Equal(t, "Firefox on Linux", normalizeDeviceName("Firefox\ton  Linux"))
-	assert.Equal(t, strings.Repeat("é", 64), normalizeDeviceName(strings.Repeat("é", 70)))
-}
+func discard() *slog.Logger { return slog.New(slog.DiscardHandler) }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts"
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/apiresponse"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/validation"
 )
@@ -65,29 +66,16 @@ func completeSetupError(err error) (api.CompleteSetupResponseObject, error) {
 	var problems *validation.Error
 	switch {
 	case errors.Is(err, ErrRateLimited):
-		return api.CompleteSetup429JSONResponse{RateLimitedJSONResponse: api.RateLimitedJSONResponse(apiError("rate_limited", err))}, nil
+		return api.CompleteSetup429JSONResponse{RateLimitedJSONResponse: api.RateLimitedJSONResponse(apiresponse.Error("rate_limited", err))}, nil
 	case errors.Is(err, ErrInvalidToken):
-		return api.CompleteSetup401JSONResponse(apiError("invalid_setup_token", err)), nil
+		return api.CompleteSetup401JSONResponse(apiresponse.Error("invalid_setup_token", err)), nil
 	case errors.Is(err, ErrAlreadyComplete):
-		return api.CompleteSetup409JSONResponse(apiError("setup_already_complete", err)), nil
+		return api.CompleteSetup409JSONResponse(apiresponse.Error("setup_already_complete", err)), nil
 	case errors.As(err, &problems):
-		return api.CompleteSetup422JSONResponse{ValidationFailedJSONResponse: api.ValidationFailedJSONResponse(validationResponse(problems))}, nil
+		return api.CompleteSetup422JSONResponse{ValidationFailedJSONResponse: api.ValidationFailedJSONResponse(apiresponse.Validation(problems))}, nil
 	default:
 		// Unexpected errors become a 500 in the shared error handler,
 		// which logs them without echoing details to the client.
 		return nil, err
 	}
-}
-
-func apiError(code string, err error) api.Error {
-	return api.Error{Code: code, Message: err.Error()}
-}
-
-// validationResponse converts validation problems to the API error shape.
-func validationResponse(problems *validation.Error) api.Error {
-	fields := make([]api.FieldError, 0, len(problems.Fields))
-	for _, field := range problems.Fields {
-		fields = append(fields, api.FieldError{Field: field.Field, Message: field.Message})
-	}
-	return api.Error{Code: "validation_failed", Message: "Some fields are invalid.", Fields: &fields}
 }
