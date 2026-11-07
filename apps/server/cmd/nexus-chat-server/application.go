@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/httpserver"
@@ -18,7 +20,10 @@ import (
 	instanceconfigstore "github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/database"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
 	"github.com/aazam476/nexus-chat/apps/server/internal/secrets"
+	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
+	setupstore "github.com/aazam476/nexus-chat/apps/server/internal/setup/store"
 )
 
 // shutdownTimeout is how long in-flight requests get to finish after a stop
@@ -51,10 +56,40 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 		return nil, err
 	}
 
-	healthService := health.NewService([]health.NamedChecker{{Name: "database", Checker: pool}})
-	handler := httpserver.NewHandler(httpserver.Features{Health: health.NewHandler(healthService)}, logger)
+	features, err := app.buildFeatures(ctx, configuration)
+	if err != nil {
+		app.close()
+		return nil, err
+	}
+	handler := httpserver.NewHandler(features, httpserver.Options{Logger: logger, TrustedProxies: configuration.TrustedProxies})
 	app.server = httpserver.NewServer("", handler, logger)
 	return app, nil
+}
+
+// buildFeatures creates every feature's service and handler.
+func (app *application) buildFeatures(ctx context.Context, configuration config.Config) (httpserver.Features, error) {
+	// One hash per CPU at a time keeps memory bounded under a login flood
+	// (each hash uses 64 MiB).
+	hasher, err := password.NewHasher(password.DefaultParams(), runtime.NumCPU())
+	if err != nil {
+		return httpserver.Features{}, err
+	}
+	setupService := setup.NewService(setup.Dependencies{
+		Store:             setupstore.New(app.pool),
+		Hasher:            hasher,
+		Limiter:           ratelimit.New(ratelimit.PerMinute(10, 5), clock.System{}),
+		Clock:             clock.System{},
+		Logger:            app.logger,
+		EnvironmentDomain: configuration.Domain,
+	})
+	if err := setupService.Start(ctx); err != nil {
+		return httpserver.Features{}, err
+	}
+	healthService := health.NewService([]health.NamedChecker{{Name: "database", Checker: app.pool}})
+	return httpserver.Features{
+		Health: health.NewHandler(healthService),
+		Setup:  setup.NewHandler(setupService),
+	}, nil
 }
 
 func (app *application) prepareDatabase(ctx context.Context) error {

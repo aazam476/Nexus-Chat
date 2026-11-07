@@ -11,6 +11,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for HealthState.
@@ -29,6 +32,46 @@ func (e HealthState) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Defines values for RegistrationMode.
+const (
+	RegistrationModeClosed     RegistrationMode = "closed"
+	RegistrationModeInviteOnly RegistrationMode = "invite_only"
+	RegistrationModeOpen       RegistrationMode = "open"
+)
+
+// Valid indicates whether the value is a known member of the RegistrationMode enum.
+func (e RegistrationMode) Valid() bool {
+	switch e {
+	case RegistrationModeClosed:
+		return true
+	case RegistrationModeInviteOnly:
+		return true
+	case RegistrationModeOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Error defines model for Error.
+type Error struct {
+	// Code Stable machine-readable code, for example `validation_failed`.
+	Code string `json:"code"`
+
+	// Fields Present for `validation_failed`; one entry per invalid field.
+	Fields *[]FieldError `json:"fields,omitempty"`
+
+	// Message Human-readable explanation in English.
+	Message string `json:"message"`
+}
+
+// FieldError defines model for FieldError.
+type FieldError struct {
+	// Field Path of the field in the request, for example `admin.email`.
+	Field   string `json:"field"`
+	Message string `json:"message"`
 }
 
 // HealthCheck defines model for HealthCheck.
@@ -50,8 +93,84 @@ type HealthStatus struct {
 	Status HealthState   `json:"status"`
 }
 
+// RegistrationMode Who may create accounts.
+type RegistrationMode string
+
+// SetupAdmin defines model for SetupAdmin.
+type SetupAdmin struct {
+	// DisplayName 1–32 characters.
+	DisplayName string `json:"displayName"`
+	Email       string `json:"email"`
+
+	// Password At least 10 characters.
+	Password string `json:"password"`
+
+	// Username 3–32 characters from a–z, 0–9, `_` and `.`.
+	Username string `json:"username"`
+}
+
+// SetupInstance defines model for SetupInstance.
+type SetupInstance struct {
+	// Domain Public domain such as `chat.example.com`. Ignored when `DOMAIN` is set in `.env`.
+	Domain *string `json:"domain,omitempty"`
+
+	// Name Instance name shown to users, 1–64 characters.
+	Name string `json:"name"`
+
+	// RegistrationMode Who may create accounts.
+	RegistrationMode RegistrationMode `json:"registrationMode"`
+}
+
+// SetupRequest defines model for SetupRequest.
+type SetupRequest struct {
+	Admin    SetupAdmin    `json:"admin"`
+	Instance SetupInstance `json:"instance"`
+
+	// SetupToken The token from the server logs. Case and dashes are ignored.
+	SetupToken string `json:"setupToken"`
+}
+
+// SetupResult defines model for SetupResult.
+type SetupResult struct {
+	AdminUserId openapi_types.UUID `json:"adminUserId"`
+}
+
+// SetupStatus defines model for SetupStatus.
+type SetupStatus struct {
+	// Domain The configured public domain, if any.
+	Domain *string `json:"domain,omitempty"`
+
+	// DomainFromEnvironment True when `DOMAIN` is set in `.env`, so the wizard cannot change it.
+	DomainFromEnvironment bool `json:"domainFromEnvironment"`
+
+	// SecureConnection True when this request arrived over HTTPS (directly or via a
+	// trusted proxy) or is addressed to localhost.
+	SecureConnection bool `json:"secureConnection"`
+
+	// SetupRequired True until the first admin has been created.
+	SetupRequired bool `json:"setupRequired"`
+}
+
+// BadRequest defines model for BadRequest.
+type BadRequest = Error
+
+// RateLimited defines model for RateLimited.
+type RateLimited = Error
+
+// ValidationFailed defines model for ValidationFailed.
+type ValidationFailed = Error
+
+// CompleteSetupJSONRequestBody defines body for CompleteSetup for application/json ContentType.
+type CompleteSetupJSONRequestBody = SetupRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetSetupStatus Setup status
+	// (GET /api/v1/setup)
+	GetSetupStatus(w http.ResponseWriter, r *http.Request)
+	// CompleteSetup Complete setup
+	// (POST /api/v1/setup)
+	CompleteSetup(w http.ResponseWriter, r *http.Request)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(w http.ResponseWriter, r *http.Request)
@@ -68,6 +187,34 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetSetupStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSetupStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteSetup operation middleware
+func (siw *ServerInterfaceWrapper) CompleteSetup(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteSetup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetLiveness operation middleware
 func (siw *ServerInterfaceWrapper) GetLiveness(w http.ResponseWriter, r *http.Request) {
@@ -217,10 +364,131 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/setup", wrapper.CompleteSetup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/healthz", wrapper.GetLiveness)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/readyz", wrapper.GetReadiness)
 
 	return m
+}
+
+type BadRequestJSONResponse Error
+
+type RateLimitedJSONResponse Error
+
+type ValidationFailedJSONResponse Error
+
+type GetSetupStatusRequestObject struct {
+}
+
+type GetSetupStatusResponseObject interface {
+	VisitGetSetupStatusResponse(w http.ResponseWriter) error
+}
+
+type GetSetupStatus200JSONResponse SetupStatus
+
+func (response GetSetupStatus200JSONResponse) VisitGetSetupStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetupRequestObject struct {
+	Body *CompleteSetupJSONRequestBody
+}
+
+type CompleteSetupResponseObject interface {
+	VisitCompleteSetupResponse(w http.ResponseWriter) error
+}
+
+type CompleteSetup201JSONResponse SetupResult
+
+func (response CompleteSetup201JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompleteSetup400JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup401JSONResponse Error
+
+func (response CompleteSetup401JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup409JSONResponse Error
+
+func (response CompleteSetup409JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response CompleteSetup422JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteSetup429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response CompleteSetup429JSONResponse) VisitCompleteSetupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetLivenessRequestObject struct {
@@ -281,6 +549,12 @@ func (response GetReadiness503JSONResponse) VisitGetReadinessResponse(w http.Res
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetSetupStatus Setup status
+	// (GET /api/v1/setup)
+	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
+	// CompleteSetup Complete setup
+	// (POST /api/v1/setup)
+	CompleteSetup(ctx context.Context, request CompleteSetupRequestObject) (CompleteSetupResponseObject, error)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(ctx context.Context, request GetLivenessRequestObject) (GetLivenessResponseObject, error)
@@ -326,6 +600,61 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetSetupStatus operation middleware
+func (sh *strictHandler) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
+	var request GetSetupStatusRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSetupStatus(ctx, request.(GetSetupStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSetupStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSetupStatusResponseObject); ok {
+		if err := validResponse.VisitGetSetupStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteSetup operation middleware
+func (sh *strictHandler) CompleteSetup(w http.ResponseWriter, r *http.Request) {
+	var request CompleteSetupRequestObject
+
+	var body CompleteSetupJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteSetup(ctx, request.(CompleteSetupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteSetup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteSetupResponseObject); ok {
+		if err := validResponse.VisitCompleteSetupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetLiveness operation middleware

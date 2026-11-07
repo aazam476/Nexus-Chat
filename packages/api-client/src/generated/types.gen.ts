@@ -4,6 +4,96 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type Error = {
+    /**
+     * Stable machine-readable code, for example `validation_failed`.
+     */
+    code: string;
+    /**
+     * Human-readable explanation in English.
+     */
+    message: string;
+    /**
+     * Present for `validation_failed`; one entry per invalid field.
+     */
+    fields?: Array<FieldError>;
+};
+
+export type FieldError = {
+    /**
+     * Path of the field in the request, for example `admin.email`.
+     */
+    field: string;
+    message: string;
+};
+
+export type SetupStatus = {
+    /**
+     * True until the first admin has been created.
+     */
+    setupRequired: boolean;
+    /**
+     * True when this request arrived over HTTPS (directly or via a
+     * trusted proxy) or is addressed to localhost.
+     *
+     */
+    secureConnection: boolean;
+    /**
+     * The configured public domain, if any.
+     */
+    domain?: string;
+    /**
+     * True when `DOMAIN` is set in `.env`, so the wizard cannot change it.
+     */
+    domainFromEnvironment: boolean;
+};
+
+export type SetupRequest = {
+    /**
+     * The token from the server logs. Case and dashes are ignored.
+     */
+    setupToken: string;
+    admin: SetupAdmin;
+    instance: SetupInstance;
+};
+
+export type SetupAdmin = {
+    /**
+     * 3–32 characters from a–z, 0–9, `_` and `.`.
+     */
+    username: string;
+    /**
+     * 1–32 characters.
+     */
+    displayName: string;
+    email: string;
+    /**
+     * At least 10 characters.
+     */
+    password: string;
+};
+
+export type SetupInstance = {
+    /**
+     * Instance name shown to users, 1–64 characters.
+     */
+    name: string;
+    /**
+     * Public domain such as `chat.example.com`. Ignored when `DOMAIN` is set in `.env`.
+     */
+    domain?: string;
+    registrationMode: RegistrationMode;
+};
+
+/**
+ * Who may create accounts.
+ */
+export type RegistrationMode = 'open' | 'invite_only' | 'closed';
+
+export type SetupResult = {
+    adminUserId: string;
+};
+
 export type HealthStatus = {
     status: HealthState;
     /**
@@ -21,6 +111,63 @@ export type HealthCheck = {
 };
 
 export type HealthState = 'ok' | 'unavailable';
+
+export type GetSetupStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/setup';
+};
+
+export type GetSetupStatusResponses = {
+    /**
+     * Current setup status.
+     */
+    200: SetupStatus;
+};
+
+export type GetSetupStatusResponse = GetSetupStatusResponses[keyof GetSetupStatusResponses];
+
+export type CompleteSetupData = {
+    body: SetupRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/setup';
+};
+
+export type CompleteSetupErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The setup token is wrong (`invalid_setup_token`).
+     */
+    401: Error;
+    /**
+     * Setup was already completed (`setup_already_complete`).
+     */
+    409: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type CompleteSetupError = CompleteSetupErrors[keyof CompleteSetupErrors];
+
+export type CompleteSetupResponses = {
+    /**
+     * Setup is complete.
+     */
+    201: SetupResult;
+};
+
+export type CompleteSetupResponse = CompleteSetupResponses[keyof CompleteSetupResponses];
 
 export type GetLivenessData = {
     body?: never;

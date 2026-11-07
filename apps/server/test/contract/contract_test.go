@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,6 +29,7 @@ import (
 type runningServer struct {
 	baseURL string
 	router  routers.Router
+	output  *lockedBuffer
 }
 
 func TestHealthEndpointsMatchTheContract(t *testing.T) {
@@ -34,7 +37,7 @@ func TestHealthEndpointsMatchTheContract(t *testing.T) {
 
 	for _, path := range []string{"/healthz", "/readyz"} {
 		t.Run(path, func(t *testing.T) {
-			server.getAndValidate(t, path, http.StatusOK)
+			server.call(t, http.MethodGet, path, "", http.StatusOK)
 		})
 	}
 }
@@ -52,8 +55,8 @@ func startServer(t *testing.T) runningServer {
 		"DATA_DIR=" + t.TempDir(),
 		"HTTP_PORT=" + strconv.Itoa(port),
 	}
-	var output bytes.Buffer
-	command.Stdout, command.Stderr = &output, &output
+	output := &lockedBuffer{}
+	command.Stdout, command.Stderr = output, output
 	require.NoError(t, command.Start())
 	t.Cleanup(func() {
 		_ = command.Process.Signal(os.Interrupt)
@@ -65,7 +68,7 @@ func startServer(t *testing.T) runningServer {
 
 	baseURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	waitUntilListening(t, baseURL)
-	return runningServer{baseURL: baseURL, router: loadContract(t)}
+	return runningServer{baseURL: baseURL, router: loadContract(t), output: output}
 }
 
 func buildServer(t *testing.T) string {
@@ -87,34 +90,59 @@ func loadContract(t *testing.T) routers.Router {
 	return router
 }
 
-// getAndValidate calls path and checks the status code, then validates the
-// request and response against the OpenAPI document.
-func (server runningServer) getAndValidate(t *testing.T, path string, wantStatus int) {
+// call sends a request with an optional JSON body, checks the status code,
+// validates request and response against the OpenAPI document, and returns
+// the response body.
+func (server runningServer) call(t *testing.T, method string, path string, body string, wantStatus int) []byte { //nolint:revive // test helper; a parameter object would make every call site harder to read
 	t.Helper()
-	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.baseURL+path, nil)
+	request, err := http.NewRequestWithContext(t.Context(), method, server.baseURL+path, strings.NewReader(body))
 	require.NoError(t, err)
+	if body != "" {
+		request.Header.Set("Content-Type", "application/json")
+	}
 	response, err := http.DefaultClient.Do(request)
 	require.NoError(t, err)
 	defer func() { _ = response.Body.Close() }()
-	body, err := io.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	require.NoError(t, err)
-	require.Equal(t, wantStatus, response.StatusCode, "body: %s", body)
+	require.Equal(t, wantStatus, response.StatusCode, "body: %s", responseBody)
 
+	server.validate(t, validationTarget{method: method, path: path, requestBody: body, response: response, responseBody: responseBody})
+	return responseBody
+}
+
+type validationTarget struct {
+	method       string
+	path         string
+	requestBody  string
+	response     *http.Response
+	responseBody []byte
+}
+
+func (server runningServer) validate(t *testing.T, target validationTarget) {
+	t.Helper()
 	// Route by path only: the contract's server URL is relative.
-	routeRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, path, nil)
+	routeRequest, err := http.NewRequestWithContext(t.Context(), target.method, target.path, strings.NewReader(target.requestBody))
 	require.NoError(t, err)
+	if target.requestBody != "" {
+		routeRequest.Header.Set("Content-Type", "application/json")
+	}
 	route, pathParameters, err := server.router.FindRoute(routeRequest)
-	require.NoError(t, err, "%s is not in the contract", path)
+	require.NoError(t, err, "%s %s is not in the contract", target.method, target.path)
 
 	input := &openapi3filter.RequestValidationInput{Request: routeRequest, PathParams: pathParameters, Route: route}
-	require.NoError(t, openapi3filter.ValidateRequest(context.Background(), input))
+	// Requests that are invalid on purpose (to test 400 handling) are not
+	// validated; their responses still are.
+	if target.response.StatusCode != http.StatusBadRequest {
+		require.NoError(t, openapi3filter.ValidateRequest(context.Background(), input))
+	}
 	require.NoError(t, openapi3filter.ValidateResponse(context.Background(), &openapi3filter.ResponseValidationInput{
 		RequestValidationInput: input,
-		Status:                 response.StatusCode,
-		Header:                 response.Header,
-		Body:                   io.NopCloser(bytes.NewReader(body)),
+		Status:                 target.response.StatusCode,
+		Header:                 target.response.Header,
+		Body:                   io.NopCloser(bytes.NewReader(target.responseBody)),
 		Options:                &openapi3filter.Options{IncludeResponseStatus: true},
-	}), "response does not match the contract: %s", body)
+	}), "response does not match the contract: %s", target.responseBody)
 }
 
 func freePort(t *testing.T) int {
@@ -141,4 +169,23 @@ func waitUntilListening(t *testing.T, baseURL string) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("server at %s never started", baseURL)
+}
+
+// lockedBuffer collects the server's output; the process writes from its
+// own goroutines while the test reads.
+type lockedBuffer struct {
+	mutex  sync.Mutex
+	buffer bytes.Buffer
+}
+
+func (locked *lockedBuffer) Write(data []byte) (int, error) {
+	locked.mutex.Lock()
+	defer locked.mutex.Unlock()
+	return locked.buffer.Write(data)
+}
+
+func (locked *lockedBuffer) String() string {
+	locked.mutex.Lock()
+	defer locked.mutex.Unlock()
+	return locked.buffer.String()
 }

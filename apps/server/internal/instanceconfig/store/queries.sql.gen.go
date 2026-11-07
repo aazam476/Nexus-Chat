@@ -22,6 +22,27 @@ func (q *Queries) GetSetting(ctx context.Context, key string) (InstanceSetting, 
 	return i, err
 }
 
+const insertSettingIfAbsent = `-- name: InsertSettingIfAbsent :execrows
+INSERT INTO instance_settings (key, value)
+VALUES ($1, $2)
+ON CONFLICT (key) DO NOTHING
+`
+
+type InsertSettingIfAbsentParams struct {
+	Key   string
+	Value []byte
+}
+
+// Inserts the value only if the key has none. Returns 1 if it was inserted
+// and 0 if a value already existed.
+func (q *Queries) InsertSettingIfAbsent(ctx context.Context, arg InsertSettingIfAbsentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertSettingIfAbsent, arg.Key, arg.Value)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const insertSettingIfMissing = `-- name: InsertSettingIfMissing :one
 INSERT INTO instance_settings (key, value)
 VALUES ($1, $2)
@@ -41,4 +62,20 @@ func (q *Queries) InsertSettingIfMissing(ctx context.Context, arg InsertSettingI
 	var i InstanceSetting
 	err := row.Scan(&i.Key, &i.Value, &i.UpdatedAt)
 	return i, err
+}
+
+const upsertSetting = `-- name: UpsertSetting :exec
+INSERT INTO instance_settings (key, value, updated_at)
+VALUES ($1, $2, now())
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()
+`
+
+type UpsertSettingParams struct {
+	Key   string
+	Value []byte
+}
+
+func (q *Queries) UpsertSetting(ctx context.Context, arg UpsertSettingParams) error {
+	_, err := q.db.Exec(ctx, upsertSetting, arg.Key, arg.Value)
+	return err
 }

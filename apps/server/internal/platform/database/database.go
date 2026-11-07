@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -66,6 +67,16 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) error
 		logger.InfoContext(ctx, "applied database migration",
 			slog.Int64("version", result.Source.Version),
 			slog.Duration("duration", result.Duration))
+	}
+	return nil
+}
+
+// InTransaction runs work inside a database transaction. If work returns an
+// error the transaction is rolled back, otherwise it is committed. Stores
+// pass the transaction to sqlc's Queries via New(transaction).
+func InTransaction(ctx context.Context, pool *pgxpool.Pool, work func(transaction pgx.Tx) error) error {
+	if err := pgx.BeginFunc(ctx, pool, work); err != nil {
+		return fmt.Errorf("database transaction: %w", err)
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func (failingChecker) Ping(context.Context) error { return errors.New("down") }
 func newTestHandler(checkers []health.NamedChecker, logs *bytes.Buffer) http.Handler {
 	logger := slog.New(slog.NewJSONHandler(logs, nil))
 	features := Features{Health: health.NewHandler(health.NewService(checkers))}
-	return NewHandler(features, logger)
+	return NewHandler(features, Options{Logger: logger})
 }
 
 func TestRoutesServeHealthEndpoints(t *testing.T) {
@@ -110,4 +111,31 @@ func TestNewServerSetsTimeouts(t *testing.T) {
 	assert.NotZero(t, server.WriteTimeout)
 	assert.NotZero(t, server.IdleTimeout)
 	assert.NotNil(t, server.ErrorLog)
+}
+
+func TestBadRequestBodiesGetJSONErrors(t *testing.T) {
+	var logs bytes.Buffer
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/setup", strings.NewReader("{not json"))
+
+	newTestHandler(nil, &logs).ServeHTTP(recorder, request)
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+	assert.Equal(t, "application/json", recorder.Header().Get("Content-Type"))
+	var body struct{ Code string }
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
+	assert.Equal(t, "bad_request", body.Code)
+}
+
+func TestInternalErrorsAreLoggedButNotShown(t *testing.T) {
+	var logs bytes.Buffer
+	responder := errorResponder{logger: slog.New(slog.NewJSONHandler(&logs, nil))}
+	recorder := httptest.NewRecorder()
+
+	responder.internalError(recorder, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/x", nil), errors.New("database password is wrong"))
+
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.NotContains(t, recorder.Body.String(), "database password")
+	assert.Contains(t, recorder.Body.String(), "internal_error")
+	assert.Contains(t, logs.String(), "database password is wrong")
 }

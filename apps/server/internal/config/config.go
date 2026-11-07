@@ -74,7 +74,7 @@ func Load(getenv Getenv) (Config, error) {
 	collect(err)
 	config.DatabaseURL, err = databaseURL(getenv)
 	collect(err)
-	collect(validateDomain(config.Domain))
+	collect(ValidateDomain(config.Domain))
 
 	if len(problems) > 0 {
 		return Config{}, fmt.Errorf("invalid configuration: %w", errors.Join(problems...))
@@ -106,9 +106,9 @@ func parseLogLevel(value string) (slog.Level, error) {
 	return level, nil
 }
 
-// validateDomain accepts an empty domain (it can be set later) or a bare
+// ValidateDomain accepts an empty domain (it can be set later) or a bare
 // host name. A scheme, path or port is a common copy-paste mistake.
-func validateDomain(domain string) error {
+func ValidateDomain(domain string) error {
 	if domain == "" {
 		return nil
 	}

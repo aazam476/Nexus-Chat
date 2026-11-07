@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses } from './types.gen.js';
+import type { CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSetupStatusData, GetSetupStatusResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,33 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * Setup status
+ *
+ * Tells the setup wizard whether the instance still needs setting up,
+ * and whether this connection is secure (HTTPS or localhost), so it can
+ * warn that the setup token and password would travel unencrypted.
+ *
+ */
+export const getSetupStatus = <ThrowOnError extends boolean = false>(options?: Options<GetSetupStatusData, ThrowOnError>): RequestResult<GetSetupStatusResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetSetupStatusResponses, unknown, ThrowOnError>({ url: '/api/v1/setup', ...options });
+
+/**
+ * Complete setup
+ *
+ * Creates the first instance admin and saves the basic instance
+ * settings. Requires the one-time setup token printed in the server
+ * logs on first boot. Works once; afterwards it returns 409.
+ *
+ */
+export const completeSetup = <ThrowOnError extends boolean = false>(options: Options<CompleteSetupData, ThrowOnError>): RequestResult<CompleteSetupResponses, CompleteSetupErrors, ThrowOnError> => (options.client ?? client).post<CompleteSetupResponses, CompleteSetupErrors, ThrowOnError>({
+    url: '/api/v1/setup',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Liveness probe

@@ -13,7 +13,64 @@ servers:
 tags:
   - name: health
     description: Liveness and readiness probes used by Docker and orchestrators.
+  - name: setup
+    description: First-run setup of a fresh instance (spec §3.5).
 paths:
+  /api/v1/setup:
+    get:
+      operationId: getSetupStatus
+      summary: Setup status
+      description: |
+        Tells the setup wizard whether the instance still needs setting up,
+        and whether this connection is secure (HTTPS or localhost), so it can
+        warn that the setup token and password would travel unencrypted.
+      tags: [setup]
+      responses:
+        "200":
+          description: Current setup status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupStatus"
+    post:
+      operationId: completeSetup
+      summary: Complete setup
+      description: |
+        Creates the first instance admin and saves the basic instance
+        settings. Requires the one-time setup token printed in the server
+        logs on first boot. Works once; afterwards it returns 409.
+      tags: [setup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupRequest"
+      responses:
+        "201":
+          description: Setup is complete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The setup token is wrong (`invalid_setup_token`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Setup was already completed (`setup_already_complete`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /healthz:
     get:
       operationId: getLiveness
@@ -49,7 +106,124 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 components:
+  responses:
+    BadRequest:
+      description: The request body is not valid JSON or has the wrong shape (`bad_request`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationFailed:
+      description: One or more fields are invalid (`validation_failed`); `fields` lists them.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    RateLimited:
+      description: Too many attempts; try again later (`rate_limited`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable code, for example `validation_failed`.
+        message:
+          type: string
+          description: Human-readable explanation in English.
+        fields:
+          type: array
+          description: Present for `validation_failed`; one entry per invalid field.
+          items:
+            $ref: "#/components/schemas/FieldError"
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Path of the field in the request, for example `admin.email`.
+        message:
+          type: string
+    SetupStatus:
+      type: object
+      additionalProperties: false
+      required: [setupRequired, secureConnection, domainFromEnvironment]
+      properties:
+        setupRequired:
+          type: boolean
+          description: True until the first admin has been created.
+        secureConnection:
+          type: boolean
+          description: |
+            True when this request arrived over HTTPS (directly or via a
+            trusted proxy) or is addressed to localhost.
+        domain:
+          type: string
+          description: The configured public domain, if any.
+        domainFromEnvironment:
+          type: boolean
+          description: True when `DOMAIN` is set in `.env`, so the wizard cannot change it.
+    SetupRequest:
+      type: object
+      additionalProperties: false
+      required: [setupToken, admin, instance]
+      properties:
+        setupToken:
+          type: string
+          description: The token from the server logs. Case and dashes are ignored.
+        admin:
+          $ref: "#/components/schemas/SetupAdmin"
+        instance:
+          $ref: "#/components/schemas/SetupInstance"
+    SetupAdmin:
+      type: object
+      additionalProperties: false
+      required: [username, displayName, email, password]
+      properties:
+        username:
+          type: string
+          description: 3–32 characters from a–z, 0–9, `_` and `.`.
+        displayName:
+          type: string
+          description: 1–32 characters.
+        email:
+          type: string
+        password:
+          type: string
+          description: At least 10 characters.
+    SetupInstance:
+      type: object
+      additionalProperties: false
+      required: [name, registrationMode]
+      properties:
+        name:
+          type: string
+          description: Instance name shown to users, 1–64 characters.
+        domain:
+          type: string
+          description: Public domain such as `chat.example.com`. Ignored when `DOMAIN` is set in `.env`.
+        registrationMode:
+          $ref: "#/components/schemas/RegistrationMode"
+    RegistrationMode:
+      type: string
+      enum: [open, invite_only, closed]
+      description: Who may create accounts.
+    SetupResult:
+      type: object
+      additionalProperties: false
+      required: [adminUserId]
+      properties:
+        adminUserId:
+          type: string
+          format: uuid
     HealthStatus:
       type: object
       additionalProperties: false

@@ -2,10 +2,12 @@ package database
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/url"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -59,4 +61,31 @@ func TestMigrateFailsWhenDatabaseIsClosed(t *testing.T) {
 	err := Migrate(context.Background(), pool, slog.New(slog.DiscardHandler))
 
 	assert.Error(t, err)
+}
+
+func TestInTransactionCommitsOrRollsBack(t *testing.T) {
+	ctx := context.Background()
+	pool := databasetest.NewPool(t)
+	_, err := pool.Exec(ctx, "CREATE TABLE items (name text)")
+	require.NoError(t, err)
+
+	require.NoError(t, InTransaction(ctx, pool, func(transaction pgx.Tx) error {
+		_, err := transaction.Exec(ctx, "INSERT INTO items VALUES ('kept')")
+		return err
+	}))
+	failure := errors.New("work failed")
+	err = InTransaction(ctx, pool, func(transaction pgx.Tx) error {
+		if _, err := transaction.Exec(ctx, "INSERT INTO items VALUES ('discarded')"); err != nil {
+			return err
+		}
+		return failure
+	})
+
+	require.ErrorIs(t, err, failure)
+	var names []string
+	rows, err := pool.Query(ctx, "SELECT name FROM items")
+	require.NoError(t, err)
+	names, err = pgx.CollectRows(rows, pgx.RowTo[string])
+	require.NoError(t, err)
+	assert.Equal(t, []string{"kept"}, names)
 }
