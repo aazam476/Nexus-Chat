@@ -120,9 +120,19 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   the system browser), all permission requests refused, and provider
   sign-in in its own window, returning to `nexuschat://oidc-return`.
 
-Still to do in M2: the Playwright release gate, the ZAP
-scan, certificate expiry emails, Maestro flows, visual snapshots with the
-worst-case fixtures, and the mutation-testing tool for auth.
+- Browser release gate (`tests/e2e`, Playwright): setup wizard → admin →
+  second user → live status on a second device → reload and logout, plus
+  the desktop app, with axe-core on every screen (no serious or critical
+  violations). It runs in the release gate over localhost and through
+  Caddy, Nginx and Traefik, where Chromium trusts the test certificate's
+  key so the page stays a secure context. An OWASP ZAP baseline scan runs
+  against the set-up instance; it led to `connect-src 'self'`,
+  Permissions-Policy, Cross-Origin-Embedder-Policy and
+  Cross-Origin-Resource-Policy headers.
+
+Still to do in M2: certificate expiry emails, Maestro flows, visual
+snapshots with the worst-case fixtures, and the mutation-testing tool for
+auth.
 
 ## Known issues
 
@@ -139,6 +149,5 @@ worst-case fixtures, and the mutation-testing tool for auth.
   fixture of its own, because that would need a GPL module in `go.mod`.
 - Fuzz and property-based tests start with the first untrusted-input
   parsers (M2/M4); there are none yet.
-- Moved from M1 to M2 (they need the client UI or admin sessions): setup
-  wizard screens, certificate upload in the Admin panel, the HTTPS warning
-  banner, expiry emails, the browser-driven release gate, and the ZAP scan.
+- Moved from M1 to M2 (they need the client UI or admin sessions):
+  certificate upload in the Admin panel and expiry emails.

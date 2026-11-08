@@ -25,3 +25,5 @@ data/
 # Expo
 .expo/
 apps/client/dist/
+test-results/
+playwright-report/

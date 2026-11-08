@@ -132,8 +132,26 @@ jobs:
           for image in nexus-chat-server nexus-chat-push-relay; do
             trivy image --exit-code 1 --severity CRITICAL --no-progress "ghcr.io/aazam476/$image:ci"
           done
-      - name: Release gate over localhost
-        run: scripts/release-gate.sh plain ci
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install the browser test tools
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @nexus-chat/e2e exec playwright install --with-deps chromium
+      - name: Build the desktop app for its test
+        run: |
+          pnpm --filter @nexus-chat/api-client build
+          pnpm --filter @nexus-chat/client build:web
+          pnpm --filter @nexus-chat/desktop build
+      - name: Allow Chromium's sandbox
+        # Ubuntu 24.04 blocks the unprivileged user namespaces that
+        # Electron's sandbox uses; the test keeps the sandbox on.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Release gate over localhost (with the desktop app and ZAP)
+        run: xvfb-run -a scripts/release-gate.sh plain ci
       - name: Release gate through HTTPS reverse proxies
         run: |
           for proxy in caddy nginx traefik; do

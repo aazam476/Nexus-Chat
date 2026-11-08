@@ -12,9 +12,16 @@
 # ghcr.io/aazam476/nexus-chat-server:<tag>.
 #
 # The smoke test grows with each milestone. Today it covers: containers come
-# up healthy, setup token appears in the logs, setup creates the admin, and
-# LiveKit is running. Second user, message and voice join are added in M2,
-# M4 and M9.
+# up healthy, the setup token appears in the logs, and then, in a real
+# browser (tests/e2e): the setup wizard creates the admin, a second user
+# signs up, status changes reach other devices live, and every screen passes
+# axe-core. Over localhost the desktop app logs in too, and an OWASP ZAP
+# baseline scan runs against the set-up instance. Message and voice join
+# are added in M4 and M9.
+#
+# Needs: Docker, pnpm with the workspace installed, Playwright's Chromium,
+# and for the desktop test a display (run under xvfb-run in CI) plus the
+# client's web build and the desktop app's build.
 set -euo pipefail
 
 mode="$1"
@@ -22,6 +29,8 @@ image_tag="$2"
 repository_root="$(cd "$(dirname "$0")/.." && pwd)"
 work="$(mktemp -d)"
 start_time=$(date +%s)
+# ghcr.io/zaproxy/zaproxy 20261103-stable (ZAP 2.17.0), pinned by digest.
+zap_image="ghcr.io/zaproxy/zaproxy:20261103-stable@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af"
 
 step() { echo "== $*"; }
 fail() { echo "FAIL: $*"; (cd "$work" && docker compose logs --no-color) || true; exit 1; }
@@ -89,11 +98,28 @@ echo "$status"
 echo "$status" | grep -q '"setupRequired":true' || fail "setup should be required on a fresh instance"
 echo "$status" | grep -q '"secureConnection":true' || fail "connection should count as secure (localhost or HTTPS via trusted proxy)"
 
-step "Complete setup (create the admin)"
-code=$(curl -sS "${curl_options[@]}" -o response.json -w '%{http_code}' -X POST "$base_url/api/v1/setup" \
-  -H 'Content-Type: application/json' \
-  -d "{\"setupToken\":\"$token\",\"admin\":{\"username\":\"admin\",\"displayName\":\"Admin\",\"email\":\"admin@example.com\",\"password\":\"release gate password\"},\"instance\":{\"name\":\"Release Gate\",\"registrationMode\":\"invite_only\"}}")
-[ "$code" = "201" ] || { cat response.json; fail "setup returned $code"; }
+# What the browser needs to reach the instance as a user would.
+e2e_env=(NEXUS_E2E_BASE_URL="$base_url" NEXUS_E2E_SETUP_TOKEN="$token")
+if [ "$mode" = "plain" ]; then
+  e2e_env+=(NEXUS_E2E_DESKTOP=1)
+else
+  # Chromium trusts the key of the certificate the proxy presents, so the
+  # page stays a secure context (ignoring certificate errors would not).
+  openssl s_client -connect 127.0.0.1:443 -servername nexus.test </dev/null 2>/dev/null |
+    openssl x509 -pubkey -noout > presented-key.pem || fail "could not read the proxy's certificate"
+  spki=$(openssl pkey -pubin -in presented-key.pem -outform der | openssl dgst -sha256 -binary | base64)
+  e2e_env+=(NEXUS_E2E_HOST_RULES="MAP nexus.test 127.0.0.1" NEXUS_E2E_TRUSTED_SPKI="$spki")
+fi
+
+step "Smoke test in a browser: setup wizard, admin, second user"
+(cd "$repository_root" && env "${e2e_env[@]}" pnpm --filter @nexus-chat/e2e e2e) || fail "browser smoke test failed"
+
+if [ "$mode" = "plain" ]; then
+  step "OWASP ZAP baseline scan"
+  mkdir -p zap && cp "$repository_root/scripts/zap/rules.tsv" zap/ && chmod 0777 zap
+  docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" "$zap_image" \
+    zap-baseline.py -t "$base_url" -c rules.tsv -r report.html || fail "ZAP baseline scan found new warnings (see zap/report.html)"
+fi
 
 step "LiveKit is running"
 docker compose "${compose_files[@]}" ps --status running --services | grep -qx livekit || fail "livekit is not running"

@@ -17,13 +17,22 @@ import (
 	"strings"
 )
 
-// contentSecurityPolicy allows only the instance's own scripts and styles,
-// so injected markup cannot load or run code from elsewhere. React Native
-// Web sets styles inline, hence 'unsafe-inline' for styles only. Images may
-// be data: and blob: URLs, which the app creates for previews.
+// contentSecurityPolicy allows only the instance's own scripts, styles
+// and connections, so injected markup cannot load or run code from
+// elsewhere or send data to another site. 'self' covers the gateway's
+// ws:// and wss:// addresses on this host. React Native Web sets styles
+// inline, hence 'unsafe-inline' for styles only. Images may be data: and
+// blob: URLs, which the app creates for previews.
 const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-	"img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; " +
+	"img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; " +
 	"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+
+// permissionsPolicy turns off browser features the app never uses. Camera,
+// microphone and screen capture stay available to the instance's own pages
+// for calls (M8, M9); the browser still asks the user first.
+const permissionsPolicy = "camera=(self), microphone=(self), display-capture=(self), " +
+	"geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), midi=(), " +
+	"accelerometer=(), gyroscope=(), magnetometer=(), browsing-topics=()"
 
 // immutablePrefix holds files whose names contain a content hash, which a
 // browser may keep forever.
@@ -50,6 +59,10 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	headers := writer.Header()
 	headers.Set("Content-Security-Policy", contentSecurityPolicy)
 	headers.Set("Cross-Origin-Opener-Policy", "same-origin")
+	// Pages load only same-origin files, so cross-origin isolation costs
+	// nothing and keeps other sites' resources out of the process.
+	headers.Set("Cross-Origin-Embedder-Policy", "require-corp")
+	headers.Set("Permissions-Policy", permissionsPolicy)
 	if name == "" || !handler.isFile(name) {
 		name = "index.html"
 		// The page names the current hashed bundles, so it must be

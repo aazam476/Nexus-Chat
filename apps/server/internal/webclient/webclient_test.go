@@ -3,6 +3,7 @@ package webclient
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -32,7 +33,25 @@ func TestAppRoutesGetTheIndexPage(t *testing.T) {
 		assert.Equal(t, "no-cache", response.Header().Get("Cache-Control"), path)
 		assert.Contains(t, response.Header().Get("Content-Security-Policy"), "script-src 'self'", path)
 		assert.Contains(t, response.Header().Get("Content-Security-Policy"), "frame-ancestors 'none'", path)
+		assert.Equal(t, "require-corp", response.Header().Get("Cross-Origin-Embedder-Policy"), path)
+		assert.Contains(t, response.Header().Get("Permissions-Policy"), "geolocation=()", path)
 	}
+}
+
+// The ZAP baseline scan cannot tell the one accepted relaxation (inline
+// styles) from others, so this test pins the rest of the policy.
+func TestThePolicyAllowsNothingFromElsewhere(t *testing.T) {
+	directives := strings.Split(get(t, "/").Header().Get("Content-Security-Policy"), "; ")
+
+	for _, directive := range directives {
+		for _, broad := range []string{"*", "http:", "https:", "ws:", "wss:", "'unsafe-eval'"} {
+			assert.NotContains(t, strings.Fields(directive), broad, directive)
+		}
+		if !strings.HasPrefix(directive, "style-src ") {
+			assert.NotContains(t, directive, "'unsafe-inline'", directive)
+		}
+	}
+	assert.Contains(t, directives, "connect-src 'self'")
 }
 
 func TestFilesAreServedAndHashedBundlesCachedForever(t *testing.T) {

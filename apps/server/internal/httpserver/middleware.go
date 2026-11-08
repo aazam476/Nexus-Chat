@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -67,14 +68,23 @@ func handlePanic(writer http.ResponseWriter, request *http.Request, recovered an
 }
 
 // securityHeaders sets headers that are correct for every response. Page
-// specific headers such as Content-Security-Policy arrive with the web
-// client in a later milestone.
+// headers such as Content-Security-Policy come from the web client.
+//
+// Cross-Origin-Resource-Policy matches allowCrossOrigin: the API, avatars
+// included, is meant for apps on other origins (the desktop app shows
+// avatars from app://), while the web build's own files are for its pages
+// only.
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		headers := writer.Header()
 		headers.Set("X-Content-Type-Options", "nosniff")
 		headers.Set("Referrer-Policy", "no-referrer")
 		headers.Set("X-Frame-Options", "DENY")
+		if strings.HasPrefix(request.URL.Path, "/api/") {
+			headers.Set("Cross-Origin-Resource-Policy", "cross-origin")
+		} else {
+			headers.Set("Cross-Origin-Resource-Policy", "same-origin")
+		}
 		next.ServeHTTP(writer, request)
 	})
 }

@@ -49,3 +49,16 @@ func TestTheWebClientServesEverythingElse(t *testing.T) {
 
 	assert.Equal(t, "app", recorder.Body.String())
 }
+
+func TestOnlyTheAPIMayBeEmbeddedByOtherOrigins(t *testing.T) {
+	handler := securityHeaders(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	policy := func(path string) string {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
+		return recorder.Header().Get("Cross-Origin-Resource-Policy")
+	}
+
+	assert.Equal(t, "cross-origin", policy("/api/v1/users/0195/avatar"), "the desktop app shows avatars")
+	assert.Equal(t, "same-origin", policy("/_expo/static/js/web/entry.js"))
+	assert.Equal(t, "same-origin", policy("/login"))
+}

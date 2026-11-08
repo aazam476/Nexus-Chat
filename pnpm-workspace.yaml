@@ -1,8 +1,9 @@
-# Every directory under apps/ and packages/ with a package.json is a
-# workspace. The Go apps have no package.json and are ignored here.
+# Every directory under apps/, packages/ and tests/ with a package.json is
+# a workspace. The Go apps have no package.json and are ignored here.
 packages:
   - apps/*
   - packages/*
+  - tests/*
 # Dependency install scripts are off unless listed here. @parcel/watcher is
 # an optional native file watcher Jest uses only in watch mode; it works
 # without its build step, so the script stays disabled.

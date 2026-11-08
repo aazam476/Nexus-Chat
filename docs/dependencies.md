@@ -103,6 +103,19 @@ runtime dependencies.
 | `@types/node`                    | 26.6.6                  | MIT     | Node.js types for the main process (dev)                                                                                                   |
 | `jest`, `ts-jest`, `@types/jest` | 30.5.2, 29.4.15, 30.0.0 | MIT     | Test runner required by the spec (dev)                                                                                                     |
 
+## TypeScript: `@nexus-chat/e2e` (dev only)
+
+| Package                | Version | License    | Why                                                                        |
+| ---------------------- | ------- | ---------- | -------------------------------------------------------------------------- |
+| `@playwright/test`     | 1.65.0  | Apache-2.0 | Browser and Electron end-to-end tests the spec names (spec §7.2)           |
+| `@axe-core/playwright` | 4.14.0  | MPL-2.0    | axe-core accessibility checks on every screen (spec §7.2), used unmodified |
+| `@types/node`          | 26.6.6  | MIT        | Node.js types for the test code                                            |
+
+The release gate also runs the OWASP ZAP baseline scan from the
+`ghcr.io/zaproxy/zaproxy` image (Apache-2.0), pinned by digest in
+`scripts/release-gate.sh`; its accepted findings are listed with reasons in
+`scripts/zap/rules.tsv`.
+
 ## TypeScript: workspace tooling (dev only)
 
 `typescript` 6.0.3, `eslint` 10.14.0, `typescript-eslint` 8.72.1,

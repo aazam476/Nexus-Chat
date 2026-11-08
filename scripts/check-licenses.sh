@@ -27,7 +27,7 @@ case "$kind" in
     # simpler than proving which ones end up in an app bundle. With pnpm,
     # each workspace keeps its own dependencies, so every workspace under
     # the directory is checked, not only its root.
-    for workspace in "$directory" "$directory"/apps/* "$directory"/packages/*; do
+    for workspace in "$directory" "$directory"/apps/* "$directory"/packages/* "$directory"/tests/*; do
       if [ -f "$workspace/package.json" ]; then
         license-checker-rseidelsohn --start "$workspace" --excludePrivatePackages --onlyAllow "$js_allowed" >/dev/null
       fi
