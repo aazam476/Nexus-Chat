@@ -21,6 +21,7 @@ consequences. "Proposed [REVIEW]" means it is waiting for maintainer approval.
 | [0014](0014-attachment-limits-and-compression.md) | Attachment size limits and lossy compression         | Accepted          |
 | [0015](0015-container-deployment.md)              | Container images and deployment layout               | Accepted          |
 | [0016](0016-oidc-sign-in.md)                      | Sign-in with OAuth 2.0 / OpenID Connect providers    | Accepted          |
+| [0017](0017-client-ui-foundation.md)              | Client UI foundation                                 | Accepted          |
 
 New records use the next number and the same headings: Context, Options,
 Decision, Consequences.
