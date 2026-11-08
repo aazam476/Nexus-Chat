@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -57,6 +58,30 @@ func (e MfaMethod) Valid() bool {
 	}
 }
 
+// Defines values for PresenceStatus.
+const (
+	PresenceStatusDnd     PresenceStatus = "dnd"
+	PresenceStatusIdle    PresenceStatus = "idle"
+	PresenceStatusOffline PresenceStatus = "offline"
+	PresenceStatusOnline  PresenceStatus = "online"
+)
+
+// Valid indicates whether the value is a known member of the PresenceStatus enum.
+func (e PresenceStatus) Valid() bool {
+	switch e {
+	case PresenceStatusDnd:
+		return true
+	case PresenceStatusIdle:
+		return true
+	case PresenceStatusOffline:
+		return true
+	case PresenceStatusOnline:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RegistrationMode.
 const (
 	RegistrationModeClosed     RegistrationMode = "closed"
@@ -93,6 +118,30 @@ func (e SmtpSecurity) Valid() bool {
 	case SmtpSecurityStarttls:
 		return true
 	case SmtpSecurityTls:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserStatus.
+const (
+	UserStatusDnd       UserStatus = "dnd"
+	UserStatusIdle      UserStatus = "idle"
+	UserStatusInvisible UserStatus = "invisible"
+	UserStatusOnline    UserStatus = "online"
+)
+
+// Valid indicates whether the value is a known member of the UserStatus enum.
+func (e UserStatus) Valid() bool {
+	switch e {
+	case UserStatusDnd:
+		return true
+	case UserStatusIdle:
+		return true
+	case UserStatusInvisible:
+		return true
+	case UserStatusOnline:
 		return true
 	default:
 		return false
@@ -217,12 +266,28 @@ type CreatedInvite struct {
 
 // CurrentUser defines model for CurrentUser.
 type CurrentUser struct {
+	// AvatarUrl Path of the profile picture; missing without one.
+	AvatarUrl       *string            `json:"avatarUrl,omitempty"`
+	Bio             string             `json:"bio"`
+	CustomStatus    *CustomStatus      `json:"customStatus,omitempty"`
 	DisplayName     string             `json:"displayName"`
 	Email           string             `json:"email"`
 	EmailVerified   bool               `json:"emailVerified"`
 	Id              openapi_types.UUID `json:"id"`
 	IsInstanceAdmin bool               `json:"isInstanceAdmin"`
-	Username        string             `json:"username"`
+
+	// Status The status the user chose.
+	Status   UserStatus `json:"status"`
+	Username string     `json:"username"`
+}
+
+// CustomStatus defines model for CustomStatus.
+type CustomStatus struct {
+	// ExpiresAt When it is removed automatically; never if missing.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+
+	// Text 1–128 characters.
+	Text string `json:"text"`
 }
 
 // EnrollTotpRequest defines model for EnrollTotpRequest.
@@ -371,6 +436,9 @@ type PasswordResetRequest struct {
 	Email string `json:"email"`
 }
 
+// PresenceStatus What others see. A user who chose invisible, or has no device connected, is offline.
+type PresenceStatus string
+
 // ProviderFlow defines model for ProviderFlow.
 type ProviderFlow struct {
 	AuthorizationUrl string `json:"authorizationUrl"`
@@ -410,6 +478,14 @@ type Session struct {
 	ExpiresAt  time.Time          `json:"expiresAt"`
 	Id         openapi_types.UUID `json:"id"`
 	LastSeenAt time.Time          `json:"lastSeenAt"`
+}
+
+// SetStatusRequest defines model for SetStatusRequest.
+type SetStatusRequest struct {
+	CustomStatus *CustomStatus `json:"customStatus,omitempty"`
+
+	// Status The status the user chose.
+	Status UserStatus `json:"status"`
 }
 
 // SetupAdmin defines model for SetupAdmin.
@@ -537,6 +613,15 @@ type UpdateOidcProviderRequest struct {
 	Scopes       *[]string `json:"scopes,omitempty"`
 }
 
+// UpdateProfileRequest defines model for UpdateProfileRequest.
+type UpdateProfileRequest struct {
+	// Bio At most 500 characters; empty removes it.
+	Bio *string `json:"bio,omitempty"`
+
+	// DisplayName 1–32 characters.
+	DisplayName *string `json:"displayName,omitempty"`
+}
+
 // UpdateSmtpSettingsRequest defines model for UpdateSmtpSettingsRequest.
 type UpdateSmtpSettingsRequest struct {
 	// From The sender address, for example `chat@example.com`.
@@ -552,6 +637,23 @@ type UpdateSmtpSettingsRequest struct {
 	Security SmtpSecurity `json:"security"`
 	Username *string      `json:"username,omitempty"`
 }
+
+// UserProfile defines model for UserProfile.
+type UserProfile struct {
+	// AvatarUrl Path of the profile picture, for example `/api/v1/avatars/{id}`; missing without one.
+	AvatarUrl    *string            `json:"avatarUrl,omitempty"`
+	Bio          string             `json:"bio"`
+	CustomStatus *CustomStatus      `json:"customStatus,omitempty"`
+	DisplayName  string             `json:"displayName"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// Status What others see. A user who chose invisible, or has no device connected, is offline.
+	Status   PresenceStatus `json:"status"`
+	Username string         `json:"username"`
+}
+
+// UserStatus The status the user chose.
+type UserStatus string
 
 // WebAuthnCeremony defines model for WebAuthnCeremony.
 type WebAuthnCeremony struct {
@@ -637,6 +739,13 @@ type ProviderCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
+// SetAvatarParams defines parameters for SetAvatar.
+type SetAvatarParams struct {
+	CropX    *int `form:"cropX,omitempty" json:"cropX,omitempty"`
+	CropY    *int `form:"cropY,omitempty" json:"cropY,omitempty"`
+	CropSize *int `form:"cropSize,omitempty" json:"cropSize,omitempty"`
+}
+
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
 
@@ -705,6 +814,12 @@ type FinishWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationAnswer
 
 // CompleteSetupJSONRequestBody defines body for CompleteSetup for application/json ContentType.
 type CompleteSetupJSONRequestBody = SetupRequest
+
+// UpdateCurrentUserJSONRequestBody defines body for UpdateCurrentUser for application/json ContentType.
+type UpdateCurrentUserJSONRequestBody = UpdateProfileRequest
+
+// SetStatusJSONRequestBody defines body for SetStatus for application/json ContentType.
+type SetStatusJSONRequestBody = SetStatusRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -840,6 +955,9 @@ type ServerInterface interface {
 	// RemoveWebAuthnCredential Remove a security key or passkey
 	// (DELETE /api/v1/auth/webauthn/{credentialId})
 	RemoveWebAuthnCredential(w http.ResponseWriter, r *http.Request, credentialId openapi_types.UUID)
+	// GetAvatar A profile picture
+	// (GET /api/v1/avatars/{avatarId})
+	GetAvatar(w http.ResponseWriter, r *http.Request, avatarId openapi_types.UUID)
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(w http.ResponseWriter, r *http.Request)
@@ -852,6 +970,21 @@ type ServerInterface interface {
 	// GetCurrentUser My account
 	// (GET /api/v1/users/me)
 	GetCurrentUser(w http.ResponseWriter, r *http.Request)
+	// UpdateCurrentUser Change my profile
+	// (PATCH /api/v1/users/me)
+	UpdateCurrentUser(w http.ResponseWriter, r *http.Request)
+	// RemoveAvatar Remove my profile picture
+	// (DELETE /api/v1/users/me/avatar)
+	RemoveAvatar(w http.ResponseWriter, r *http.Request)
+	// SetAvatar Upload my profile picture
+	// (PUT /api/v1/users/me/avatar)
+	SetAvatar(w http.ResponseWriter, r *http.Request, params SetAvatarParams)
+	// SetStatus Set my status
+	// (PUT /api/v1/users/me/status)
+	SetStatus(w http.ResponseWriter, r *http.Request)
+	// GetUserProfile Someone's public profile
+	// (GET /api/v1/users/{userId})
+	GetUserProfile(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(w http.ResponseWriter, r *http.Request)
@@ -1650,6 +1783,32 @@ func (siw *ServerInterfaceWrapper) RemoveWebAuthnCredential(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// GetAvatar operation middleware
+func (siw *ServerInterfaceWrapper) GetAvatar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "avatarId" -------------
+	var avatarId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "avatarId", r.PathValue("avatarId"), &avatarId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "avatarId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAvatar(w, r, avatarId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstanceInfo operation middleware
 func (siw *ServerInterfaceWrapper) GetInstanceInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -1697,6 +1856,133 @@ func (siw *ServerInterfaceWrapper) GetCurrentUser(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCurrentUser operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCurrentUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveAvatar operation middleware
+func (siw *ServerInterfaceWrapper) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveAvatar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetAvatar operation middleware
+func (siw *ServerInterfaceWrapper) SetAvatar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetAvatarParams
+
+	// ------------- Optional query parameter "cropX" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cropX", r.URL.Query(), &params.CropX, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cropX"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cropX", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cropY" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cropY", r.URL.Query(), &params.CropY, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cropY"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cropY", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cropSize" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cropSize", r.URL.Query(), &params.CropSize, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cropSize"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cropSize", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetAvatar(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetStatus operation middleware
+func (siw *ServerInterfaceWrapper) SetStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUserProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetUserProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserProfile(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1899,6 +2185,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/sessions", wrapper.ListSessions)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/sessions/{sessionId}", wrapper.RevokeSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/users/me", wrapper.GetCurrentUser)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/users/me", wrapper.UpdateCurrentUser)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/users/me/avatar", wrapper.RemoveAvatar)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/users/me/avatar", wrapper.SetAvatar)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/users/me/status", wrapper.SetStatus)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/users/{userId}", wrapper.GetUserProfile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/setup", wrapper.CompleteSetup)
@@ -4485,6 +4777,98 @@ func (response RemoveWebAuthnCredential404JSONResponse) VisitRemoveWebAuthnCrede
 	return err
 }
 
+type GetAvatarRequestObject struct {
+	AvatarId openapi_types.UUID `json:"avatarId"`
+}
+
+type GetAvatarResponseObject interface {
+	VisitGetAvatarResponse(w http.ResponseWriter) error
+}
+
+type GetAvatar200ResponseHeaders struct {
+	CacheControl string
+}
+
+type GetAvatar200ImagegifResponse struct {
+	Body          io.Reader
+	Headers       GetAvatar200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetAvatar200ImagegifResponse) VisitGetAvatarResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/gif")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetAvatar200ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetAvatar200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetAvatar200ImagejpegResponse) VisitGetAvatarResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetAvatar200ImagepngResponse struct {
+	Body          io.Reader
+	Headers       GetAvatar200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetAvatar200ImagepngResponse) VisitGetAvatarResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetAvatar404JSONResponse Error
+
+func (response GetAvatar404JSONResponse) VisitGetAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetInstanceInfoRequestObject struct {
 }
 
@@ -4650,6 +5034,292 @@ func (response GetCurrentUser401JSONResponse) VisitGetCurrentUserResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCurrentUserRequestObject struct {
+	Body *UpdateCurrentUserJSONRequestBody
+}
+
+type UpdateCurrentUserResponseObject interface {
+	VisitUpdateCurrentUserResponse(w http.ResponseWriter) error
+}
+
+type UpdateCurrentUser200JSONResponse CurrentUser
+
+func (response UpdateCurrentUser200JSONResponse) VisitUpdateCurrentUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCurrentUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCurrentUser400JSONResponse) VisitUpdateCurrentUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCurrentUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateCurrentUser401JSONResponse) VisitUpdateCurrentUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCurrentUser422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response UpdateCurrentUser422JSONResponse) VisitUpdateCurrentUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveAvatarRequestObject struct {
+}
+
+type RemoveAvatarResponseObject interface {
+	VisitRemoveAvatarResponse(w http.ResponseWriter) error
+}
+
+type RemoveAvatar204Response struct {
+}
+
+func (response RemoveAvatar204Response) VisitRemoveAvatarResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveAvatar401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveAvatar401JSONResponse) VisitRemoveAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAvatarRequestObject struct {
+	Params SetAvatarParams
+	Body   io.Reader
+}
+
+type SetAvatarResponseObject interface {
+	VisitSetAvatarResponse(w http.ResponseWriter) error
+}
+
+type SetAvatar200JSONResponse CurrentUser
+
+func (response SetAvatar200JSONResponse) VisitSetAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAvatar401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetAvatar401JSONResponse) VisitSetAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAvatar413JSONResponse Error
+
+func (response SetAvatar413JSONResponse) VisitSetAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAvatar422JSONResponse Error
+
+func (response SetAvatar422JSONResponse) VisitSetAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetAvatar429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SetAvatar429JSONResponse) VisitSetAvatarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetStatusRequestObject struct {
+	Body *SetStatusJSONRequestBody
+}
+
+type SetStatusResponseObject interface {
+	VisitSetStatusResponse(w http.ResponseWriter) error
+}
+
+type SetStatus200JSONResponse CurrentUser
+
+func (response SetStatus200JSONResponse) VisitSetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetStatus400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SetStatus400JSONResponse) VisitSetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetStatus401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetStatus401JSONResponse) VisitSetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetStatus422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response SetStatus422JSONResponse) VisitSetStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserProfileRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type GetUserProfileResponseObject interface {
+	VisitGetUserProfileResponse(w http.ResponseWriter) error
+}
+
+type GetUserProfile200JSONResponse UserProfile
+
+func (response GetUserProfile200JSONResponse) VisitGetUserProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserProfile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetUserProfile401JSONResponse) VisitGetUserProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUserProfile404JSONResponse Error
+
+func (response GetUserProfile404JSONResponse) VisitGetUserProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4844,6 +5514,9 @@ type StrictServerInterface interface {
 	// RemoveWebAuthnCredential Remove a security key or passkey
 	// (DELETE /api/v1/auth/webauthn/{credentialId})
 	RemoveWebAuthnCredential(ctx context.Context, request RemoveWebAuthnCredentialRequestObject) (RemoveWebAuthnCredentialResponseObject, error)
+	// GetAvatar A profile picture
+	// (GET /api/v1/avatars/{avatarId})
+	GetAvatar(ctx context.Context, request GetAvatarRequestObject) (GetAvatarResponseObject, error)
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(ctx context.Context, request GetInstanceInfoRequestObject) (GetInstanceInfoResponseObject, error)
@@ -4856,6 +5529,21 @@ type StrictServerInterface interface {
 	// GetCurrentUser My account
 	// (GET /api/v1/users/me)
 	GetCurrentUser(ctx context.Context, request GetCurrentUserRequestObject) (GetCurrentUserResponseObject, error)
+	// UpdateCurrentUser Change my profile
+	// (PATCH /api/v1/users/me)
+	UpdateCurrentUser(ctx context.Context, request UpdateCurrentUserRequestObject) (UpdateCurrentUserResponseObject, error)
+	// RemoveAvatar Remove my profile picture
+	// (DELETE /api/v1/users/me/avatar)
+	RemoveAvatar(ctx context.Context, request RemoveAvatarRequestObject) (RemoveAvatarResponseObject, error)
+	// SetAvatar Upload my profile picture
+	// (PUT /api/v1/users/me/avatar)
+	SetAvatar(ctx context.Context, request SetAvatarRequestObject) (SetAvatarResponseObject, error)
+	// SetStatus Set my status
+	// (PUT /api/v1/users/me/status)
+	SetStatus(ctx context.Context, request SetStatusRequestObject) (SetStatusResponseObject, error)
+	// GetUserProfile Someone's public profile
+	// (GET /api/v1/users/{userId})
+	GetUserProfile(ctx context.Context, request GetUserProfileRequestObject) (GetUserProfileResponseObject, error)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(ctx context.Context, request GetLivenessRequestObject) (GetLivenessResponseObject, error)
@@ -6135,6 +6823,32 @@ func (sh *strictHandler) RemoveWebAuthnCredential(w http.ResponseWriter, r *http
 	}
 }
 
+// GetAvatar operation middleware
+func (sh *strictHandler) GetAvatar(w http.ResponseWriter, r *http.Request, avatarId openapi_types.UUID) {
+	var request GetAvatarRequestObject
+
+	request.AvatarId = avatarId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAvatar(ctx, request.(GetAvatarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAvatar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAvatarResponseObject); ok {
+		if err := validResponse.VisitGetAvatarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetInstanceInfo operation middleware
 func (sh *strictHandler) GetInstanceInfo(w http.ResponseWriter, r *http.Request) {
 	var request GetInstanceInfoRequestObject
@@ -6231,6 +6945,146 @@ func (sh *strictHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetCurrentUserResponseObject); ok {
 		if err := validResponse.VisitGetCurrentUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCurrentUser operation middleware
+func (sh *strictHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
+	var request UpdateCurrentUserRequestObject
+
+	var body UpdateCurrentUserJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCurrentUser(ctx, request.(UpdateCurrentUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCurrentUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCurrentUserResponseObject); ok {
+		if err := validResponse.VisitUpdateCurrentUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveAvatar operation middleware
+func (sh *strictHandler) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
+	var request RemoveAvatarRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveAvatar(ctx, request.(RemoveAvatarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveAvatar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveAvatarResponseObject); ok {
+		if err := validResponse.VisitRemoveAvatarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetAvatar operation middleware
+func (sh *strictHandler) SetAvatar(w http.ResponseWriter, r *http.Request, params SetAvatarParams) {
+	var request SetAvatarRequestObject
+
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetAvatar(ctx, request.(SetAvatarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetAvatar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetAvatarResponseObject); ok {
+		if err := validResponse.VisitSetAvatarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetStatus operation middleware
+func (sh *strictHandler) SetStatus(w http.ResponseWriter, r *http.Request) {
+	var request SetStatusRequestObject
+
+	var body SetStatusJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetStatus(ctx, request.(SetStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetStatusResponseObject); ok {
+		if err := validResponse.VisitSetStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUserProfile operation middleware
+func (sh *strictHandler) GetUserProfile(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request GetUserProfileRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUserProfile(ctx, request.(GetUserProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUserProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUserProfileResponseObject); ok {
+		if err := validResponse.VisitGetUserProfileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

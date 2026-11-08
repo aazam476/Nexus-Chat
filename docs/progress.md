@@ -95,8 +95,15 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   that started the flow (no login or link CSRF), sign-up following the
   registration mode, linking and unlinking, client secrets encrypted.
 
-Still to do in M2: profile, avatar and status; the
-WebSocket gateway and presence; and the client: Expo app shell, setup wizard, login screens, HTTPS
+- Profiles: display name and bio, profile pictures (PNG, JPEG, WebP, GIF up
+  to 8 MB, cropped and resized to 512×512, re-encoded so no metadata such
+  as GPS positions survives, animated GIFs kept animated), status and
+  custom status with expiry.
+- WebSocket gateway (`docs/realtime-protocol.md`): identify, heartbeats
+  that re-check the session, resume with replay of the last 500 events,
+  presence with automatic idle, frame limits; fuzz-tested frame parser.
+
+Still to do in M2: the client: Expo app shell, setup wizard, login screens, HTTPS
 banner, Electron shell, Playwright release gate and ZAP scan.
 
 ## Known issues

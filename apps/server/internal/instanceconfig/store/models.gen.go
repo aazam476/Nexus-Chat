@@ -96,16 +96,22 @@ type TotpCredential struct {
 }
 
 type User struct {
-	ID                uuid.UUID
-	Username          string
-	DisplayName       string
-	Email             string
-	EmailVerifiedAt   *time.Time
-	PasswordHash      *string
-	IsInstanceAdmin   bool
-	CreatedAt         time.Time
-	FailedLoginCount  int32
-	LoginBlockedUntil *time.Time
+	ID                    uuid.UUID
+	Username              string
+	DisplayName           string
+	Email                 string
+	EmailVerifiedAt       *time.Time
+	PasswordHash          *string
+	IsInstanceAdmin       bool
+	CreatedAt             time.Time
+	FailedLoginCount      int32
+	LoginBlockedUntil     *time.Time
+	Bio                   string
+	AvatarID              *uuid.UUID
+	AvatarFormat          *string
+	Status                string
+	CustomStatusText      *string
+	CustomStatusExpiresAt *time.Time
 }
 
 type WebauthnCeremony struct {

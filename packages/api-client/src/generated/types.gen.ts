@@ -292,6 +292,13 @@ export type CurrentUser = {
     email: string;
     emailVerified: boolean;
     isInstanceAdmin: boolean;
+    bio: string;
+    /**
+     * Path of the profile picture; missing without one.
+     */
+    avatarUrl?: string;
+    status: UserStatus;
+    customStatus?: CustomStatus;
 };
 
 export type SetupResult = {
@@ -508,6 +515,56 @@ export type UpdateOidcProviderRequest = {
     scopes?: Array<string>;
     allowSignup: boolean;
 };
+
+/**
+ * The status the user chose.
+ */
+export type UserStatus = 'online' | 'idle' | 'dnd' | 'invisible';
+
+export type CustomStatus = {
+    /**
+     * 1–128 characters.
+     */
+    text: string;
+    /**
+     * When it is removed automatically; never if missing.
+     */
+    expiresAt?: string;
+};
+
+export type UpdateProfileRequest = {
+    /**
+     * 1–32 characters.
+     */
+    displayName?: string;
+    /**
+     * At most 500 characters; empty removes it.
+     */
+    bio?: string;
+};
+
+export type SetStatusRequest = {
+    status: UserStatus;
+    customStatus?: CustomStatus;
+};
+
+export type UserProfile = {
+    id: string;
+    username: string;
+    displayName: string;
+    bio: string;
+    /**
+     * Path of the profile picture, for example `/api/v1/avatars/{id}`; missing without one.
+     */
+    avatarUrl?: string;
+    status: PresenceStatus;
+    customStatus?: CustomStatus;
+};
+
+/**
+ * What others see. A user who chose invisible, or has no device connected, is offline.
+ */
+export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'offline';
 
 export type ProviderId = string;
 
@@ -1958,6 +2015,198 @@ export type GetCurrentUserResponses = {
 };
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
+
+export type UpdateCurrentUserData = {
+    body: UpdateProfileRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me';
+};
+
+export type UpdateCurrentUserErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type UpdateCurrentUserError = UpdateCurrentUserErrors[keyof UpdateCurrentUserErrors];
+
+export type UpdateCurrentUserResponses = {
+    /**
+     * The updated account.
+     */
+    200: CurrentUser;
+};
+
+export type UpdateCurrentUserResponse = UpdateCurrentUserResponses[keyof UpdateCurrentUserResponses];
+
+export type RemoveAvatarData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/avatar';
+};
+
+export type RemoveAvatarErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type RemoveAvatarError = RemoveAvatarErrors[keyof RemoveAvatarErrors];
+
+export type RemoveAvatarResponses = {
+    /**
+     * The account has no picture.
+     */
+    204: void;
+};
+
+export type RemoveAvatarResponse = RemoveAvatarResponses[keyof RemoveAvatarResponses];
+
+export type SetAvatarData = {
+    body: Blob | File;
+    path?: never;
+    query?: {
+        cropX?: number;
+        cropY?: number;
+        cropSize?: number;
+    };
+    url: '/api/v1/users/me/avatar';
+};
+
+export type SetAvatarErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The file is over 8 MB or the image over 8192 pixels on a side (`image_too_large`).
+     */
+    413: Error;
+    /**
+     * Not a supported or readable image (`unsupported_image`), or the
+     * crop square is outside the image (`invalid_crop`).
+     *
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type SetAvatarError = SetAvatarErrors[keyof SetAvatarErrors];
+
+export type SetAvatarResponses = {
+    /**
+     * The account with its new picture.
+     */
+    200: CurrentUser;
+};
+
+export type SetAvatarResponse = SetAvatarResponses[keyof SetAvatarResponses];
+
+export type SetStatusData = {
+    body: SetStatusRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/status';
+};
+
+export type SetStatusErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type SetStatusError = SetStatusErrors[keyof SetStatusErrors];
+
+export type SetStatusResponses = {
+    /**
+     * The account with its new status.
+     */
+    200: CurrentUser;
+};
+
+export type SetStatusResponse = SetStatusResponses[keyof SetStatusResponses];
+
+export type GetUserProfileData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{userId}';
+};
+
+export type GetUserProfileErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * There is no such user (`user_not_found`).
+     */
+    404: Error;
+};
+
+export type GetUserProfileError = GetUserProfileErrors[keyof GetUserProfileErrors];
+
+export type GetUserProfileResponses = {
+    /**
+     * The profile.
+     */
+    200: UserProfile;
+};
+
+export type GetUserProfileResponse = GetUserProfileResponses[keyof GetUserProfileResponses];
+
+export type GetAvatarData = {
+    body?: never;
+    path: {
+        avatarId: string;
+    };
+    query?: never;
+    url: '/api/v1/avatars/{avatarId}';
+};
+
+export type GetAvatarErrors = {
+    /**
+     * There is no such picture (`avatar_not_found`).
+     */
+    404: Error;
+};
+
+export type GetAvatarError = GetAvatarErrors[keyof GetAvatarErrors];
+
+export type GetAvatarResponses = {
+    /**
+     * The 512×512 picture.
+     */
+    200: Blob | File;
+};
+
+export type GetAvatarResponse = GetAvatarResponses[keyof GetAvatarResponses];
 
 export type GetInstanceInfoData = {
     body?: never;

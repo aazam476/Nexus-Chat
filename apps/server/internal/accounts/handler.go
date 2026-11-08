@@ -40,8 +40,24 @@ func (handler *Handler) GetCurrentUser(ctx context.Context, _ api.GetCurrentUser
 // CurrentUserResponse converts an account row to its API form. Only the
 // account's owner may see this (it includes the email address).
 func CurrentUserResponse(user store.User) api.CurrentUser {
-	return api.CurrentUser{
+	response := api.CurrentUser{
 		Id: user.ID, Username: user.Username, DisplayName: user.DisplayName, Email: user.Email,
 		EmailVerified: user.EmailVerifiedAt != nil, IsInstanceAdmin: user.IsInstanceAdmin,
+		Bio: user.Bio, AvatarUrl: AvatarURL(user), Status: api.UserStatus(user.Status),
 	}
+	if user.CustomStatusText != nil {
+		response.CustomStatus = &api.CustomStatus{Text: *user.CustomStatusText, ExpiresAt: user.CustomStatusExpiresAt}
+	}
+	return response
+}
+
+// AvatarURL is the path of the user's profile picture, or nil without one.
+// Each upload has a new ID, so the address changes whenever the picture
+// does and browsers may cache it forever.
+func AvatarURL(user store.User) *string {
+	if user.AvatarID == nil {
+		return nil
+	}
+	path := "/api/v1/avatars/" + user.AvatarID.String()
+	return &path
 }

@@ -39,9 +39,12 @@ import (
 	instanceconfigstore "github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/database"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/filestore"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
+	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
+	"github.com/aazam476/nexus-chat/apps/server/internal/realtime"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
 	registrationstore "github.com/aazam476/nexus-chat/apps/server/internal/registration/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/secrets"
@@ -69,6 +72,8 @@ type application struct {
 	secureServer *http.Server
 	certificates *tlsconfig.Manager
 	sessions     *session.Service
+	hub          *realtime.Hub
+	gateway      *realtime.Gateway
 }
 
 // newApplication prepares everything the server needs before it accepts
@@ -102,8 +107,9 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 		app.close()
 		return nil, err
 	}
+	features.Profiles = app.buildRealtimeAndProfiles(configuration)
 	handler := httpserver.NewHandler(features, httpserver.Options{
-		Logger: logger, TrustedProxies: configuration.TrustedProxies, Authenticator: app.sessions,
+		Logger: logger, TrustedProxies: configuration.TrustedProxies, Authenticator: app.sessions, Gateway: app.gateway,
 	})
 	app.server = httpserver.NewServer("", handler, logger)
 	app.secureServer = httpserver.NewServer("", handler, logger)
@@ -228,6 +234,22 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	}
 }
 
+// buildRealtimeAndProfiles creates the gateway hub and the profile
+// feature, which tells the hub about account changes.
+func (app *application) buildRealtimeAndProfiles(configuration config.Config) *profiles.Handler {
+	system := clock.System{}
+	accountQueries := accountsstore.New(app.pool)
+	app.hub = realtime.NewHub(system)
+	app.gateway = realtime.NewGateway(realtime.GatewayOptions{
+		Hub: app.hub, Sessions: app.sessions, Users: accountQueries, Logger: app.logger,
+	})
+	service := profiles.NewService(profiles.Dependencies{
+		Store: accountQueries, Files: filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
+		Listener: app.hub, AvatarLimiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Clock: system, Logger: app.logger,
+	})
+	return profiles.NewHandler(service, app.hub)
+}
+
 // newMailSettings manages SMTP settings; the limit on test emails stops a
 // script from flooding the mail server.
 func newMailSettings(settings *instanceconfig.Service, box *secretbox.Box) *admin.MailSettings {
@@ -283,8 +305,9 @@ func (app *application) serve(ctx context.Context, sockets listeners) error {
 	// shutdown below runs or the listener fails.
 	go func() { serveErrors <- app.server.Serve(sockets.plain) }()
 	go func() { serveErrors <- app.secureServer.ServeTLS(sockets.secure, "", "") }()
-	// Watch stops when ctx is cancelled.
+	// Watch and Run stop when ctx is cancelled.
 	go app.certificates.Watch(ctx, certificateCheckInterval)
+	go realtime.NewSweeper(app.hub, accountsstore.New(app.pool), app.logger).Run(ctx, realtime.SweepInterval())
 
 	var failure error
 	select {
@@ -303,6 +326,9 @@ func (app *application) shutdown(ctx context.Context, serveErrors chan error, on
 	// keeps ctx's values but not its cancellation.
 	shutdownContext, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
+	// Shutdown does not close WebSockets, which were hijacked from the
+	// HTTP server; devices reconnect and resume once the server is back.
+	app.gateway.Close()
 	result := errors.Join(app.server.Shutdown(shutdownContext), app.secureServer.Shutdown(shutdownContext))
 	remaining := 2
 	if oneAlreadyStopped {

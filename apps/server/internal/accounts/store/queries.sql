@@ -33,3 +33,24 @@ SELECT * FROM users WHERE email = lower(sqlc.arg(email));
 -- name: SetPassword :exec
 -- Sets a new password and clears any login lockout.
 UPDATE users SET password_hash = $2, failed_login_count = 0, login_blocked_until = NULL WHERE id = $1;
+
+-- name: UpdateProfile :one
+UPDATE users SET display_name = $2, bio = $3 WHERE id = $1 RETURNING *;
+
+-- name: SetAvatar :one
+UPDATE users SET avatar_id = $2, avatar_format = $3 WHERE id = $1 RETURNING *;
+
+-- name: GetAvatarFormat :one
+SELECT avatar_format::text FROM users WHERE avatar_id = sqlc.arg(avatar_id)::uuid;
+
+-- name: SetStatus :one
+UPDATE users
+SET status = $2, custom_status_text = $3, custom_status_expires_at = $4
+WHERE id = $1
+RETURNING *;
+
+-- name: ClearExpiredCustomStatuses :many
+-- Removes custom statuses whose expiry has passed and returns whose.
+UPDATE users SET custom_status_text = NULL, custom_status_expires_at = NULL
+WHERE custom_status_expires_at <= sqlc.arg(now)::timestamptz
+RETURNING id;

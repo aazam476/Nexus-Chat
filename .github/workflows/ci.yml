@@ -58,6 +58,8 @@ jobs:
         # Database tests start PostgreSQL with Testcontainers (Docker is
         # available on GitHub-hosted Ubuntu runners).
         run: scripts/go-coverage.sh ${{ matrix.module }}
+      - name: Fuzz parsers of untrusted input
+        run: scripts/go-fuzz.sh ${{ matrix.module }} 30
       - name: License check
         run: scripts/check-licenses.sh go ${{ matrix.module }}
       - name: Vulnerability scan

@@ -17,11 +17,14 @@ Dependabot proposes updates weekly.
 | `github.com/oapi-codegen/runtime` | v1.8.0 | Apache-2.0 | Small runtime support library required by the code `oapi-codegen` generates |
 | `github.com/coreos/go-oidc/v3` | v3.21.0 | Apache-2.0 | OIDC discovery and ID token verification for provider sign-in ([ADR 0016](adr/0016-oidc-sign-in.md)); brings `go-jose/v4` (Apache-2.0) |
 | `golang.org/x/oauth2` | v0.37.0 | BSD-3-Clause | Authorization code exchange with PKCE for provider sign-in, from the Go project |
+| `github.com/coder/websocket` | v1.8.15 | ISC | The WebSocket gateway ([ADR 0012](adr/0012-websocket-and-realtime-state.md)); `context`-based, no dependencies |
+| `golang.org/x/image` | v0.47.0 | BSD-3-Clause | WebP decoding and high-quality resizing of profile pictures, from the Go project |
+| `golang.org/x/sync` | v0.24.0 | BSD-3-Clause | A weighted semaphore that bounds how many uploaded pictures are decoded at once |
 | `github.com/pquerna/otp` | v1.5.0 | Apache-2.0 | TOTP (RFC 6238) enrollment URIs and code checks for two-factor login |
 | `github.com/go-webauthn/webauthn` | v0.18.2 | BSD-3-Clause | WebAuthn ceremonies for passkeys and security keys; the maintained Go implementation, verifies attestation and assertions |
 
 Their own dependencies (`pgpassfile`, `pgservicefile`, `puddle`,
-`interpolate`, `go-retry`, `multierr`, `golang.org/x/sync`,
+`interpolate`, `go-retry`, `multierr`,
 `golang.org/x/text`) come with them and are covered by the license check.
 
 ## Bundled data

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -589,6 +589,86 @@ export const getCurrentUser = <ThrowOnError extends boolean = false>(options?: O
     url: '/api/v1/users/me',
     ...options
 });
+
+/**
+ * Change my profile
+ *
+ * Only the fields sent are changed.
+ */
+export const updateCurrentUser = <ThrowOnError extends boolean = false>(options: Options<UpdateCurrentUserData, ThrowOnError>): RequestResult<UpdateCurrentUserResponses, UpdateCurrentUserErrors, ThrowOnError> => (options.client ?? client).patch<UpdateCurrentUserResponses, UpdateCurrentUserErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/users/me',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove my profile picture
+ */
+export const removeAvatar = <ThrowOnError extends boolean = false>(options?: Options<RemoveAvatarData, ThrowOnError>): RequestResult<RemoveAvatarResponses, RemoveAvatarErrors, ThrowOnError> => (options?.client ?? client).delete<RemoveAvatarResponses, RemoveAvatarErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/users/me/avatar',
+    ...options
+});
+
+/**
+ * Upload my profile picture
+ *
+ * A PNG, JPEG, WebP or GIF image of at most 8 MB. The server crops the
+ * square given by `cropX`, `cropY` and `cropSize` (in the image's
+ * pixels; the centered square if left out), resizes it to 512×512 and
+ * removes all metadata. Animated GIFs stay animated.
+ *
+ */
+export const setAvatar = <ThrowOnError extends boolean = false>(options: Options<SetAvatarData, ThrowOnError>): RequestResult<SetAvatarResponses, SetAvatarErrors, ThrowOnError> => (options.client ?? client).put<SetAvatarResponses, SetAvatarErrors, ThrowOnError>({
+    bodySerializer: null,
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/users/me/avatar',
+    ...options,
+    headers: {
+        'Content-Type': 'application/octet-stream',
+        ...options.headers
+    }
+});
+
+/**
+ * Set my status
+ *
+ * Sets the chosen status and the custom status text. Leaving out
+ * `customStatus` removes it. The new presence is sent to the user's
+ * devices over the gateway.
+ *
+ */
+export const setStatus = <ThrowOnError extends boolean = false>(options: Options<SetStatusData, ThrowOnError>): RequestResult<SetStatusResponses, SetStatusErrors, ThrowOnError> => (options.client ?? client).put<SetStatusResponses, SetStatusErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/users/me/status',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Someone's public profile
+ */
+export const getUserProfile = <ThrowOnError extends boolean = false>(options: Options<GetUserProfileData, ThrowOnError>): RequestResult<GetUserProfileResponses, GetUserProfileErrors, ThrowOnError> => (options.client ?? client).get<GetUserProfileResponses, GetUserProfileErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/users/{userId}',
+    ...options
+});
+
+/**
+ * A profile picture
+ *
+ * Public, so it works in an image tag. Each upload gets a new ID, so
+ * responses can be cached forever.
+ *
+ */
+export const getAvatar = <ThrowOnError extends boolean = false>(options: Options<GetAvatarData, ThrowOnError>): RequestResult<GetAvatarResponses, GetAvatarErrors, ThrowOnError> => (options.client ?? client).get<GetAvatarResponses, GetAvatarErrors, ThrowOnError>({ url: '/api/v1/avatars/{avatarId}', ...options });
 
 /**
  * Public instance information

@@ -139,3 +139,14 @@ func TestInternalErrorsAreLoggedButNotShown(t *testing.T) {
 	assert.Contains(t, recorder.Body.String(), "internal_error")
 	assert.Contains(t, logs.String(), "database password is wrong")
 }
+
+func TestTheGatewayIsMountedOutsideTheContract(t *testing.T) {
+	var logs bytes.Buffer
+	gateway := http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) { writer.WriteHeader(http.StatusTeapot) })
+	handler := NewHandler(Features{}, Options{Logger: slog.New(slog.NewJSONHandler(&logs, nil)), Gateway: gateway})
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/gateway", nil))
+
+	assert.Equal(t, http.StatusTeapot, recorder.Code, "no session is needed to open the socket; identify carries the token")
+}

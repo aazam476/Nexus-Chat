@@ -150,15 +150,19 @@ Friends and fellow server members are added when those features exist
 
 ## 7. Close codes
 
-| Code | Meaning                                  | Client should                  |
-| ---- | ---------------------------------------- | ------------------------------ |
-| 1000 | Normal close (server shutting down)      | Reconnect and `resume`         |
-| 4000 | Malformed frame (not JSON, too large)    | Fix the client; reconnect      |
-| 4003 | No `identify` or `resume` in time        | Reconnect                      |
-| 4004 | The token is invalid, expired or revoked | Log in again; do not reconnect |
-| 4005 | `identify` or `resume` sent twice        | Fix the client; reconnect      |
-| 4008 | Too many frames                          | Reconnect after backoff        |
-| 4009 | No heartbeat in time                     | Reconnect and `resume`         |
+| Code | Meaning                                                                  | Client should                  |
+| ---- | ------------------------------------------------------------------------ | ------------------------------ |
+| 1000 | Normal close                                                             | Reconnect and `resume`         |
+| 1001 | The server is restarting                                                 | Reconnect and `resume`         |
+| 1011 | Internal server error                                                    | Reconnect after backoff        |
+| 1009 | A frame over 16 KiB                                                      | Fix the client; reconnect      |
+| 4000 | Malformed frame (not JSON text, or not an object with a type)            | Fix the client; reconnect      |
+| 4003 | No `identify` or `resume` in time                                        | Reconnect                      |
+| 4004 | The token is invalid, expired or revoked                                 | Log in again; do not reconnect |
+| 4005 | `identify` or `resume` sent twice                                        | Fix the client; reconnect      |
+| 4008 | Too many frames                                                          | Reconnect after backoff        |
+| 4009 | No heartbeat in time                                                     | Reconnect and `resume`         |
+| 4010 | Another connection resumed this session, or this one fell too far behind | Reconnect and `resume`         |
 
 ## 8. Versioning
 

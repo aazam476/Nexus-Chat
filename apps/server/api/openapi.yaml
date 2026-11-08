@@ -1227,6 +1227,207 @@ paths:
                 $ref: "#/components/schemas/CurrentUser"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    patch:
+      operationId: updateCurrentUser
+      summary: Change my profile
+      description: Only the fields sent are changed.
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: The updated account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/users/me/avatar:
+    put:
+      operationId: setAvatar
+      summary: Upload my profile picture
+      description: |
+        A PNG, JPEG, WebP or GIF image of at most 8 MB. The server crops the
+        square given by `cropX`, `cropY` and `cropSize` (in the image's
+        pixels; the centered square if left out), resizes it to 512×512 and
+        removes all metadata. Animated GIFs stay animated.
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cropX
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: cropY
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: cropSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: The account with its new picture.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: The file is over 8 MB or the image over 8192 pixels on a side (`image_too_large`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            Not a supported or readable image (`unsupported_image`), or the
+            crop square is outside the image (`invalid_crop`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: removeAvatar
+      summary: Remove my profile picture
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: The account has no picture.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/users/me/status:
+    put:
+      operationId: setStatus
+      summary: Set my status
+      description: |
+        Sets the chosen status and the custom status text. Leaving out
+        `customStatus` removes it. The new presence is sent to the user's
+        devices over the gateway.
+      tags: [users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetStatusRequest"
+      responses:
+        "200":
+          description: The account with its new status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/users/{userId}:
+    get:
+      operationId: getUserProfile
+      summary: Someone's public profile
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: There is no such user (`user_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/avatars/{avatarId}:
+    get:
+      operationId: getAvatar
+      summary: A profile picture
+      description: |
+        Public, so it works in an image tag. Each upload gets a new ID, so
+        responses can be cached forever.
+      tags: [users]
+      parameters:
+        - name: avatarId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The 512×512 picture.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: There is no such picture (`avatar_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/instance:
     get:
       operationId: getInstanceInfo
@@ -1802,7 +2003,7 @@ components:
     CurrentUser:
       type: object
       additionalProperties: false
-      required: [id, username, displayName, email, emailVerified, isInstanceAdmin]
+      required: [id, username, displayName, email, emailVerified, isInstanceAdmin, bio, status]
       properties:
         id:
           type: string
@@ -1817,6 +2018,15 @@ components:
           type: boolean
         isInstanceAdmin:
           type: boolean
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+          description: Path of the profile picture; missing without one.
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        customStatus:
+          $ref: "#/components/schemas/CustomStatus"
     SetupResult:
       type: object
       additionalProperties: false
@@ -2105,3 +2315,63 @@ components:
             type: string
         allowSignup:
           type: boolean
+    UserStatus:
+      type: string
+      description: The status the user chose.
+      enum: [online, idle, dnd, invisible]
+    CustomStatus:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          type: string
+          description: 1–128 characters.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When it is removed automatically; never if missing.
+    UpdateProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName:
+          type: string
+          description: 1–32 characters.
+        bio:
+          type: string
+          description: At most 500 characters; empty removes it.
+    SetStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        customStatus:
+          $ref: "#/components/schemas/CustomStatus"
+    UserProfile:
+      type: object
+      additionalProperties: false
+      required: [id, username, displayName, bio, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+          description: Path of the profile picture, for example `/api/v1/avatars/{id}`; missing without one.
+        status:
+          $ref: "#/components/schemas/PresenceStatus"
+        customStatus:
+          $ref: "#/components/schemas/CustomStatus"
+    PresenceStatus:
+      type: string
+      description: What others see. A user who chose invisible, or has no device connected, is offline.
+      enum: [online, idle, dnd, offline]

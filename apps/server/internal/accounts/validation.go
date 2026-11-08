@@ -52,7 +52,7 @@ func NewValidator(breached PasswordChecker) *Validator {
 func (validator *Validator) ValidateNewAccount(account NewAccount) (NewAccount, error) {
 	var problems validation.Errors
 	problems.Add("username", validateUsername(account.Username))
-	problems.Add("displayName", validateDisplayName(account.DisplayName))
+	problems.Add("displayName", ValidateDisplayName(account.DisplayName))
 	email, err := normalizeEmail(account.Email)
 	problems.Add("email", err)
 	problems.Add("password", validator.CheckPassword(account.Password))
@@ -80,7 +80,9 @@ func validateUsername(username string) error {
 	return nil
 }
 
-func validateDisplayName(displayName string) error {
+// ValidateDisplayName checks the display name rules (spec §4.1): 1–32
+// characters, no surrounding spaces, no control characters.
+func ValidateDisplayName(displayName string) error {
 	trimmed := strings.TrimSpace(displayName)
 	if trimmed != displayName {
 		return errors.New("must not start or end with spaces")

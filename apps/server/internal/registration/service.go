@@ -158,6 +158,7 @@ func (service *Service) create(ctx context.Context, account accounts.NewAccount,
 	return accountsstore.User{
 		ID: params.ID, Username: params.Username, DisplayName: params.DisplayName,
 		Email: params.Email, PasswordHash: params.PasswordHash, CreatedAt: params.CreatedAt,
+		Status: accounts.StatusOnline, // the column default
 	}, nil
 }
 

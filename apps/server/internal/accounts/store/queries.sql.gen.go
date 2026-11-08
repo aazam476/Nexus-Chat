@@ -12,6 +12,33 @@ import (
 	"github.com/google/uuid"
 )
 
+const clearExpiredCustomStatuses = `-- name: ClearExpiredCustomStatuses :many
+UPDATE users SET custom_status_text = NULL, custom_status_expires_at = NULL
+WHERE custom_status_expires_at <= $1::timestamptz
+RETURNING id
+`
+
+// Removes custom statuses whose expiry has passed and returns whose.
+func (q *Queries) ClearExpiredCustomStatuses(ctx context.Context, now time.Time) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, clearExpiredCustomStatuses, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countInstanceAdmins = `-- name: CountInstanceAdmins :one
 SELECT count(*) FROM users WHERE is_instance_admin
 `
@@ -23,8 +50,19 @@ func (q *Queries) CountInstanceAdmins(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getAvatarFormat = `-- name: GetAvatarFormat :one
+SELECT avatar_format::text FROM users WHERE avatar_id = $1::uuid
+`
+
+func (q *Queries) GetAvatarFormat(ctx context.Context, avatarID uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getAvatarFormat, avatarID)
+	var avatar_format string
+	err := row.Scan(&avatar_format)
+	return avatar_format, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE email = lower($1)
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE email = lower($1)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -41,12 +79,18 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.FailedLoginCount,
 		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE id = $1
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -63,12 +107,18 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.FailedLoginCount,
 		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
 	)
 	return i, err
 }
 
 const getUserByLogin = `-- name: GetUserByLogin :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE username = lower($1) OR email = lower($1)
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE username = lower($1) OR email = lower($1)
 `
 
 // Finds an account by username or email; both are stored in lower case.
@@ -86,12 +136,18 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (User, error
 		&i.CreatedAt,
 		&i.FailedLoginCount,
 		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until FROM users WHERE username = $1
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE username = $1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -108,6 +164,12 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.CreatedAt,
 		&i.FailedLoginCount,
 		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
 	)
 	return i, err
 }
@@ -179,6 +241,40 @@ func (q *Queries) ResetFailedLogins(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const setAvatar = `-- name: SetAvatar :one
+UPDATE users SET avatar_id = $2, avatar_format = $3 WHERE id = $1 RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at
+`
+
+type SetAvatarParams struct {
+	ID           uuid.UUID
+	AvatarID     *uuid.UUID
+	AvatarFormat *string
+}
+
+func (q *Queries) SetAvatar(ctx context.Context, arg SetAvatarParams) (User, error) {
+	row := q.db.QueryRow(ctx, setAvatar, arg.ID, arg.AvatarID, arg.AvatarFormat)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.IsInstanceAdmin,
+		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
+	)
+	return i, err
+}
+
 const setPassword = `-- name: SetPassword :exec
 UPDATE users SET password_hash = $2, failed_login_count = 0, login_blocked_until = NULL WHERE id = $1
 `
@@ -194,6 +290,49 @@ func (q *Queries) SetPassword(ctx context.Context, arg SetPasswordParams) error 
 	return err
 }
 
+const setStatus = `-- name: SetStatus :one
+UPDATE users
+SET status = $2, custom_status_text = $3, custom_status_expires_at = $4
+WHERE id = $1
+RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at
+`
+
+type SetStatusParams struct {
+	ID                    uuid.UUID
+	Status                string
+	CustomStatusText      *string
+	CustomStatusExpiresAt *time.Time
+}
+
+func (q *Queries) SetStatus(ctx context.Context, arg SetStatusParams) (User, error) {
+	row := q.db.QueryRow(ctx, setStatus,
+		arg.ID,
+		arg.Status,
+		arg.CustomStatusText,
+		arg.CustomStatusExpiresAt,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.IsInstanceAdmin,
+		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
+	)
+	return i, err
+}
+
 const updatePasswordHash = `-- name: UpdatePasswordHash :exec
 UPDATE users SET password_hash = $2 WHERE id = $1
 `
@@ -206,4 +345,38 @@ type UpdatePasswordHashParams struct {
 func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
 	_, err := q.db.Exec(ctx, updatePasswordHash, arg.ID, arg.PasswordHash)
 	return err
+}
+
+const updateProfile = `-- name: UpdateProfile :one
+UPDATE users SET display_name = $2, bio = $3 WHERE id = $1 RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at
+`
+
+type UpdateProfileParams struct {
+	ID          uuid.UUID
+	DisplayName string
+	Bio         string
+}
+
+func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateProfile, arg.ID, arg.DisplayName, arg.Bio)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.IsInstanceAdmin,
+		&i.CreatedAt,
+		&i.FailedLoginCount,
+		&i.LoginBlockedUntil,
+		&i.Bio,
+		&i.AvatarID,
+		&i.AvatarFormat,
+		&i.Status,
+		&i.CustomStatusText,
+		&i.CustomStatusExpiresAt,
+	)
+	return i, err
 }

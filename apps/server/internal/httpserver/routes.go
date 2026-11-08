@@ -15,6 +15,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
+	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
 )
@@ -27,6 +28,7 @@ type Features struct {
 	Health       *health.Handler
 	Instance     *instanceconfig.Handler
 	OIDC         *oidc.Handler
+	Profiles     *profiles.Handler
 	Registration *registration.Handler
 	Setup        *setup.Handler
 }
@@ -37,6 +39,9 @@ type Options struct {
 	TrustedProxies config.TrustedProxies
 	// Authenticator checks the session token of protected operations.
 	Authenticator Authenticator
+	// Gateway serves the WebSocket at /api/v1/gateway, which is not part
+	// of the OpenAPI contract (docs/realtime-protocol.md is its contract).
+	Gateway http.Handler
 }
 
 // Every feature's handler type is called Handler, and two embedded fields
@@ -48,6 +53,7 @@ type (
 	healthHandler       = health.Handler
 	instanceHandler     = instanceconfig.Handler
 	oidcHandler         = oidc.Handler
+	profilesHandler     = profiles.Handler
 	registrationHandler = registration.Handler
 	setupHandler        = setup.Handler
 )
@@ -62,6 +68,7 @@ type handlers struct {
 	*healthHandler
 	*instanceHandler
 	*oidcHandler
+	*profilesHandler
 	*registrationHandler
 	*setupHandler
 }
@@ -76,6 +83,7 @@ func NewHandler(features Features, options Options) http.Handler {
 		handlers{
 			accountsHandler: features.Accounts, adminHandler: features.Admin, authHandler: features.Auth,
 			healthHandler: features.Health, instanceHandler: features.Instance, oidcHandler: features.OIDC,
+			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
@@ -83,7 +91,11 @@ func NewHandler(features Features, options Options) http.Handler {
 			RequestErrorHandlerFunc:  errorHandlers.badRequest,
 			ResponseErrorHandlerFunc: errorHandlers.internalError,
 		})
-	routes := api.HandlerFromMux(strict, http.NewServeMux())
+	mux := http.NewServeMux()
+	if options.Gateway != nil {
+		mux.Handle("GET /api/v1/gateway", options.Gateway)
+	}
+	routes := api.HandlerFromMux(strict, mux)
 	withMiddleware := clientip.Middleware(options.TrustedProxies, securityHeaders(routes))
 	return recoverPanics(logRequests(withMiddleware, options.Logger), options.Logger)
 }
