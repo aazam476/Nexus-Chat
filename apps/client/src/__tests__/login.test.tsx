@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import Login from "../../app/login";
 import { fakeServer, type FakeServer } from "../testing/fakeServer";
 import { ada, fakeConnection, renderWithApp } from "../testing/renderWithApp";
+import { isolate } from "../i18n/bidi";
 
 jest.mock("expo-web-browser", () => ({
   ...jest.requireActual<typeof WebBrowser>("expo-web-browser"),
@@ -159,7 +160,7 @@ describe("the login screen", () => {
       .mockResolvedValue({ type: "success", url: "nexuschat://oidc-return#flow=flow-1&code=the-code" });
     const connection = await renderWithApp(<Login />, fakeConnection(server));
 
-    await fireEvent.press(await screen.findByText("Continue with Corp"));
+    await fireEvent.press(await screen.findByText(`Continue with ${isolate("Corp")}`));
 
     await waitFor(() => {
       expect(connection.signedIn).toHaveBeenCalledWith("nxs_p", ada);
@@ -194,7 +195,7 @@ describe("the login screen", () => {
       .mockResolvedValue({ type: "success", url: "nexuschat://oidc-return#code=c" });
     await renderWithApp(<Login />, fakeConnection(server));
 
-    await fireEvent.press(await screen.findByText("Continue with Corp"));
+    await fireEvent.press(await screen.findByText(`Continue with ${isolate("Corp")}`));
 
     expect(await screen.findByText(/No account is linked to this login/)).toBeOnTheScreen();
   });
@@ -213,14 +214,14 @@ describe("the login screen", () => {
       .mocked(WebBrowser.openAuthSessionAsync)
       .mockResolvedValue({ type: WebBrowser.WebBrowserResultType.CANCEL });
     const connection = await renderWithApp(<Login />, fakeConnection(server));
-    await fireEvent.press(await screen.findByText("Continue with Corp"));
+    await fireEvent.press(await screen.findByText(`Continue with ${isolate("Corp")}`));
     expect(connection.signedIn).not.toHaveBeenCalled();
 
     server.answer("POST /api/v1/auth/oidc/providers/corp/begin", {
       status: 502,
       body: { code: "provider_unavailable", message: "x" },
     });
-    await fireEvent.press(screen.getByText("Continue with Corp"));
+    await fireEvent.press(screen.getByText(`Continue with ${isolate("Corp")}`));
     expect(
       await screen.findByText("Signing in with the provider did not work. Try again."),
     ).toBeOnTheScreen();
@@ -243,7 +244,7 @@ describe("the login screen", () => {
     const connection = fakeConnection(server, { user: ada, address: undefined, instance: undefined });
     await renderWithApp(<Login />, connection);
     expect(router.replace).toHaveBeenCalledWith("/home");
-    expect(screen.getByText("Log in to localhost")).toBeOnTheScreen();
+    expect(screen.getByText(`Log in to ${isolate("localhost")}`)).toBeOnTheScreen();
 
     const closed = fakeConnection(server);
     closed.instance = {

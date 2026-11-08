@@ -99,7 +99,8 @@ describe("the Admin panel", () => {
 
     expect(await screen.findByText("The certificate is installed and HTTPS is on.")).toBeOnTheScreen();
     expect(server.requests.at(-1)?.body).toEqual({ certificate: "CERT", privateKey: "KEY" });
-    expect(screen.getByText("Covers: chat.example.com")).toBeOnTheScreen();
+    expect(screen.getByText("Covers these names:")).toBeOnTheScreen();
+    expect(screen.getByText("chat.example.com")).toBeOnTheScreen();
     expect(screen.getByText("Issued by: Example CA")).toBeOnTheScreen();
     expect(screen.getByText("Expires: February 1, 2027")).toBeOnTheScreen();
     expect(screen.getByTestId("tls-private-key").props.value).toBe("");

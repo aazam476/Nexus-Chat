@@ -2,6 +2,7 @@ import type { SignInProvider } from "@nexus-chat/api-client";
 import { Button, Stack, Text } from "@nexus-chat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { isolate } from "../../i18n/bidi";
 
 /** Props of {@link ProviderButtons}. */
 export interface ProviderButtonsProps {
@@ -22,7 +23,7 @@ export function ProviderButtons({ providers, onSignIn }: ProviderButtonsProps): 
         <Button
           key={provider.id}
           variant="secondary"
-          label={t("login.provider", { name: provider.displayName })}
+          label={t("login.provider", { name: isolate(provider.displayName) })}
           onPress={() => {
             onSignIn(provider.id);
           }}

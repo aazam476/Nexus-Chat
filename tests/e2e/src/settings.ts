@@ -23,6 +23,11 @@ export const settings = {
   trustedKey: env.NEXUS_E2E_TRUSTED_SPKI,
   /** Whether the desktop test runs; it needs a display and the Electron binary. */
   desktop: env.NEXUS_E2E_DESKTOP === "1",
+  /**
+   * Parallel browsers. The release gate's tests share one instance and run
+   * in order, so they use 1; the visual checks are independent.
+   */
+  workers: Number(env.NEXUS_E2E_WORKERS ?? "1"),
 };
 
 /** Chromium command-line switches for the settings above. */

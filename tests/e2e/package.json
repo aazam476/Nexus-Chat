@@ -2,16 +2,18 @@
   "name": "@nexus-chat/e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "Black-box browser and desktop tests that drive a running Nexus Chat instance (spec §7.2, §7.4).",
+  "description": "Black-box browser and desktop tests that drive a running Nexus Chat instance (spec \u00a77.2, \u00a77.4).",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "e2e": "playwright test",
+    "e2e": "playwright test --project web --project desktop",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "visual": "playwright test --project visual"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
+    "@nexus-chat/fixtures": "workspace:*",
     "@playwright/test": "1.65.0",
     "@types/node": "26.6.6"
   }

@@ -37,6 +37,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@nexus-chat/fixtures": "workspace:*",
     "@testing-library/react-native": "14.1.0",
     "@types/jest": "30.0.0",
     "@types/react": "19.3.0",

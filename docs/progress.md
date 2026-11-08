@@ -150,8 +150,17 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   saved password is never shown; a test email goes to the admin), under
   the plain-HTTP warning. The release gate opens it and runs axe on it.
 
-Still to do in M2: Maestro flows and visual snapshots with the worst-case
-fixtures.
+- Worst-case UI (code standards §8.5): permanent demo, worst-case and
+  right-to-left fixtures (`tests/fixtures`) used by component tests and by
+  Playwright visual checks of every screen in both themes at 320, 390 and
+  1280px, with layout checks (no clipped text, sideways scrolling or
+  overlapping controls), axe, and pixel snapshots taken in the pinned
+  Playwright image. Running them found and fixed: the custom status was
+  never shown or settable, and changing status would have cleared it;
+  wrapped button labels were left-aligned; certificate names ran together
+  in one paragraph; names in sentences lacked bidirectional isolation.
+
+Still to do in M2: Maestro flows.
 
 ## Known issues
 

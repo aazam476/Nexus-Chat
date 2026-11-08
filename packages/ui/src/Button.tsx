@@ -101,7 +101,7 @@ function ButtonFace({ label, busy, palette, pressed, focused, inactive }: Button
       {busy ? (
         <ActivityIndicator color={palette.text} accessibilityElementsHidden />
       ) : (
-        <Animated.Text style={[type.label, { color: palette.text }]}>{label}</Animated.Text>
+        <Animated.Text style={[type.label, styles.label, { color: palette.text }]}>{label}</Animated.Text>
       )}
     </Animated.View>
   );
@@ -130,6 +130,8 @@ const pressTransition: CSSTransitionProperties<ViewStyle> = {
 };
 
 const styles = StyleSheet.create({
+  // A label that wraps stays centered line by line, like a one-line label.
+  label: { textAlign: "center" },
   box: {
     minHeight: minimumTouchTarget,
     paddingHorizontal: spacing.lg,

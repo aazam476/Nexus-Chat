@@ -102,7 +102,19 @@
     "presence": "Others see you as: {{status}}",
     "presenceOffline": "Offline",
     "logout": "Log out",
-    "admin": "Admin panel"
+    "admin": "Admin panel",
+    "customStatus": "Custom status",
+    "noCustomStatus": "No custom status. Add one so others know what you are up to.",
+    "customUntil": "Clears {{time}}",
+    "customText": "New custom status",
+    "customHint": "Up to 128 characters, emoji welcome",
+    "expiry": "Clear after",
+    "expiryNever": "Don't clear",
+    "expiryHour": "1 hour",
+    "expiryFourHours": "4 hours",
+    "expiryDay": "1 day",
+    "customSave": "Set custom status",
+    "customClear": "Clear custom status"
   },
   "oidc": {
     "finishing": "Finishing sign-in…"
@@ -119,7 +131,7 @@
       "active": "HTTPS is on, with this certificate:",
       "inactive": "No certificate is installed, so this server does not serve HTTPS itself.",
       "proxyNote": "If a reverse proxy (Caddy, Nginx, Traefik) handles HTTPS for this instance, you do not need a certificate here.",
-      "names": "Covers: {{names}}",
+      "names": "Covers these names:",
       "issuer": "Issued by: {{issuer}}",
       "expires": "Expires: {{date}}",
       "expiresSoon_one": "Warning: the certificate expires in {{count}} day",

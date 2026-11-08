@@ -7,6 +7,7 @@ import { GatewayClient, type SocketLike } from "../realtime/gatewayClient";
 import { apply } from "../realtime/useGateway";
 import { fakeServer } from "../testing/fakeServer";
 import { ada, fakeConnection, renderWithApp } from "../testing/renderWithApp";
+import { isolate } from "../i18n/bidi";
 
 /** A socket the test drives: it records what the client sends. */
 class FakeSocket implements SocketLike {
@@ -191,7 +192,7 @@ describe("the home screen", () => {
       <Home />,
       fakeConnection(server, { user: ada, sessionToken: "nxs_t" }),
     );
-    expect(screen.getByText("Welcome, Ada")).toBeOnTheScreen();
+    expect(screen.getByText(`Welcome, ${isolate("Ada")}`)).toBeOnTheScreen();
 
     act(() => {
       nth(sockets, 0).receive({ type: "presence_update", seq: 1, data: { status: "dnd" } });

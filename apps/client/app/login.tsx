@@ -13,6 +13,7 @@ import { useSignedInRedirect } from "../src/navigation/useSignedInRedirect";
 import { OtherWaysIn } from "../src/screens/login/OtherWaysIn";
 import { PasswordForm } from "../src/screens/login/PasswordForm";
 import { SecondFactorForm } from "../src/screens/login/SecondFactorForm";
+import { isolate } from "../src/i18n/bidi";
 
 /** Logging in: password (then a second factor), passkey, or a provider. */
 export default function Login(): ReactNode {
@@ -26,7 +27,7 @@ export default function Login(): ReactNode {
   return (
     <Screen>
       <HttpsWarning />
-      <Heading>{t("login.title", { instance: instanceName })}</Heading>
+      <Heading>{t("login.title", { instance: isolate(instanceName) })}</Heading>
       <ErrorMessage message={flow.error ?? passkey.error ?? providers.error} />
       {flow.step.kind === "secondFactor" ? (
         <SecondFactorForm

@@ -30,6 +30,8 @@ NEXUS_E2E_BASE_URL=http://localhost:8080 NEXUS_E2E_SETUP_TOKEN=<token from the l
   pnpm --filter @nexus-chat/e2e e2e
 ```
 
+`e2e` runs the release gate's projects (`web`, `desktop`); `visual` is separate (below).
+
 | Variable                 | Meaning                                                                   |
 | ------------------------ | ------------------------------------------------------------------------- |
 | `NEXUS_E2E_BASE_URL`     | The instance, as a browser on this machine reaches it                     |
@@ -43,3 +45,33 @@ Trusting the test certificate's key keeps the page a secure context, as
 with a real certificate; ignoring certificate errors would not.
 
 Retries are off: a test that fails once fails the run (spec §7.5).
+
+## Visual checks
+
+`specs/visual.spec.ts` shows every screen with the demo, worst-case and
+right-to-left data from `tests/fixtures`, in both themes and at 320px
+(reflow at 400% zoom, which also covers 200% text), 390px and 1280px. It
+fakes the instance at the network boundary (`src/fakeInstance.ts`), so it
+needs only the web build. On every screen it checks that no text is cut
+off or runs off the screen, nothing scrolls sideways, no controls
+overlap, and axe finds nothing serious.
+
+```bash
+pnpm --filter @nexus-chat/client build:web
+pnpm --filter @nexus-chat/e2e visual
+```
+
+Pixel snapshots (`specs/visual.spec.ts-snapshots`) are compared only with
+`NEXUS_VISUAL_SNAPSHOTS=1`, inside the Playwright image that CI pins
+(`mcr.microsoft.com/playwright:v1.65.0-noble`), because other fonts and
+browsers render differently. After an intended change, update them in
+that image:
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work mcr.microsoft.com/playwright:v1.65.0-noble \
+  bash -c "npm install -g pnpm@12.18.0 && pnpm install && pnpm --filter @nexus-chat/api-client build && \
+  pnpm --filter @nexus-chat/client build:web && NEXUS_VISUAL_SNAPSHOTS=1 pnpm --filter @nexus-chat/e2e visual --update-snapshots"
+```
+
+A failing CI run uploads the differences as the `visual-differences`
+artifact.

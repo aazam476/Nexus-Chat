@@ -24,7 +24,6 @@ export function CertificateDetails({ status, now }: CertificateDetailsProps): Re
           new Date(status.expiresAt),
         );
   const warning = expiryWarning(status.expiresAt, now);
-  const names = (status.names ?? []).join(", ");
   const issuer = status.issuer ?? "";
   return (
     <Stack gap="sm">
@@ -39,7 +38,14 @@ export function CertificateDetails({ status, now }: CertificateDetailsProps): Re
           <Text>{t("admin.tls.replace")}</Text>
         </Banner>
       )}
-      <Text tone="muted">{t("admin.tls.names", { names })}</Text>
+      <Stack gap="xs">
+        <Text variant="label">{t("admin.tls.names")}</Text>
+        {(status.names ?? []).map((name) => (
+          <Text key={name} tone="muted">
+            {name}
+          </Text>
+        ))}
+      </Stack>
       <Text tone="muted">{t("admin.tls.issuer", { issuer })}</Text>
       <Text tone="muted">{t("admin.tls.expires", { date: expires })}</Text>
     </Stack>

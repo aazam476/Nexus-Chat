@@ -8,7 +8,9 @@ import { useConnection } from "../src/connection/ConnectionContext";
 import { hostOf } from "../src/instance/address";
 import { useGateway } from "../src/realtime/useGateway";
 import { AdminLink } from "../src/screens/home/AdminLink";
+import { CustomStatusEditor } from "../src/screens/home/CustomStatusEditor";
 import { StatusPicker } from "../src/screens/home/StatusPicker";
+import { isolate } from "../src/i18n/bidi";
 
 /** The signed-in start screen: who you are, your status, and logging out. */
 export default function Home(): ReactNode {
@@ -28,12 +30,13 @@ export default function Home(): ReactNode {
     <Screen>
       <HttpsWarning />
       <Stack gap="sm">
-        <Heading>{t("home.title", { name: user.displayName })}</Heading>
+        <Heading>{t("home.title", { name: isolate(user.displayName) })}</Heading>
         <Text tone="muted">
           {t("home.intro", { instance: hostOf(connection.address ?? "http://localhost") })}
         </Text>
       </Stack>
       <StatusPicker current={user.status} presence={presence.status} />
+      <CustomStatusEditor />
       <AdminLink admin={user.isInstanceAdmin} />
       <Button
         label={t("home.logout")}
