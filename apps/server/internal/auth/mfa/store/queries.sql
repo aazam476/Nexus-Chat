@@ -25,7 +25,10 @@ DELETE FROM totp_credentials WHERE id = $1 AND user_id = $2;
 DELETE FROM totp_credentials WHERE user_id = $1 AND confirmed_at IS NULL;
 
 -- name: CountSecondFactors :one
-SELECT count(*) FROM totp_credentials WHERE user_id = $1 AND confirmed_at IS NOT NULL;
+-- Authenticator apps plus security keys and passkeys: any of them means
+-- a password alone is not enough to log in.
+SELECT ((SELECT count(*) FROM totp_credentials t WHERE t.user_id = $1 AND t.confirmed_at IS NOT NULL)
+     + (SELECT count(*) FROM webauthn_credentials w WHERE w.user_id = $1))::bigint AS count;
 
 -- name: DeleteBackupCodes :exec
 DELETE FROM backup_codes WHERE user_id = $1;

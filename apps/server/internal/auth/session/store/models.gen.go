@@ -73,3 +73,23 @@ type User struct {
 	FailedLoginCount  int32
 	LoginBlockedUntil *time.Time
 }
+
+type WebauthnCeremony struct {
+	ID        uuid.UUID
+	UserID    *uuid.UUID
+	Purpose   string
+	Session   []byte
+	Name      string
+	ExpiresAt time.Time
+}
+
+type WebauthnCredential struct {
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	CredentialID []byte
+	Credential   []byte
+	Kind         string
+	Name         string
+	CreatedAt    time.Time
+	LastUsedAt   *time.Time
+}

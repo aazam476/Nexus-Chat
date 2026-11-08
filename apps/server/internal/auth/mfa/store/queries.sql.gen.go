@@ -42,9 +42,12 @@ func (q *Queries) CountBackupCodes(ctx context.Context, userID uuid.UUID) (int64
 }
 
 const countSecondFactors = `-- name: CountSecondFactors :one
-SELECT count(*) FROM totp_credentials WHERE user_id = $1 AND confirmed_at IS NOT NULL
+SELECT ((SELECT count(*) FROM totp_credentials t WHERE t.user_id = $1 AND t.confirmed_at IS NOT NULL)
+     + (SELECT count(*) FROM webauthn_credentials w WHERE w.user_id = $1))::bigint AS count
 `
 
+// Authenticator apps plus security keys and passkeys: any of them means
+// a password alone is not enough to log in.
 func (q *Queries) CountSecondFactors(ctx context.Context, userID uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countSecondFactors, userID)
 	var count int64

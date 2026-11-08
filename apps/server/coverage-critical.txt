@@ -4,3 +4,4 @@
 ./internal/auth
 ./internal/auth/passwordreset
 ./internal/auth/mfa
+./internal/auth/passkeys
