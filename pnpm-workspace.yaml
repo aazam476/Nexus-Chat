@@ -6,8 +6,12 @@ packages:
 # Dependency install scripts are off unless listed here. @parcel/watcher is
 # an optional native file watcher Jest uses only in watch mode; it works
 # without its build step, so the script stays disabled.
+# Electron's install script downloads the Electron binary for this
+# platform, checked against the checksums published with the release; the
+# desktop app cannot start without it.
 allowBuilds:
   "@parcel/watcher": false
+  electron: true
 
 # Security overrides for transitive dependencies, removed once the parent
 # package ships the fix itself (see docs/dependencies.md).

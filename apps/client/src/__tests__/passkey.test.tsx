@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react-native";
+import { act, renderHook, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 
 import { usePasskeyLogin } from "../auth/usePasskeyLogin";
@@ -38,7 +38,7 @@ describe("passkey login", () => {
     const { result } = await renderHook(() => usePasskeyLogin(), { wrapper });
 
     expect(result.current.supported).toBe(true);
-    await result.current.logIn();
+    await act(() => result.current.logIn());
 
     await waitFor(() => {
       expect(connection.signedIn).toHaveBeenCalledWith("nxs_k", ada);
@@ -66,7 +66,7 @@ describe("passkey login", () => {
     );
     const { result } = await renderHook(() => usePasskeyLogin(), { wrapper });
 
-    await result.current.logIn();
+    await act(() => result.current.logIn());
 
     await waitFor(() => {
       expect(result.current.error).toEqual({ key: "login.passkeyFailed" });

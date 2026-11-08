@@ -16,6 +16,9 @@ import { messageFor, type Message } from "./errors";
 /** The path the provider returns to, on web. */
 export const returnPath = "/oidc-return";
 
+/** The address the provider returns to in the iOS, Android and desktop apps. */
+export const appReturnAddress = "nexuschat://oidc-return";
+
 /** What came back from the provider. */
 export interface ProviderReturn {
   code?: string;

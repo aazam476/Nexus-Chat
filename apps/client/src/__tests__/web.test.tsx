@@ -1,8 +1,9 @@
-import { fireEvent, renderHook, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 
 import ProviderReturn from "../../app/oidc-return";
+import { deviceName } from "../auth/deviceName";
 import { startProviderSignIn } from "../auth/providerSignIn.web";
 import { useProviderReturn } from "../auth/useProviderReturn";
 import { usePasskeyLogin } from "../auth/usePasskeyLogin";
@@ -133,6 +134,44 @@ describe("starting a provider sign-in on web", () => {
       message: { key: "login.providerFailed" },
     });
   });
+
+  it("uses the desktop app's sign-in window when there is one", async () => {
+    const server = fakeServer();
+    server.answer("POST /api/v1/auth/oidc/providers/corp/begin", {
+      status: 200,
+      body: { flowId: "flow-2", authorizationUrl: "https://idp.example.com/auth" },
+    });
+    server.answer("POST /api/v1/auth/oidc/complete", {
+      status: 200,
+      body: { token: "nxs_d", session, user: ada },
+    });
+    const signInWithProvider = jest
+      .fn<Promise<string | undefined>, [string]>()
+      .mockResolvedValueOnce("flow=flow-2&code=the-code")
+      .mockResolvedValueOnce(undefined);
+    Object.assign(window, { nexusDesktop: { signInWithProvider } });
+    const storage = createMemoryStorage();
+
+    try {
+      expect(await startProviderSignIn(server.client, "corp", storage)).toEqual({
+        kind: "signedIn",
+        result: { token: "nxs_d", session, user: ada },
+      });
+      expect(signInWithProvider).toHaveBeenCalledWith("https://idp.example.com/auth");
+      expect(server.requests.at(-2)?.body).toEqual({ returnTo: "nexuschat://oidc-return" });
+      expect(server.requests.at(-1)?.body).toEqual({
+        flowId: "flow-2",
+        code: "the-code",
+        deviceName: deviceName(),
+      });
+      expect(await storage.get(storageKeys.providerFlow)).toBeUndefined();
+
+      // The user closed the window.
+      expect(await startProviderSignIn(server.client, "corp", storage)).toBeUndefined();
+    } finally {
+      delete (window as { nexusDesktop?: unknown }).nexusDesktop;
+    }
+  });
 });
 
 describe("passkeys", () => {
@@ -169,7 +208,7 @@ describe("passkeys", () => {
       status: 409,
       body: { code: "webauthn_unavailable", message: "x" },
     });
-    await result.current.logIn();
+    await act(() => result.current.logIn());
     await waitFor(() => {
       expect(result.current.error).toEqual({ key: "login.passkeyUnavailable" });
     });
@@ -178,7 +217,7 @@ describe("passkeys", () => {
       status: 200,
       body: { ceremonyId: "c", options: { publicKey: {} } },
     });
-    await result.current.logIn();
+    await act(() => result.current.logIn());
     await waitFor(() => {
       expect(result.current.error).toEqual({ key: "login.passkeyFailed" });
     });

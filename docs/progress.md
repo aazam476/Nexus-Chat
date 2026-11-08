@@ -114,7 +114,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   on web. The server serves the web build with a strict Content Security
   Policy.
 
-Still to do in M2: the Electron shell, the Playwright release gate, the ZAP
+- Desktop shell (`apps/desktop`, Electron): the web build served from a
+  secure `app://` origin with a strict Content Security Policy, a
+  sandboxed window that can only navigate within the app (links open in
+  the system browser), all permission requests refused, and provider
+  sign-in in its own window, returning to `nexuschat://oidc-return`.
+
+Still to do in M2: the Playwright release gate, the ZAP
 scan, certificate expiry emails, Maestro flows, visual snapshots with the
 worst-case fixtures, and the mutation-testing tool for auth.
 

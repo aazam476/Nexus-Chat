@@ -7,9 +7,7 @@ import { beginProviderSignIn, type Client } from "@nexus-chat/api-client";
 import * as WebBrowser from "expo-web-browser";
 
 import type { SecureStorage } from "../storage/storage";
-import { finishProviderSignIn, parseReturn, type ProviderOutcome } from "./providerReturn";
-
-const returnAddress = "nexuschat://oidc-return";
+import { appReturnAddress, finishProviderSignIn, parseReturn, type ProviderOutcome } from "./providerReturn";
 
 /** Signs in with `providerId`; the result arrives when the browser closes. */
 export async function startProviderSignIn(
@@ -20,12 +18,12 @@ export async function startProviderSignIn(
   const begun = await beginProviderSignIn({
     client,
     path: { providerId },
-    body: { returnTo: returnAddress },
+    body: { returnTo: appReturnAddress },
   });
   if (begun.data === undefined) {
     return { kind: "failed", message: { key: "login.providerFailed" } };
   }
-  const session = await WebBrowser.openAuthSessionAsync(begun.data.authorizationUrl, returnAddress);
+  const session = await WebBrowser.openAuthSessionAsync(begun.data.authorizationUrl, appReturnAddress);
   if (session.type !== "success") {
     return undefined; // the user closed the browser
   }

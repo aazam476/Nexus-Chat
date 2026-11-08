@@ -92,6 +92,17 @@ compatible native modules), so the app builds on iOS, Android and the web.
 | `eslint-plugin-react-native-a11y`                          | 3.5.1           | MIT        | Accessibility rules for React Native (spec §7.2); its peer range predates ESLint 10 but its rules run unchanged |
 | `eslint-plugin-i18next`                                    | 6.1.5           | ISC        | Rejects text written directly into screens (spec §4.13)                                                         |
 
+## TypeScript: `@nexus-chat/desktop`
+
+The desktop app ships Electron and the client's web build; it has no other
+runtime dependencies.
+
+| Package                          | Version                 | License | Why                                                                                                                                        |
+| -------------------------------- | ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `electron`                       | 45.2.3                  | MIT     | The desktop shell the spec names (spec §2); its install script downloads the Electron binary and checks it against the release's checksums |
+| `@types/node`                    | 26.6.6                  | MIT     | Node.js types for the main process (dev)                                                                                                   |
+| `jest`, `ts-jest`, `@types/jest` | 30.5.2, 29.4.15, 30.0.0 | MIT     | Test runner required by the spec (dev)                                                                                                     |
+
 ## TypeScript: workspace tooling (dev only)
 
 `typescript` 6.0.3, `eslint` 10.14.0, `typescript-eslint` 8.72.1,

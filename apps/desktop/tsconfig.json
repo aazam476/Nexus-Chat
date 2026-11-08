@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Electron's sandboxed preload script must be CommonJS, so this
+    // package is compiled to CommonJS from ordinary import syntax.
+    "verbatimModuleSyntax": false,
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "jest"],
+    "noEmit": true
+  },
+  "include": ["src", "jest.config.ts"]
+}

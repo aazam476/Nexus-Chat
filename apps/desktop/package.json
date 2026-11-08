@@ -1,0 +1,22 @@
+{
+  "name": "@nexus-chat/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Nexus Chat desktop app for Windows, macOS and Linux: the web build in an Electron window.",
+  "license": "Apache-2.0",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "pnpm build && electron .",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest --coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "30.0.0",
+    "@types/node": "26.6.6",
+    "electron": "45.2.3",
+    "jest": "30.5.2",
+    "ts-jest": "29.4.15"
+  }
+}
