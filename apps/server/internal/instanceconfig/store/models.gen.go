@@ -40,6 +40,15 @@ type InstanceSetting struct {
 	UpdatedAt time.Time
 }
 
+type KeyPackage struct {
+	ID         int64
+	SessionID  uuid.UUID
+	UserID     uuid.UUID
+	Data       []byte
+	LastResort bool
+	CreatedAt  time.Time
+}
+
 type OidcFlow struct {
 	ID             uuid.UUID
 	ProviderID     string

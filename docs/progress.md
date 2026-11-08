@@ -187,6 +187,14 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   checksum-verified download); issue #858 has a regression test and a
   one-character patch; CI checks reviewed and unreviewed advisories
   against the pinned version.
+- Server key-package directory (`internal/keypackages`): each device (for
+  now, each session) uploads one-time key packages and one last-resort
+  package (`POST /api/v1/key-packages`), sees its stock and when to refill
+  (`GET`), and others claim one per device of a user
+  (`POST /api/v1/users/{userId}/key-packages/claim`), with one-time ones
+  used up and the last resort kept. The server stays MLS-free and checks
+  only the header (MLS 1.0, key package, ciphersuite 0x0001) and size.
+  Claims are rate-limited per claiming user; packages go with the session.
 - Performance at 10–2,000 devices is in ADR 0002, with the review
   options. Messages cost the same at any size; joins and commits grow
   linearly because ts-mls rehashes the whole tree. Device (Hermes)

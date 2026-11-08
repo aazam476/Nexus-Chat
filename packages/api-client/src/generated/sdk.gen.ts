@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -678,6 +678,55 @@ export const setStatus = <ThrowOnError extends boolean = false>(options: Options
 export const getUserProfile = <ThrowOnError extends boolean = false>(options: Options<GetUserProfileData, ThrowOnError>): RequestResult<GetUserProfileResponses, GetUserProfileErrors, ThrowOnError> => (options.client ?? client).get<GetUserProfileResponses, GetUserProfileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/users/{userId}',
+    ...options
+});
+
+/**
+ * How many key packages this device has stored
+ *
+ * The calling device's (session's) stock of MLS key packages. When
+ * `refill` is true the device should upload more (docs/e2ee-design.md
+ * §3.2: keep about 50, top up below 20).
+ *
+ */
+export const getKeyPackageStock = <ThrowOnError extends boolean = false>(options?: Options<GetKeyPackageStockData, ThrowOnError>): RequestResult<GetKeyPackageStockResponses, GetKeyPackageStockErrors, ThrowOnError> => (options?.client ?? client).get<GetKeyPackageStockResponses, GetKeyPackageStockErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-packages',
+    ...options
+});
+
+/**
+ * Store key packages for this device
+ *
+ * Adds one-time key packages and optionally replaces the device's
+ * last-resort package (RFC 9420 §10). Each must be an encoded
+ * MLSMessage holding a KeyPackage for ciphersuite 0x0001, at most
+ * 16 KiB. The server does not verify signatures; clients do before
+ * adding anyone. The packages go away when the session ends.
+ *
+ */
+export const uploadKeyPackages = <ThrowOnError extends boolean = false>(options: Options<UploadKeyPackagesData, ThrowOnError>): RequestResult<UploadKeyPackagesResponses, UploadKeyPackagesErrors, ThrowOnError> => (options.client ?? client).post<UploadKeyPackagesResponses, UploadKeyPackagesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-packages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Take a key package for each of a user's devices
+ *
+ * Hands out one key package per device of the user, to add those
+ * devices to a group. One-time packages are used up; a device with
+ * none left gets its last-resort package. Devices without any are
+ * left out, so an empty list means no device can be added now.
+ *
+ */
+export const claimKeyPackages = <ThrowOnError extends boolean = false>(options: Options<ClaimKeyPackagesData, ThrowOnError>): RequestResult<ClaimKeyPackagesResponses, ClaimKeyPackagesErrors, ThrowOnError> => (options.client ?? client).post<ClaimKeyPackagesResponses, ClaimKeyPackagesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/users/{userId}/key-packages/claim',
     ...options
 });
 

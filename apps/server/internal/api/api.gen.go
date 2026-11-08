@@ -200,6 +200,13 @@ type ChallengeRequest struct {
 	ChallengeToken string `json:"challengeToken"`
 }
 
+// ClaimedKeyPackage defines model for ClaimedKeyPackage.
+type ClaimedKeyPackage struct {
+	DeviceId   openapi_types.UUID `json:"deviceId"`
+	KeyPackage []byte             `json:"keyPackage"`
+	LastResort bool               `json:"lastResort"`
+}
+
 // CodeRequest defines model for CodeRequest.
 type CodeRequest struct {
 	Code string `json:"code"`
@@ -364,6 +371,26 @@ type Invite struct {
 	Id        openapi_types.UUID `json:"id"`
 	MaxUses   *int32             `json:"maxUses,omitempty"`
 	Uses      int32              `json:"uses"`
+}
+
+// KeyPackageStock defines model for KeyPackageStock.
+type KeyPackageStock struct {
+	HasLastResort bool `json:"hasLastResort"`
+
+	// OneTime One-time key packages stored for this device.
+	OneTime int32 `json:"oneTime"`
+
+	// Refill True when fewer than 20 one-time packages are left.
+	Refill bool `json:"refill"`
+}
+
+// KeyPackageUpload defines model for KeyPackageUpload.
+type KeyPackageUpload struct {
+	// KeyPackages Encoded MLSMessages, each holding a KeyPackage (base64).
+	KeyPackages [][]byte `json:"keyPackages"`
+
+	// LastResort Replaces the device's last-resort key package.
+	LastResort *[]byte `json:"lastResort,omitempty"`
 }
 
 // LinkedProvider defines model for LinkedProvider.
@@ -823,6 +850,9 @@ type BeginWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationRequest
 // FinishWebAuthnRegistrationJSONRequestBody defines body for FinishWebAuthnRegistration for application/json ContentType.
 type FinishWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationAnswer
 
+// UploadKeyPackagesJSONRequestBody defines body for UploadKeyPackages for application/json ContentType.
+type UploadKeyPackagesJSONRequestBody = KeyPackageUpload
+
 // CompleteSetupJSONRequestBody defines body for CompleteSetup for application/json ContentType.
 type CompleteSetupJSONRequestBody = SetupRequest
 
@@ -975,6 +1005,12 @@ type ServerInterface interface {
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(w http.ResponseWriter, r *http.Request)
+	// GetKeyPackageStock How many key packages this device has stored
+	// (GET /api/v1/key-packages)
+	GetKeyPackageStock(w http.ResponseWriter, r *http.Request)
+	// UploadKeyPackages Store key packages for this device
+	// (POST /api/v1/key-packages)
+	UploadKeyPackages(w http.ResponseWriter, r *http.Request)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(w http.ResponseWriter, r *http.Request)
@@ -999,6 +1035,9 @@ type ServerInterface interface {
 	// GetUserProfile Someone's public profile
 	// (GET /api/v1/users/{userId})
 	GetUserProfile(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// ClaimKeyPackages Take a key package for each of a user's devices
+	// (POST /api/v1/users/{userId}/key-packages/claim)
+	ClaimKeyPackages(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(w http.ResponseWriter, r *http.Request)
@@ -1851,6 +1890,34 @@ func (siw *ServerInterfaceWrapper) GetInstanceInfo(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetKeyPackageStock operation middleware
+func (siw *ServerInterfaceWrapper) GetKeyPackageStock(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetKeyPackageStock(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadKeyPackages operation middleware
+func (siw *ServerInterfaceWrapper) UploadKeyPackages(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadKeyPackages(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSetupStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -2011,6 +2078,32 @@ func (siw *ServerInterfaceWrapper) GetUserProfile(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetUserProfile(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClaimKeyPackages operation middleware
+func (siw *ServerInterfaceWrapper) ClaimKeyPackages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClaimKeyPackages(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2219,6 +2312,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/users/me/avatar", wrapper.SetAvatar)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/users/me/status", wrapper.SetStatus)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/users/{userId}", wrapper.GetUserProfile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/key-packages", wrapper.GetKeyPackageStock)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/key-packages", wrapper.UploadKeyPackages)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/users/{userId}/key-packages/claim", wrapper.ClaimKeyPackages)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
@@ -5099,6 +5195,119 @@ func (response GetInstanceInfo200JSONResponse) VisitGetInstanceInfoResponse(w ht
 	return err
 }
 
+type GetKeyPackageStockRequestObject struct {
+}
+
+type GetKeyPackageStockResponseObject interface {
+	VisitGetKeyPackageStockResponse(w http.ResponseWriter) error
+}
+
+type GetKeyPackageStock200JSONResponse KeyPackageStock
+
+func (response GetKeyPackageStock200JSONResponse) VisitGetKeyPackageStockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKeyPackageStock401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetKeyPackageStock401JSONResponse) VisitGetKeyPackageStockResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadKeyPackagesRequestObject struct {
+	Body *UploadKeyPackagesJSONRequestBody
+}
+
+type UploadKeyPackagesResponseObject interface {
+	VisitUploadKeyPackagesResponse(w http.ResponseWriter) error
+}
+
+type UploadKeyPackages200JSONResponse KeyPackageStock
+
+func (response UploadKeyPackages200JSONResponse) VisitUploadKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadKeyPackages400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UploadKeyPackages400JSONResponse) VisitUploadKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadKeyPackages401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UploadKeyPackages401JSONResponse) VisitUploadKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadKeyPackages409JSONResponse Error
+
+func (response UploadKeyPackages409JSONResponse) VisitUploadKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadKeyPackages422JSONResponse Error
+
+func (response UploadKeyPackages422JSONResponse) VisitUploadKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSetupStatusRequestObject struct {
 }
 
@@ -5533,6 +5742,56 @@ func (response GetUserProfile404JSONResponse) VisitGetUserProfileResponse(w http
 	return err
 }
 
+type ClaimKeyPackagesRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type ClaimKeyPackagesResponseObject interface {
+	VisitClaimKeyPackagesResponse(w http.ResponseWriter) error
+}
+
+type ClaimKeyPackages200JSONResponse []ClaimedKeyPackage
+
+func (response ClaimKeyPackages200JSONResponse) VisitClaimKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClaimKeyPackages401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ClaimKeyPackages401JSONResponse) VisitClaimKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClaimKeyPackages429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response ClaimKeyPackages429JSONResponse) VisitClaimKeyPackagesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetLivenessRequestObject struct {
 }
 
@@ -5732,6 +5991,12 @@ type StrictServerInterface interface {
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(ctx context.Context, request GetInstanceInfoRequestObject) (GetInstanceInfoResponseObject, error)
+	// GetKeyPackageStock How many key packages this device has stored
+	// (GET /api/v1/key-packages)
+	GetKeyPackageStock(ctx context.Context, request GetKeyPackageStockRequestObject) (GetKeyPackageStockResponseObject, error)
+	// UploadKeyPackages Store key packages for this device
+	// (POST /api/v1/key-packages)
+	UploadKeyPackages(ctx context.Context, request UploadKeyPackagesRequestObject) (UploadKeyPackagesResponseObject, error)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
@@ -5756,6 +6021,9 @@ type StrictServerInterface interface {
 	// GetUserProfile Someone's public profile
 	// (GET /api/v1/users/{userId})
 	GetUserProfile(ctx context.Context, request GetUserProfileRequestObject) (GetUserProfileResponseObject, error)
+	// ClaimKeyPackages Take a key package for each of a user's devices
+	// (POST /api/v1/users/{userId}/key-packages/claim)
+	ClaimKeyPackages(ctx context.Context, request ClaimKeyPackagesRequestObject) (ClaimKeyPackagesResponseObject, error)
 	// GetLiveness Liveness probe
 	// (GET /healthz)
 	GetLiveness(ctx context.Context, request GetLivenessRequestObject) (GetLivenessResponseObject, error)
@@ -7116,6 +7384,61 @@ func (sh *strictHandler) GetInstanceInfo(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// GetKeyPackageStock operation middleware
+func (sh *strictHandler) GetKeyPackageStock(w http.ResponseWriter, r *http.Request) {
+	var request GetKeyPackageStockRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetKeyPackageStock(ctx, request.(GetKeyPackageStockRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetKeyPackageStock")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetKeyPackageStockResponseObject); ok {
+		if err := validResponse.VisitGetKeyPackageStockResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadKeyPackages operation middleware
+func (sh *strictHandler) UploadKeyPackages(w http.ResponseWriter, r *http.Request) {
+	var request UploadKeyPackagesRequestObject
+
+	var body UploadKeyPackagesJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadKeyPackages(ctx, request.(UploadKeyPackagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadKeyPackages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadKeyPackagesResponseObject); ok {
+		if err := validResponse.VisitUploadKeyPackagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetSetupStatus operation middleware
 func (sh *strictHandler) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
 	var request GetSetupStatusRequestObject
@@ -7328,6 +7651,32 @@ func (sh *strictHandler) GetUserProfile(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetUserProfileResponseObject); ok {
 		if err := validResponse.VisitGetUserProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ClaimKeyPackages operation middleware
+func (sh *strictHandler) ClaimKeyPackages(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request ClaimKeyPackagesRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ClaimKeyPackages(ctx, request.(ClaimKeyPackagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ClaimKeyPackages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ClaimKeyPackagesResponseObject); ok {
+		if err := validResponse.VisitClaimKeyPackagesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

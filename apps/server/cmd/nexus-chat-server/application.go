@@ -52,7 +52,6 @@ import (
 	setupstore "github.com/aazam476/nexus-chat/apps/server/internal/setup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/tlsconfig"
 	"github.com/aazam476/nexus-chat/apps/server/internal/voice"
-	"github.com/aazam476/nexus-chat/apps/server/internal/webclient"
 )
 
 // shutdownTimeout is how long in-flight requests get to finish after a stop
@@ -109,6 +108,7 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 		return nil, err
 	}
 	features.Profiles = app.buildRealtimeAndProfiles(configuration)
+	features.KeyPackages = app.newKeyPackagesHandler()
 	handler := httpserver.NewHandler(features, httpserver.Options{
 		Logger: logger, TrustedProxies: configuration.TrustedProxies, Authenticator: app.sessions, Gateway: app.gateway,
 		WebClient: webClient(configuration.WebDirectory),
@@ -254,15 +254,6 @@ func (app *application) buildRealtimeAndProfiles(configuration config.Config) *p
 		Listener: app.hub, AvatarLimiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Clock: system, Logger: app.logger,
 	})
 	return profiles.NewHandler(service, app.hub)
-}
-
-// webClient serves the web build from directory, or nothing when the
-// server runs without one (development, API-only deployments).
-func webClient(directory string) http.Handler {
-	if directory == "" {
-		return nil
-	}
-	return webclient.NewHandler(directory)
 }
 
 // newMailSettings manages SMTP settings; the limit on test emails stops a

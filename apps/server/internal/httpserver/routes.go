@@ -14,6 +14,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
+	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
@@ -27,6 +28,7 @@ type Features struct {
 	Auth         *auth.Handler
 	Health       *health.Handler
 	Instance     *instanceconfig.Handler
+	KeyPackages  *keypackages.Handler
 	OIDC         *oidc.Handler
 	Profiles     *profiles.Handler
 	Registration *registration.Handler
@@ -55,6 +57,7 @@ type (
 	authHandler         = auth.Handler
 	healthHandler       = health.Handler
 	instanceHandler     = instanceconfig.Handler
+	keyPackagesHandler  = keypackages.Handler
 	oidcHandler         = oidc.Handler
 	profilesHandler     = profiles.Handler
 	registrationHandler = registration.Handler
@@ -70,6 +73,7 @@ type handlers struct {
 	*authHandler
 	*healthHandler
 	*instanceHandler
+	*keyPackagesHandler
 	*oidcHandler
 	*profilesHandler
 	*registrationHandler
@@ -85,7 +89,8 @@ func NewHandler(features Features, options Options) http.Handler {
 	strict := api.NewStrictHandlerWithOptions(
 		handlers{
 			accountsHandler: features.Accounts, adminHandler: features.Admin, authHandler: features.Auth,
-			healthHandler: features.Health, instanceHandler: features.Instance, oidcHandler: features.OIDC,
+			healthHandler: features.Health, instanceHandler: features.Instance, keyPackagesHandler: features.KeyPackages,
+			oidcHandler:         features.OIDC,
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
 		},

@@ -23,6 +23,8 @@ tags:
     description: Public information about this instance.
   - name: admin
     description: Instance administration. Every operation needs an instance admin.
+  - name: encryption
+    description: End-to-end encryption support. The server stores and relays opaque MLS data; it never sees keys or plaintext.
 paths:
   /api/v1/auth/login:
     post:
@@ -1443,6 +1445,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/key-packages:
+    get:
+      operationId: getKeyPackageStock
+      summary: How many key packages this device has stored
+      description: |
+        The calling device's (session's) stock of MLS key packages. When
+        `refill` is true the device should upload more (docs/e2ee-design.md
+        §3.2: keep about 50, top up below 20).
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The stock.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyPackageStock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: uploadKeyPackages
+      summary: Store key packages for this device
+      description: |
+        Adds one-time key packages and optionally replaces the device's
+        last-resort package (RFC 9420 §10). Each must be an encoded
+        MLSMessage holding a KeyPackage for ciphersuite 0x0001, at most
+        16 KiB. The server does not verify signatures; clients do before
+        adding anyone. The packages go away when the session ends.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyPackageUpload"
+      responses:
+        "200":
+          description: Stored; the new stock.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyPackageStock"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: The device would hold more than 200 one-time packages (`key_package_stock_full`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            A package is not a key package for ciphersuite 0x0001 or is too
+            large (`invalid_key_package`), or the upload is empty or holds
+            more than 100 (`validation_failed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/users/{userId}/key-packages/claim:
+    post:
+      operationId: claimKeyPackages
+      summary: Take a key package for each of a user's devices
+      description: |
+        Hands out one key package per device of the user, to add those
+        devices to a group. One-time packages are used up; a device with
+        none left gets its last-resort package. Devices without any are
+        left out, so an empty list means no device can be added now.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: One package per device that has one.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClaimedKeyPackage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /api/v1/avatars/{avatarId}:
     get:
       operationId: getAvatar
@@ -2019,6 +2117,49 @@ components:
         lastUsedAt:
           type: string
           format: date-time
+    KeyPackageStock:
+      type: object
+      additionalProperties: false
+      required: [oneTime, hasLastResort, refill]
+      properties:
+        oneTime:
+          type: integer
+          format: int32
+          description: One-time key packages stored for this device.
+        hasLastResort:
+          type: boolean
+        refill:
+          type: boolean
+          description: True when fewer than 20 one-time packages are left.
+    KeyPackageUpload:
+      type: object
+      additionalProperties: false
+      required: [keyPackages]
+      properties:
+        keyPackages:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            format: byte
+          description: Encoded MLSMessages, each holding a KeyPackage (base64).
+        lastResort:
+          type: string
+          format: byte
+          description: Replaces the device's last-resort key package.
+    ClaimedKeyPackage:
+      type: object
+      additionalProperties: false
+      required: [deviceId, keyPackage, lastResort]
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        keyPackage:
+          type: string
+          format: byte
+        lastResort:
+          type: boolean
     ReauthenticateRequest:
       type: object
       additionalProperties: false

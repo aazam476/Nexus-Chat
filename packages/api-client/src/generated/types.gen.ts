@@ -252,6 +252,35 @@ export type WebAuthnCredential = {
     lastUsedAt?: string;
 };
 
+export type KeyPackageStock = {
+    /**
+     * One-time key packages stored for this device.
+     */
+    oneTime: number;
+    hasLastResort: boolean;
+    /**
+     * True when fewer than 20 one-time packages are left.
+     */
+    refill: boolean;
+};
+
+export type KeyPackageUpload = {
+    /**
+     * Encoded MLSMessages, each holding a KeyPackage (base64).
+     */
+    keyPackages: Array<string>;
+    /**
+     * Replaces the device's last-resort key package.
+     */
+    lastResort?: string;
+};
+
+export type ClaimedKeyPackage = {
+    deviceId: string;
+    keyPackage: string;
+    lastResort: boolean;
+};
+
 export type ReauthenticateRequest = {
     password: string;
 };
@@ -2265,6 +2294,102 @@ export type GetUserProfileResponses = {
 };
 
 export type GetUserProfileResponse = GetUserProfileResponses[keyof GetUserProfileResponses];
+
+export type GetKeyPackageStockData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/key-packages';
+};
+
+export type GetKeyPackageStockErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type GetKeyPackageStockError = GetKeyPackageStockErrors[keyof GetKeyPackageStockErrors];
+
+export type GetKeyPackageStockResponses = {
+    /**
+     * The stock.
+     */
+    200: KeyPackageStock;
+};
+
+export type GetKeyPackageStockResponse = GetKeyPackageStockResponses[keyof GetKeyPackageStockResponses];
+
+export type UploadKeyPackagesData = {
+    body: KeyPackageUpload;
+    path?: never;
+    query?: never;
+    url: '/api/v1/key-packages';
+};
+
+export type UploadKeyPackagesErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The device would hold more than 200 one-time packages (`key_package_stock_full`).
+     */
+    409: Error;
+    /**
+     * A package is not a key package for ciphersuite 0x0001 or is too
+     * large (`invalid_key_package`), or the upload is empty or holds
+     * more than 100 (`validation_failed`).
+     *
+     */
+    422: Error;
+};
+
+export type UploadKeyPackagesError = UploadKeyPackagesErrors[keyof UploadKeyPackagesErrors];
+
+export type UploadKeyPackagesResponses = {
+    /**
+     * Stored; the new stock.
+     */
+    200: KeyPackageStock;
+};
+
+export type UploadKeyPackagesResponse = UploadKeyPackagesResponses[keyof UploadKeyPackagesResponses];
+
+export type ClaimKeyPackagesData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{userId}/key-packages/claim';
+};
+
+export type ClaimKeyPackagesErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type ClaimKeyPackagesError = ClaimKeyPackagesErrors[keyof ClaimKeyPackagesErrors];
+
+export type ClaimKeyPackagesResponses = {
+    /**
+     * One package per device that has one.
+     */
+    200: Array<ClaimedKeyPackage>;
+};
+
+export type ClaimKeyPackagesResponse = ClaimKeyPackagesResponses[keyof ClaimKeyPackagesResponses];
 
 export type GetAvatarData = {
     body?: never;
