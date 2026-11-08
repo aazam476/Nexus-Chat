@@ -1,0 +1,111 @@
+{
+  "common": {
+    "continue": "Continue",
+    "back": "Back",
+    "loading": "Loading…",
+    "unexpectedError": "Something went wrong. Try again in a moment."
+  },
+  "https": {
+    "title": "Warning: this connection is not secure",
+    "intro": "This instance is reached over plain HTTP. Until HTTPS is set up, these do not work:",
+    "calls": "Voice and video calls, and screen sharing",
+    "passkeys": "Passkeys and security keys",
+    "encryption": "End-to-end encryption in the browser",
+    "push": "Web push notifications",
+    "mobile": "The iOS and Android apps",
+    "federation": "Talking to other instances",
+    "learnMore": "How to set up HTTPS"
+  },
+  "connect": {
+    "title": "Connect to an instance",
+    "intro": "Enter the address of the Nexus Chat instance you want to use.",
+    "address": "Instance address",
+    "addressHint": "For example chat.example.com",
+    "invalid": "Enter an address such as chat.example.com.",
+    "unreachable": "No Nexus Chat instance answered at this address."
+  },
+  "login": {
+    "title": "Log in to {{instance}}",
+    "login": "Username or email",
+    "password": "Password",
+    "submit": "Log in",
+    "passkey": "Log in with a passkey",
+    "orProvider": "Or continue with",
+    "provider": "Continue with {{name}}",
+    "register": "Create an account",
+    "otherInstance": "Use another instance",
+    "invalidCredentials": "The username or password is wrong.",
+    "delayed": "Too many attempts. Try again in {{seconds}} seconds.",
+    "rateLimited": "Too many attempts. Wait a minute and try again.",
+    "passkeyFailed": "The passkey could not be used.",
+    "passkeyUnavailable": "Passkeys need HTTPS and a browser that supports them.",
+    "providerFailed": "Signing in with the provider did not work. Try again.",
+    "providerNoAccount": "No account is linked to this login. Log in another way and link the provider in settings.",
+    "providerNoEmail": "The provider did not share your email address, which an account needs.",
+    "providerEmailInUse": "An account already uses this email. Log in to it and link the provider in settings."
+  },
+  "mfa": {
+    "title": "Two-step verification",
+    "intro": "Enter the code from your authenticator app, or one of your backup codes.",
+    "code": "Code",
+    "useBackupCode": "Use a backup code instead",
+    "useAuthenticator": "Use an authenticator code instead",
+    "backupCode": "Backup code",
+    "submit": "Verify",
+    "invalid": "That code did not work. Log in again to get a new attempt."
+  },
+  "register": {
+    "title": "Create an account",
+    "username": "Username",
+    "usernameHint": "3–32 characters: a–z, 0–9, underscores and dots",
+    "displayName": "Display name",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "At least 10 characters",
+    "invite": "Invite code",
+    "inviteHint": "Needed on invite-only instances",
+    "submit": "Create account",
+    "closed": "This instance is not accepting new accounts.",
+    "inviteRequired": "This instance is invite-only. Enter an invite code.",
+    "invalidInvite": "That invite code is unknown, used up or expired.",
+    "haveAccount": "I already have an account"
+  },
+  "setup": {
+    "title": "Set up {{instance}}",
+    "intro": "Create the first admin account. The setup token is printed in the server's logs.",
+    "httpWarning": "Warning: the setup token and your password will travel unencrypted. Finish setup from the same machine or local network, or add HTTPS first.",
+    "token": "Setup token",
+    "adminSection": "Admin account",
+    "instanceSection": "Instance",
+    "instanceName": "Instance name",
+    "domain": "Public domain",
+    "domainHint": "Optional for now, needed for HTTPS and federation. For example chat.example.com",
+    "domainFromEnvironment": "Set by DOMAIN in .env: {{domain}}",
+    "registrationMode": "Who can create accounts",
+    "modeOpen": "Anyone",
+    "modeInviteOnly": "People with an invite",
+    "modeClosed": "Nobody (admins add people later)",
+    "submit": "Finish setup",
+    "invalidToken": "That setup token is wrong. Copy it again from the server logs.",
+    "alreadyComplete": "This instance is already set up. Log in instead.",
+    "done": "Setup is complete. Log in with your new admin account."
+  },
+  "home": {
+    "title": "Welcome, {{name}}",
+    "intro": "You are logged in to {{instance}}. Servers and messages arrive in the next releases.",
+    "status": "Status",
+    "statusOnline": "Online",
+    "statusIdle": "Idle",
+    "statusDnd": "Do not disturb",
+    "statusInvisible": "Invisible",
+    "presence": "Others see you as: {{status}}",
+    "presenceOffline": "Offline",
+    "logout": "Log out"
+  },
+  "oidc": {
+    "finishing": "Finishing sign-in…"
+  },
+  "validation": {
+    "required": "This field is required."
+  }
+}

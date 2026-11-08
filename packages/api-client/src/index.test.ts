@@ -1,4 +1,4 @@
-import { createApiClient, getLiveness, getReadiness, type HealthStatus } from "./index.js";
+import { createApiClient, getCurrentUser, getLiveness, getReadiness, type HealthStatus } from "./index.js";
 
 /** A fetch replacement that records requests and answers with `status` and `body`. */
 function fakeFetch(status: number, body: HealthStatus): { fetch: typeof fetch; requests: Request[] } {
@@ -21,6 +21,27 @@ describe("createApiClient", () => {
 
     expect(fake.requests.map((request) => request.url)).toEqual(["https://chat.example.com/healthz"]);
     expect(result.data).toEqual({ status: "ok", checks: [] });
+  });
+
+  it("sends the session token to protected operations only", async () => {
+    const fake = fakeFetch(200, { status: "ok", checks: [] });
+    let token: string | undefined = "nxs_first";
+    const client = createApiClient({
+      baseUrl: "https://chat.example.com",
+      fetch: fake.fetch,
+      token: () => token,
+    });
+
+    await getCurrentUser({ client });
+    token = undefined;
+    await getCurrentUser({ client });
+    await getLiveness({ client });
+
+    expect(fake.requests.map((request) => request.headers.get("Authorization"))).toEqual([
+      "Bearer nxs_first",
+      null,
+      null,
+    ]);
   });
 
   it("keeps a base path and drops repeated trailing slashes", async () => {

@@ -43,12 +43,13 @@ the milestone that builds the feature.
 
 ## 3. Mobile
 
-| Feature                      | iOS                                                                                | Android                                                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Screen share                 | Broadcast upload extension (whole screen only)                                     | MediaProjection (whole screen; app-only on Android 14+ where the system offers it) |
-| System audio in screen share | Captured by the broadcast extension (app audio only, per iOS rules)                | Android 10+ `AudioPlaybackCapture`, only from apps that allow capture              |
-| Push-to-talk                 | On-screen button only                                                              | On-screen button only                                                              |
-| Fully self-hosted push       | Not possible with the store app ([`push-notifications.md`](push-notifications.md)) | UnifiedPush                                                                        |
+| Feature                      | iOS                                                                                                                  | Android                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Screen share                 | Broadcast upload extension (whole screen only)                                                                       | MediaProjection (whole screen; app-only on Android 14+ where the system offers it) |
+| System audio in screen share | Captured by the broadcast extension (app audio only, per iOS rules)                                                  | Android 10+ `AudioPlaybackCapture`, only from apps that allow capture              |
+| Push-to-talk                 | On-screen button only                                                                                                | On-screen button only                                                              |
+| Fully self-hosted push       | Not possible with the store app ([`push-notifications.md`](push-notifications.md))                                   | UnifiedPush                                                                        |
+| Passkeys                     | Not yet: each instance must publish `apple-app-site-association` naming the app, planned with the native work in M11 | Not yet: each instance must publish `assetlinks.json`, planned for M11             |
 
 ## 4. Windows and Linux desktop
 

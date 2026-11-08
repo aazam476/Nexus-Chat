@@ -42,6 +42,9 @@ type Options struct {
 	// Gateway serves the WebSocket at /api/v1/gateway, which is not part
 	// of the OpenAPI contract (docs/realtime-protocol.md is its contract).
 	Gateway http.Handler
+	// WebClient serves the web app at every path the API does not use; nil
+	// when the server runs without the web build.
+	WebClient http.Handler
 }
 
 // Every feature's handler type is called Handler, and two embedded fields
@@ -95,8 +98,11 @@ func NewHandler(features Features, options Options) http.Handler {
 	if options.Gateway != nil {
 		mux.Handle("GET /api/v1/gateway", options.Gateway)
 	}
+	if options.WebClient != nil {
+		mux.Handle("GET /", options.WebClient)
+	}
 	routes := api.HandlerFromMux(strict, mux)
-	withMiddleware := clientip.Middleware(options.TrustedProxies, securityHeaders(routes))
+	withMiddleware := clientip.Middleware(options.TrustedProxies, securityHeaders(allowCrossOrigin(routes)))
 	return recoverPanics(logRequests(withMiddleware, options.Logger), options.Logger)
 }
 

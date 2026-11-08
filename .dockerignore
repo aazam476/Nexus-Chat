@@ -1,6 +1,8 @@
-# Only the Go sources are needed in the image build context.
+# Build output and dependencies are rebuilt inside the image.
 **/node_modules
 **/coverage*
 **/.turbo
 .git
 data
+**/dist
+**/.expo

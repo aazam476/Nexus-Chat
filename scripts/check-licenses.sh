@@ -24,8 +24,14 @@ case "$kind" in
     ;;
   js)
     # All dependencies, including development tools, are checked: it is
-    # simpler than proving which ones end up in an app bundle.
-    license-checker-rseidelsohn --start "$directory" --excludePrivatePackages --onlyAllow "$js_allowed" >/dev/null
+    # simpler than proving which ones end up in an app bundle. With pnpm,
+    # each workspace keeps its own dependencies, so every workspace under
+    # the directory is checked, not only its root.
+    for workspace in "$directory" "$directory"/apps/* "$directory"/packages/*; do
+      if [ -f "$workspace/package.json" ]; then
+        license-checker-rseidelsohn --start "$workspace" --excludePrivatePackages --onlyAllow "$js_allowed" >/dev/null
+      fi
+    done
     ;;
   *)
     echo "usage: $0 go|js <directory>" >&2

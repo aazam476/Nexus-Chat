@@ -69,6 +69,29 @@ No runtime dependencies: the generated client uses the platform `fetch`.
 | `@hey-api/openapi-ts`            | 0.99.0                  | MIT     | Generates the client from `openapi.yaml`; supports TypeScript 6 (`openapi-typescript` does not yet) |
 | `jest`, `ts-jest`, `@types/jest` | 30.5.2, 29.4.15, 30.0.0 | MIT     | Test runner required by the spec                                                                    |
 
+## TypeScript: `@nexus-chat/client` and `@nexus-chat/ui`
+
+Versions are the ones Expo SDK 58 is tested with (from `expo`'s own list of
+compatible native modules), so the app builds on iOS, Android and the web.
+
+| Package                                                                                      | Version                        | License | Why                                                                                                                                       |
+| -------------------------------------------------------------------------------------------- | ------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `expo`, `expo-router`, `expo-constants`, `expo-linking`, `expo-status-bar`, `expo-system-ui` | 58.0.x                         | MIT     | The app framework and file-based navigation the spec names (spec §2)                                                                      |
+| `react`, `react-dom`, `react-native`, `react-native-web`                                     | 19.3.0, 19.3.0, 0.88.1, 0.21.4 | MIT     | React Native, and its web renderer for the web build                                                                                      |
+| `react-native-reanimated`, `react-native-worklets`                                           | 4.7.1, 0.13.0                  | MIT     | Animations on the UI thread (ADR 0017)                                                                                                    |
+| `react-native-gesture-handler`, `react-native-screens`, `react-native-safe-area-context`     | 3.3.0, 4.30.1, 5.11.1          | MIT     | Native gestures, native screen containers and notch-safe layouts, required by Expo Router                                                 |
+| `expo-secure-store`                                                                          | 58.0.2                         | MIT     | Keychain / Keystore storage for the session on iOS and Android (spec §5.3)                                                                |
+| `expo-web-browser`                                                                           | 58.0.7                         | MIT     | The in-app browser session for provider sign-in on mobile (ADR 0016)                                                                      |
+| `i18next`, `react-i18next`                                                                   | 26.7.2, 17.1.13                | MIT     | Every user-facing string comes from translation files (spec §4.13); the newest majors were released the day before and are left to settle |
+
+| Package (dev)                                              | Version         | License    | Why                                                                                                             |
+| ---------------------------------------------------------- | --------------- | ---------- | --------------------------------------------------------------------------------------------------------------- |
+| `jest-expo`, `@testing-library/react-native`               | 58.0.14, 14.1.0 | MIT        | Component and hook tests in React Native's environment (spec §7.1)                                              |
+| `fake-indexeddb`                                           | 6.2.7           | Apache-2.0 | Tests the web storage without a browser                                                                         |
+| `@eslint-react/eslint-plugin`, `eslint-plugin-react-hooks` | 5.28.8, 7.1.1   | MIT        | React and hooks rules                                                                                           |
+| `eslint-plugin-react-native-a11y`                          | 3.5.1           | MIT        | Accessibility rules for React Native (spec §7.2); its peer range predates ESLint 10 but its rules run unchanged |
+| `eslint-plugin-i18next`                                    | 6.1.5           | ISC        | Rejects text written directly into screens (spec §4.13)                                                         |
+
 ## TypeScript: workspace tooling (dev only)
 
 `typescript` 6.0.3, `eslint` 10.14.0, `typescript-eslint` 8.72.1,

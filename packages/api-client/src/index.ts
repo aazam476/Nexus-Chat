@@ -25,6 +25,11 @@ export interface ApiClientOptions {
   baseUrl: string;
   /** Replaces the global `fetch`, for tests or custom networking. */
   fetch?: typeof fetch;
+  /**
+   * Returns the session token for operations that need one. It is called
+   * for each request, so logging in or out takes effect immediately.
+   */
+  token?: () => string | undefined;
 }
 
 /**
@@ -35,6 +40,9 @@ export interface ApiClientOptions {
  */
 export function createApiClient(options: ApiClientOptions): Client {
   const config = createConfig({ baseUrl: normalizeBaseUrl(options.baseUrl) });
+  if (options.token !== undefined) {
+    config.auth = options.token;
+  }
   if (options.fetch !== undefined) {
     config.fetch = options.fetch;
   }

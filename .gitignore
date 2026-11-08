@@ -21,3 +21,7 @@ data/
 
 # The license-check fixture's node_modules is test data and must be committed.
 !scripts/license-fixtures/**/node_modules/
+
+# Expo
+.expo/
+apps/client/dist/

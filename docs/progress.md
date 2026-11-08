@@ -103,8 +103,20 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   that re-check the session, resume with replay of the last 500 events,
   presence with automatic idle, frame limits; fuzz-tested frame parser.
 
-Still to do in M2: the client: Expo app shell, setup wizard, login screens, HTTPS
-banner, Electron shell, Playwright release gate and ZAP scan.
+- Client (ADR 0017): the Expo app with Expo Router, `packages/ui` (tokens
+  checked for WCAG AA contrast in both themes, motion constants with
+  reduced motion, accessible primitives), translations from `locales/`,
+  the instance picker, setup wizard, sign-up, password login with second
+  factor, passkey login on web, provider sign-in (web redirect and mobile
+  in-app browser), the HTTPS warning, and a home screen with status and
+  live presence over the gateway. The session is kept in the Keychain or
+  Keystore on mobile and in IndexedDB under a non-extractable WebCrypto key
+  on web. The server serves the web build with a strict Content Security
+  Policy.
+
+Still to do in M2: the Electron shell, the Playwright release gate, the ZAP
+scan, certificate expiry emails, Maestro flows, visual snapshots with the
+worst-case fixtures, and the mutation-testing tool for auth.
 
 ## Known issues
 

@@ -34,6 +34,9 @@ type Config struct {
 	HTTPSPort int
 	// DataDirectory holds generated secrets and, by default, uploaded files.
 	DataDirectory string
+	// WebDirectory holds the web client's build; empty serves the API only.
+	// The image sets it, so self-hosters never need to.
+	WebDirectory string
 	// DatabaseURL is a PostgreSQL connection string.
 	DatabaseURL string
 	// TrustedProxies lists the networks whose X-Forwarded-* headers we trust.
@@ -59,6 +62,7 @@ func Load(getenv Getenv) (Config, error) {
 	config := Config{
 		Domain:        strings.TrimSpace(getenv("DOMAIN")),
 		DataDirectory: stringOrDefault(getenv("DATA_DIR"), DefaultDataDirectory),
+		WebDirectory:  strings.TrimSpace(getenv("WEB_DIR")),
 	}
 	var err error
 
