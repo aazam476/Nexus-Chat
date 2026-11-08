@@ -178,6 +178,20 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   Simulator once the macOS build pipeline exists (M11), since iOS builds
   need macOS runners.
 
+## M3: Crypto core [REVIEW] (in progress)
+
+- `packages/crypto` with the MLS engine on ts-mls 1.6.4: create a group,
+  add and remove devices, join from a Welcome, refresh keys, encrypt and
+  decrypt, at 100% branch coverage.
+- All 148 mlswg passive-client interop vectors pass in CI (pinned commit,
+  checksum-verified download); issue #858 has a regression test and a
+  one-character patch; CI checks reviewed and unreviewed advisories
+  against the pinned version.
+- Performance at 10–2,000 devices is in ADR 0002, with the review
+  options. Messages cost the same at any size; joins and commits grow
+  linearly because ts-mls rehashes the whole tree. Device (Hermes)
+  numbers are still needed for the review.
+
 ## Known issues
 
 - Moderate and low `pnpm audit` findings remain in development-only tools

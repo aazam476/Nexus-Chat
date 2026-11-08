@@ -208,6 +208,8 @@ jobs:
         run: pnpm lint
       - name: Type check
         run: pnpm typecheck
+      - name: MLS interop test vectors (pinned and checksum-verified)
+        run: scripts/fetch-mls-vectors.sh
       - name: Tests with coverage gates
         run: pnpm test
       - name: Build
@@ -222,6 +224,10 @@ jobs:
           fi
       - name: Vulnerability scan
         run: pnpm audit --audit-level high
+      - name: Advisories against the MLS library, including unreviewed ones
+        run: scripts/check-mls-advisories.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
   images:
     name: Images and release gate

@@ -1,0 +1,13 @@
+diff --git a/dist/src/clientState.js b/dist/src/clientState.js
+index 45af97faf0d8094090fe5fdca57ef40bb90480b2..56864bd901ba702b90c300d17626979f12a3cc29 100644
+--- a/dist/src/clientState.js
++++ b/dist/src/clientState.js
+@@ -278,7 +278,7 @@ export async function validateRatchetTree(tree, groupContext, config, authServic
+                 const leafIndex = toLeafIndex(unmergedLeaf);
+                 const dp = directPath(leafToNodeIndex(leafIndex), leafWidth(tree.length));
+                 const nodeIndex = leafToNodeIndex(leafIndex);
+-                if (tree[nodeIndex]?.nodeType !== "leaf" && !dp.includes(toNodeIndex(i)))
++                if (tree[nodeIndex]?.nodeType !== "leaf" || !dp.includes(toNodeIndex(i)))
+                     return new ValidationError("Unmerged leaf did not represent a non-blank descendant leaf node");
+                 for (const parentIdx of dp) {
+                     const dpNode = tree[parentIdx];

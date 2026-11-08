@@ -24,3 +24,5 @@ overrides:
   # TypeScript 6 support. Use the same version as the rest of the lint
   # toolchain (same major version).
   "eslint-plugin-tsdoc>@typescript-eslint/utils": 8.72.1
+patchedDependencies:
+  ts-mls@1.6.4: patches/ts-mls@1.6.4.patch

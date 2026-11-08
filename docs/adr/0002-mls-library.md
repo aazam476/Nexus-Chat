@@ -71,3 +71,55 @@ targets. The `MlsEngine` interface keeps OpenMLS as a planned fallback.
   It verifies no MLS signatures. A client that lies in those fields can only
   get its own messages rejected by the other members. Keeping the Go side
   MLS-free shrinks its crypto surface.
+
+## Measurements for the M3 review (November 2026)
+
+`packages/crypto` wraps ts-mls 1.6.4 behind `mls/engine.ts`. The interop
+vectors pass: all 148 passive-client cases (welcome, handling commits, and
+random sequences, ciphersuites 1–7) from mlswg/mls-implementations at
+commit `2034fe72`. Issue #858 is reproduced by a regression test and fixed
+by `patches/ts-mls@1.6.4.patch` (`&&` → `||`, one character).
+
+`pnpm --filter @nexus-chat/crypto bench` on Node 26, 4 vCPUs, with native
+WebCrypto (milliseconds unless noted):
+
+| Devices | Key packages (all) | Add all, one commit | Welcome size | Join  | Commit with path | Apply that commit | Encrypt / decrypt |
+| ------- | ------------------ | ------------------- | ------------ | ----- | ---------------- | ----------------- | ----------------- |
+| 10      | 19                 | 44                  | 3 KiB        | 22    | 31               | 21                | 2 / 1             |
+| 100     | 58                 | 203                 | 34 KiB       | 131   | 184              | 102               | 2 / 1             |
+| 1,000   | 701                | 2,842               | 337 KiB      | 936   | 1,450            | 815               | 2 / 1             |
+| 2,000   | 1,165              | 7,600               | 675 KiB      | 1,598 | 2,594            | 1,410             | 2 / 1             |
+
+What the numbers say:
+
+- Sending and reading messages costs the same at any group size.
+- Joining and applying a commit grow linearly with the group. A CPU
+  profile of the 1,000-device run puts most of it in tree hashing and the
+  TLS encoding under it: ts-mls recomputes the whole tree's hash on every
+  commit instead of caching unchanged subtrees (as OpenMLS does), and it
+  imports a fresh WebCrypto key for every primitive call.
+- ts-mls uses native WebCrypto for Ed25519, X25519, AES-GCM, HKDF and
+  hashing when `crypto.subtle` has them, and pure JavaScript (@noble)
+  otherwise. Pure-JS Ed25519 verification costs 1.5 ms per signature on
+  this machine, so a phone without native Ed25519 would spend seconds per
+  1,000-device join on signatures alone.
+- Not measured yet: a real mid-range Android phone with Hermes and
+  `react-native-quick-crypto`. Hermes interprets where Node compiles, so
+  expect these numbers several times higher there. The same benchmark runs
+  on a device from a development build.
+
+Options for the review:
+
+1. **Keep ts-mls** and fix the linear costs where they are: cache subtree
+   hashes and reuse imported keys (a contained change, offered upstream and
+   carried as a patch meanwhile). Messages are already constant-time.
+2. **Keep ts-mls and bound the problem**: membership changes in very large
+   channels are batched (one commit per batch, which the delivery service
+   already enforces per epoch), so a device applies a few commits per
+   minute at most.
+3. **Switch to OpenMLS** behind the same `MlsEngine` interface, accepting
+   the Rust toolchain in every build.
+
+Recommendation: 1 and 2 together. They keep one readable code path, and
+the costs measured are an implementation detail of one function, not a
+limit of the protocol. Measure on a device before M4 either way.

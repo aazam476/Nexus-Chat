@@ -93,6 +93,18 @@ compatible native modules), so the app builds on iOS, Android and the web.
 | `eslint-plugin-react-native-a11y`                          | 3.5.1           | MIT        | Accessibility rules for React Native (spec §7.2); its peer range predates ESLint 10 but its rules run unchanged |
 | `eslint-plugin-i18next`                                    | 6.1.5           | ISC        | Rejects text written directly into screens (spec §4.13)                                                         |
 
+## TypeScript: `@nexus-chat/crypto`
+
+| Package                                            | Version             | License | Why                                                                                                                                    |
+| -------------------------------------------------- | ------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `ts-mls`                                           | 1.6.4 (patched)     | MIT     | MLS (RFC 9420) on every platform (ADR 0002); `patches/ts-mls@1.6.4.patch` fixes issue #858                                             |
+| `@noble/curves`, `@noble/ciphers`, `@noble/hashes` | 2.0.1, 2.1.1, 2.0.1 | MIT     | Loaded by ts-mls where WebCrypto lacks an algorithm; versions are the exact ones ts-mls pins (`@noble/hashes` matches `@noble/curves`) |
+
+| Package (dev)                                   | Version      | License | Why                                                               |
+| ----------------------------------------------- | ------------ | ------- | ----------------------------------------------------------------- |
+| `@hpke/chacha20poly1305`, `@hpke/dhkem-x448`    | 1.8.0, 1.8.0 | MIT     | Let the interop vectors run ciphersuites 3–7, which we do not use |
+| `jest`, `ts-jest`, `@types/jest`, `@types/node` | see package  | MIT     | Tests                                                             |
+
 ## TypeScript: `@nexus-chat/desktop`
 
 The desktop app ships Electron and the client's web build; it has no other
