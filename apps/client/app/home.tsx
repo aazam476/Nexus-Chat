@@ -7,6 +7,7 @@ import { HttpsWarning } from "../src/components/HttpsWarning";
 import { useConnection } from "../src/connection/ConnectionContext";
 import { hostOf } from "../src/instance/address";
 import { useGateway } from "../src/realtime/useGateway";
+import { AdminLink } from "../src/screens/home/AdminLink";
 import { StatusPicker } from "../src/screens/home/StatusPicker";
 
 /** The signed-in start screen: who you are, your status, and logging out. */
@@ -33,6 +34,7 @@ export default function Home(): ReactNode {
         </Text>
       </Stack>
       <StatusPicker current={user.status} presence={presence.status} />
+      <AdminLink admin={user.isInstanceAdmin} />
       <Button
         label={t("home.logout")}
         variant="secondary"

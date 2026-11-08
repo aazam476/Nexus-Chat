@@ -141,13 +141,20 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   the last 10 minutes, so a stolen session cannot add its own way back in.
   Account deletion (later) uses the same check.
 
-Still to do in M2: Maestro flows, visual
-snapshots with the worst-case fixtures, and the mutation-testing tool for
-auth.
+- Mutation testing with gremlins in CI on every authentication package:
+  89–100% of mutants caught, against a 70% minimum (ADR 0001).
+
+- Admin panel in the client: the HTTPS certificate (status, names, issuer,
+  expiry, a warning banner from 30 days before expiry, install by pasting
+  the PEM files, removal after a confirmation) and the email settings (the
+  saved password is never shown; a test email goes to the admin), under
+  the plain-HTTP warning. The release gate opens it and runs axe on it.
+
+Still to do in M2: Maestro flows and visual snapshots with the worst-case
+fixtures.
 
 ## Known issues
 
-- Mutation testing tool for Go is chosen in M2 (see ADR 0001).
 - Moderate and low `pnpm audit` findings remain in development-only tools
   (`glob`, `minimatch`, `deepmerge`); see
   [dependencies.md](dependencies.md#security-and-compatibility-overrides).
@@ -156,5 +163,3 @@ auth.
   fixture of its own, because that would need a GPL module in `go.mod`.
 - Fuzz and property-based tests start with the first untrusted-input
   parsers (M2/M4); there are none yet.
-- Moved from M1 to M2 (it needs the client UI): certificate upload in the
-  Admin panel. The admin API for it is done.

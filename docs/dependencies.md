@@ -50,15 +50,15 @@ None beyond the standard library.
 
 ## Go: tests and build tools (not shipped)
 
-| Module                                                   | Version  | License    | Why                                                                                       |
-| -------------------------------------------------------- | -------- | ---------- | ----------------------------------------------------------------------------------------- |
-| `github.com/stretchr/testify`                            | v1.12.1  | MIT        | Assertions, as the code standards specify                                                 |
-| `github.com/testcontainers/testcontainers-go`            | v0.45.0  | MIT        | Starts PostgreSQL for database and contract tests                                         |
-| `github.com/getkin/kin-openapi`                          | v0.153.0 | MIT        | Contract tests validate responses against `openapi.yaml`                                  |
-| `github.com/fxamacker/cbor/v2`                           | v2.9.4   | MIT        | Builds WebAuthn authenticator responses in the passkey tests                              |
-| `github.com/oapi-codegen/oapi-codegen/v2`                | v2.8.2   | Apache-2.0 | Generates server interfaces from the OpenAPI file (Go `tool`)                             |
-| `github.com/sqlc-dev/sqlc`                               | v1.31.1  | MIT        | Compiles SQL queries to typed Go (Go `tool`)                                              |
-| golangci-lint, gobco, go-licenses, govulncheck, gitleaks | see CI   | GPL-free   | Lint, branch coverage, license and vulnerability checks; installed in CI, not in `go.mod` |
+| Module                                                             | Version  | License    | Why                                                                                                         |
+| ------------------------------------------------------------------ | -------- | ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `github.com/stretchr/testify`                                      | v1.12.1  | MIT        | Assertions, as the code standards specify                                                                   |
+| `github.com/testcontainers/testcontainers-go`                      | v0.45.0  | MIT        | Starts PostgreSQL for database and contract tests                                                           |
+| `github.com/getkin/kin-openapi`                                    | v0.153.0 | MIT        | Contract tests validate responses against `openapi.yaml`                                                    |
+| `github.com/fxamacker/cbor/v2`                                     | v2.9.4   | MIT        | Builds WebAuthn authenticator responses in the passkey tests                                                |
+| `github.com/oapi-codegen/oapi-codegen/v2`                          | v2.8.2   | Apache-2.0 | Generates server interfaces from the OpenAPI file (Go `tool`)                                               |
+| `github.com/sqlc-dev/sqlc`                                         | v1.31.1  | MIT        | Compiles SQL queries to typed Go (Go `tool`)                                                                |
+| golangci-lint, gobco, gremlins, go-licenses, govulncheck, gitleaks | see CI   | GPL-free   | Lint, branch coverage, mutation testing, license and vulnerability checks; installed in CI, not in `go.mod` |
 
 ## TypeScript: `@nexus-chat/api-client`
 

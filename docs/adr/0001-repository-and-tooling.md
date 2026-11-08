@@ -45,10 +45,12 @@ proposes updates weekly.
   branch coverage is measured with gobco v1.3.4 (BSD-2-Clause).
 - **Linting:** golangci-lint v2.15.0 with the configuration in
   `.golangci.yml`, which encodes the code standards' size and style limits.
-- **Go mutation testing:** decided in M2, when the first package that needs
-  it (authentication) exists. gremlins' latest release, v0.5.1, is from May
-  2024, so its maintenance status is checked again then and the choice is
-  recorded here.
+- **Go mutation testing:** gremlins v0.6.0 (Apache-2.0), chosen in M2 once
+  authentication existed. Its December 2025 release supports current Go,
+  and it needs no changes to the code under test. `scripts/go-mutation.sh`
+  runs it in CI over every package in `coverage-critical.txt` and fails
+  below 70% test efficacy (mutants the tests catch, out of those they
+  cover). The alternative, go-mutesting, has had no release since 2021.
 - **No git hook managers.** Lint, format, and test checks run in CI only.
 
 ## Consequences

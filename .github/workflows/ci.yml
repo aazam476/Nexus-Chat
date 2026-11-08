@@ -20,6 +20,7 @@ env:
   GOBCO_VERSION: v1.3.4
   GO_LICENSES_VERSION: v2.0.1
   GOVULNCHECK_VERSION: v1.9.0
+  GREMLINS_VERSION: v0.6.0
   TRIVY_VERSION: 0.76.2
   # SHA-256 of trivy_0.76.2_Linux-64bit.tar.gz from the official release.
   # Pinned here so a replaced download cannot run in CI.
@@ -65,6 +66,19 @@ jobs:
       - name: Vulnerability scan
         working-directory: ${{ matrix.module }}
         run: govulncheck ./...
+
+  mutation:
+    name: Mutation testing (auth)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - run: go install github.com/go-gremlins/gremlins/cmd/gremlins@${GREMLINS_VERSION}
+      - name: At least 70% of mutants caught in every critical package
+        run: scripts/go-mutation.sh apps/server
 
   javascript:
     name: TypeScript

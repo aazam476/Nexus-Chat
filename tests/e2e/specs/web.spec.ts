@@ -31,6 +31,18 @@ test("the setup wizard creates the admin", async ({ page }) => {
   await expectAccessible(page);
 });
 
+test("the admin opens the Admin panel", async ({ page }) => {
+  await page.goto("/");
+  await logIn(page, accounts.admin);
+  await page.getByTestId("go-admin").click();
+
+  await expect(page.getByTestId("tls-state")).toHaveText(/No certificate is installed/);
+  await expect(page.getByTestId("smtp-host")).toBeVisible();
+  await expectAccessible(page);
+  await page.getByTestId("smtp-test").click();
+  await expect(page.getByText("Save the email settings before sending a test email.")).toBeVisible();
+});
+
 test("a second user signs up", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("go-register").click();

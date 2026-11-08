@@ -9,6 +9,7 @@ install, over localhost and through each HTTPS reverse proxy.
 What they cover today:
 
 - the setup wizard creates the admin, and a second user signs up;
+- the admin opens the Admin panel;
 - a status change on one device reaches the user's other devices live;
 - the session survives a reload and ends at logout; failed logins are
   explained;

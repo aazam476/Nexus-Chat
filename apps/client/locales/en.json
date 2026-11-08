@@ -3,7 +3,8 @@
     "continue": "Continue",
     "back": "Back",
     "loading": "Loading…",
-    "unexpectedError": "Something went wrong. Try again in a moment."
+    "unexpectedError": "Something went wrong. Try again in a moment.",
+    "cancel": "Cancel"
   },
   "https": {
     "title": "Warning: this connection is not secure",
@@ -100,12 +101,66 @@
     "statusInvisible": "Invisible",
     "presence": "Others see you as: {{status}}",
     "presenceOffline": "Offline",
-    "logout": "Log out"
+    "logout": "Log out",
+    "admin": "Admin panel"
   },
   "oidc": {
     "finishing": "Finishing sign-in…"
   },
   "validation": {
     "required": "This field is required."
+  },
+  "admin": {
+    "title": "Admin panel",
+    "intro": "Settings for the whole instance. Only instance admins see this page.",
+    "back": "Back to home",
+    "tls": {
+      "title": "HTTPS certificate",
+      "active": "HTTPS is on, with this certificate:",
+      "inactive": "No certificate is installed, so this server does not serve HTTPS itself.",
+      "proxyNote": "If a reverse proxy (Caddy, Nginx, Traefik) handles HTTPS for this instance, you do not need a certificate here.",
+      "names": "Covers: {{names}}",
+      "issuer": "Issued by: {{issuer}}",
+      "expires": "Expires: {{date}}",
+      "expiresSoon_one": "Warning: the certificate expires in {{count}} day",
+      "expiresSoon_other": "Warning: the certificate expires in {{count}} days",
+      "expiresVerySoon_one": "Warning: the certificate expires in {{count}} day. Replace it now.",
+      "expiresVerySoon_other": "Warning: the certificate expires in {{count}} days. Replace it now.",
+      "replace": "Once it expires, apps and browsers refuse to connect. Install the renewed certificate below; it takes effect without a restart.",
+      "certificate": "Certificate chain (PEM)",
+      "certificateHint": "The certificate first, then every intermediate certificate, as one block of text.",
+      "privateKey": "Private key (PEM)",
+      "privateKeyHint": "The key of the certificate above. It is cleared from this page once it is saved.",
+      "install": "Install certificate",
+      "installed": "The certificate is installed and HTTPS is on.",
+      "rejected": "The certificate was not installed: {{reason}}",
+      "remove": "Remove certificate",
+      "removeExplained": "Removing the certificate turns HTTPS off. Plain HTTP keeps working, but calls, passkeys, encryption in browsers, push notifications, the mobile apps and federation stop working.",
+      "removeConfirm": "Remove and turn HTTPS off",
+      "removed": "The certificate is removed and HTTPS is off."
+    },
+    "smtp": {
+      "title": "Email (SMTP)",
+      "intro": "The mail server this instance sends verification, password reset and warning emails through.",
+      "host": "Mail server",
+      "port": "Port",
+      "security": "Connection security",
+      "starttls": "STARTTLS (usually port 587)",
+      "tls": "TLS (usually port 465)",
+      "none": "None (only for a relay on the same network)",
+      "username": "Username",
+      "password": "Password",
+      "passwordKept": "A password is saved. Leave this empty to keep it.",
+      "passwordOptional": "Leave empty if the mail server needs no sign-in.",
+      "from": "Sender address",
+      "fromHint": "For example chat@example.com",
+      "save": "Save email settings",
+      "saved": "Email settings saved.",
+      "test": "Send a test email",
+      "testSent": "The test email was sent to your address.",
+      "notConfigured": "Save the email settings before sending a test email.",
+      "deliveryFailed": "The mail server did not accept the test email. Check the settings and try again.",
+      "testRateLimited": "Too many test emails. Wait a minute and try again."
+    }
   }
 }

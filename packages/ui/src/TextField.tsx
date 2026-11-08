@@ -21,6 +21,8 @@ export interface TextFieldProps {
   keyboardType?: TextInputProps["keyboardType"];
   autoCapitalize?: TextInputProps["autoCapitalize"];
   onSubmitEditing?: () => void;
+  /** Visible lines for multi-line text, such as a pasted certificate; one line when unset. */
+  lines?: number;
   testID?: string;
 }
 
@@ -83,6 +85,8 @@ function FieldInput(props: FieldInputProps): ReactNode {
       autoCapitalize={props.autoCapitalize ?? "none"}
       autoCorrect={false}
       onSubmitEditing={props.onSubmitEditing}
+      multiline={props.lines !== undefined}
+      numberOfLines={props.lines}
       onFocus={props.handlers.onFocus}
       onBlur={props.handlers.onBlur}
       testID={props.testID}
@@ -91,6 +95,10 @@ function FieldInput(props: FieldInputProps): ReactNode {
         type.body,
         { color: colors.text, backgroundColor: colors.surface, borderColor: props.borderColor },
         props.focused && styles.focused,
+        props.lines !== undefined && {
+          minHeight: props.lines * type.body.lineHeight,
+          textAlignVertical: "top" as const,
+        },
       ]}
     />
   );

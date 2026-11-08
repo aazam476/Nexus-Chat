@@ -110,6 +110,15 @@ describe("TextField", () => {
 
     expect(screen.getByLabelText("Code").props["aria-describedby"]).toBe("Code-hint");
   });
+
+  it("grows to the given number of lines for multi-line text", async () => {
+    await render(themed(<TextField label="Certificate" value="" onChangeText={jest.fn()} lines={6} />));
+
+    const input = screen.getByLabelText("Certificate");
+    expect(input.props.multiline).toBe(true);
+    expect(input.props.numberOfLines).toBe(6);
+    expect(screen.getByLabelText("Certificate")).toHaveStyle({ minHeight: 144 });
+  });
 });
 
 describe("Link", () => {
