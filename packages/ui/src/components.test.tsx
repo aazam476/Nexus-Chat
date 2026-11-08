@@ -4,7 +4,10 @@ import { Linking } from "react-native";
 import type { ReactElement, ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { act } from "react";
+
 import { Banner } from "./Banner";
+import { FadeIn } from "./FadeIn";
 import { Button } from "./Button";
 import { Heading } from "./Heading";
 import { Link } from "./Link";
@@ -13,6 +16,7 @@ import { Stack } from "./Stack";
 import { Text } from "./Text";
 import { TextField } from "./TextField";
 import { ThemeProvider, useTheme, type ThemePreference } from "./theme";
+import { linkPressedOpacity, spinnerDelay } from "./motion";
 import { colors } from "./tokens";
 
 function themed(node: ReactNode, preference: ThemePreference = "light"): ReactElement {
@@ -59,6 +63,26 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
   });
 
+  it("shows its spinner only once a request takes a while, and is busy at once", async () => {
+    jest.useFakeTimers();
+    try {
+      const view = await render(themed(<Button label="Saving" busy onPress={jest.fn()} />));
+      expect(screen.getByRole("button", { name: "Saving" })).toBeBusy();
+      expect(screen.getByText("Saving")).toBeOnTheScreen();
+
+      await act(async () => {
+        jest.advanceTimersByTime(spinnerDelay);
+        await Promise.resolve();
+      });
+      expect(screen.queryByText("Saving")).toBeNull();
+
+      await view.rerender(themed(<Button label="Saving" onPress={jest.fn()} />));
+      expect(screen.getByText("Saving")).toBeOnTheScreen();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("shows press and focus states", async () => {
     await render(themed(<Button label="Go" onPress={jest.fn()} />));
     const button = screen.getByRole("button", { name: "Go" });
@@ -69,6 +93,29 @@ describe("Button", () => {
     await fireEvent(button, "blur");
 
     expect(button).toBeOnTheScreen();
+  });
+});
+
+describe("FadeIn", () => {
+  it.each([
+    ["step", "200ms"],
+    ["message", "150ms"],
+  ] as const)("fades a %s in by opacity only, in %s", async (kind, duration) => {
+    await render(
+      themed(
+        <FadeIn kind={kind} testID="fade">
+          <Text>Next</Text>
+        </FadeIn>,
+      ),
+    );
+
+    expect(screen.getByText("Next")).toBeOnTheScreen();
+    expect(screen.getByTestId("fade").props.style).toEqual(
+      expect.objectContaining({
+        animationName: { from: { opacity: 0 }, to: { opacity: 1 } },
+        animationDuration: duration,
+      }),
+    );
   });
 });
 
@@ -122,6 +169,16 @@ describe("TextField", () => {
 });
 
 describe("Link", () => {
+  it("dims while pressed", async () => {
+    await render(themed(<Link label="Back" onPress={jest.fn()} />));
+    const link = screen.getByRole("link", { name: "Back" });
+
+    await fireEvent(link, "pressIn");
+    expect(screen.getByText("Back")).toHaveStyle({ opacity: linkPressedOpacity });
+    await fireEvent(link, "pressOut");
+    expect(screen.getByText("Back")).not.toHaveStyle({ opacity: linkPressedOpacity });
+  });
+
   it("opens its address", async () => {
     const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
     await render(themed(<Link label="Learn more" href="https://example.com" />));

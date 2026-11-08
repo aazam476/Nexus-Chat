@@ -24,3 +24,19 @@ export const reducedMotionPressOpacity = 0.8;
 export function usePrefersReducedMotion(): boolean {
   return useReducedMotion();
 }
+
+/** A pressed link dims; underlined text would look wrong scaled. */
+export const linkPressedOpacity = 0.6;
+
+/**
+ * How long a busy button waits before showing its spinner, in ms. Most
+ * requests finish sooner, and a spinner that flashes for a frame reads as
+ * a glitch. Screen readers hear "busy" at once.
+ */
+export const spinnerDelay = 250;
+
+/** How long a message (an error, "Saved.") takes to fade in. */
+export const appearDuration = "150ms" as const;
+
+/** How long a new step of a form (a second factor, a confirmation) takes to fade in. */
+export const stepDuration = "200ms" as const;

@@ -6,6 +6,7 @@
 export { Banner, type BannerProps } from "./Banner";
 export { Button, type ButtonProps } from "./Button";
 export { contrastRatio, luminance } from "./contrast";
+export { FadeIn, type FadeInProps } from "./FadeIn";
 export { Heading, type HeadingProps } from "./Heading";
 export { Link, type LinkProps } from "./Link";
 export * as motion from "./motion";

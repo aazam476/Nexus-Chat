@@ -1,4 +1,4 @@
-import { Text } from "@nexus-chat/ui";
+import { FadeIn, Text } from "@nexus-chat/ui";
 import type { ReactNode } from "react";
 
 import type { Message } from "../auth/errors";
@@ -16,8 +16,10 @@ export function ErrorMessage({ message }: ErrorMessageProps): ReactNode {
     return null;
   }
   return (
-    <Text tone="danger" live testID="form-error">
-      {text}
-    </Text>
+    <FadeIn>
+      <Text tone="danger" live testID="form-error">
+        {text}
+      </Text>
+    </FadeIn>
   );
 }

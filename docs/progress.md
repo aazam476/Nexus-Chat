@@ -160,6 +160,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   wrapped button labels were left-aligned; certificate names ran together
   in one paragraph; names in sentences lacked bidirectional isolation.
 
+- Motion pass for the milestone (code standards §8.5): finding
+  opportunities, removing motion and planning improvements. Nothing needed
+  removing (only the press scale and the platform's screen transitions
+  move). Added: links dim while pressed (120ms); errors, confirmations
+  and new form steps fade in (150ms and 200ms, opacity only, so reduced
+  motion keeps them); a busy button shows its spinner only after 250ms, so
+  fast requests no longer flash one. Rejected: motion on the status and
+  option pickers (frequent, and the check mark already shows the choice),
+  on the HTTPS and expiry warnings (they must be read at once), and on
+  keyboard focus. The final animation review skill is not available in
+  this environment; the changes were reviewed against the same rules by
+  hand, and press feel still needs a check on a real device.
 - Maestro flows (`apps/client/.maestro`): setup wizard, wrong password,
   login and logout, and sign-up, run in CI on an Android emulator against
   a fresh instance with the release APK. The same flows run on the iOS

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, type ViewStyle } from "react-native";
 import Animated, { type CSSTransitionProperties } from "react-native-reanimated";
 
@@ -7,6 +7,7 @@ import {
   pressDuration,
   pressScale,
   reducedMotionPressOpacity,
+  spinnerDelay,
   usePrefersReducedMotion,
 } from "./motion";
 import { useTheme } from "./theme";
@@ -87,6 +88,7 @@ function ButtonFace({ label, busy, palette, pressed, focused, inactive }: Button
   const reducedMotion = usePrefersReducedMotion();
   const borderColor = focused ? colors.focus : palette.border;
   const pressedStyle = reducedMotion ? styles.pressedReduced : styles.pressed;
+  const spinning = useDelayed(busy, spinnerDelay);
   return (
     <Animated.View
       style={[
@@ -98,7 +100,7 @@ function ButtonFace({ label, busy, palette, pressed, focused, inactive }: Button
         pressed && pressedStyle,
       ]}
     >
-      {busy ? (
+      {spinning ? (
         <ActivityIndicator color={palette.text} accessibilityElementsHidden />
       ) : (
         <Animated.Text style={[type.label, styles.label, { color: palette.text }]}>{label}</Animated.Text>
@@ -119,6 +121,27 @@ function paletteFor(
     default:
       return { background: colors.primary, text: colors.onPrimary, border: colors.primary };
   }
+}
+
+/**
+ * `value`, but turning true only after it has stayed true for `delayMs`,
+ * so a short busy moment shows no spinner at all.
+ */
+function useDelayed(value: boolean, delayMs: number): boolean {
+  const [delayed, setDelayed] = useState(false);
+  useEffect(() => {
+    if (!value) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      setDelayed(true);
+    }, delayMs);
+    return () => {
+      clearTimeout(timer);
+      setDelayed(false);
+    };
+  }, [value, delayMs]);
+  return value && delayed;
 }
 
 // Reanimated runs this transition on the UI thread; it is kept out of

@@ -1,4 +1,4 @@
-import { Text } from "@nexus-chat/ui";
+import { FadeIn, Text } from "@nexus-chat/ui";
 import type { ReactNode } from "react";
 
 import type { Message } from "../auth/errors";
@@ -21,8 +21,10 @@ export function NoticeMessage({ message, testID = "form-notice" }: NoticeMessage
     return null;
   }
   return (
-    <Text live testID={testID}>
-      {text}
-    </Text>
+    <FadeIn>
+      <Text live testID={testID}>
+        {text}
+      </Text>
+    </FadeIn>
   );
 }

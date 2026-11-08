@@ -1,4 +1,4 @@
-import { Heading, Screen } from "@nexus-chat/ui";
+import { FadeIn, Heading, Screen } from "@nexus-chat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,12 +30,14 @@ export default function Login(): ReactNode {
       <Heading>{t("login.title", { instance: isolate(instanceName) })}</Heading>
       <ErrorMessage message={flow.error ?? passkey.error ?? providers.error} />
       {flow.step.kind === "secondFactor" ? (
-        <SecondFactorForm
-          methods={flow.step.methods}
-          busy={flow.busy}
-          onSubmit={(method, code) => void flow.submitCode(method, code)}
-          onCancel={flow.startOver}
-        />
+        <FadeIn kind="step">
+          <SecondFactorForm
+            methods={flow.step.methods}
+            busy={flow.busy}
+            onSubmit={(method, code) => void flow.submitCode(method, code)}
+            onCancel={flow.startOver}
+          />
+        </FadeIn>
       ) : (
         <>
           <PasswordForm
