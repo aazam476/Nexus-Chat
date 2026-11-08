@@ -32,12 +32,12 @@ Every frame is one UTF-8 JSON text message:
 { "type": "presence_update", "seq": 42, "data": { "...": "..." } }
 ```
 
-| Field  | Who sets it   | Meaning                                                          |
-| ------ | ------------- | ---------------------------------------------------------------- |
-| `type` | both          | What the frame is (tables below)                                 |
-| `data` | both          | The frame's content; an empty object when there is none          |
-| `seq`  | server        | Only on **events**: 1, 2, 3… per gateway session, never reused   |
-| `id`   | client (opt.) | Echoed in an `error` caused by this frame, to match them up      |
+| Field  | Who sets it   | Meaning                                                        |
+| ------ | ------------- | -------------------------------------------------------------- |
+| `type` | both          | What the frame is (tables below)                               |
+| `data` | both          | The frame's content; an empty object when there is none        |
+| `seq`  | server        | Only on **events**: 1, 2, 3… per gateway session, never reused |
+| `id`   | client (opt.) | Echoed in an `error` caused by this frame, to match them up    |
 
 Unknown fields are ignored, so later versions can add them. An unknown
 `type` from the client is answered with an `error` frame, not a disconnect.
@@ -97,28 +97,28 @@ nothing that matters.
 
 ## 4. Client → server frames
 
-| `type`      | `data`                                              | Notes                                                                                   |
-| ----------- | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `identify`  | `{ "token": "nxs_…" }`                              | Starts a new gateway session                                                            |
-| `resume`    | `{ "token", "gatewaySessionId", "lastSequence" }`   | Continues a dropped session (§3)                                                        |
-| `heartbeat` | `{ "lastSequence": 41 }`                            | `lastSequence` is informational; 0 before any event                                     |
-| `activity`  | `{ "idle": true }`                                  | The device's user has been inactive for 10 minutes (`true`) or is back (`false`)        |
+| `type`      | `data`                                            | Notes                                                                            |
+| ----------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `identify`  | `{ "token": "nxs_…" }`                            | Starts a new gateway session                                                     |
+| `resume`    | `{ "token", "gatewaySessionId", "lastSequence" }` | Continues a dropped session (§3)                                                 |
+| `heartbeat` | `{ "lastSequence": 41 }`                          | `lastSequence` is informational; 0 before any event                              |
+| `activity`  | `{ "idle": true }`                                | The device's user has been inactive for 10 minutes (`true`) or is back (`false`) |
 
 ## 5. Server → client frames
 
 Frames without `seq` are about the connection itself and are never
 replayed. Frames with `seq` are events.
 
-| `type`            | `seq` | `data`                                                     |
-| ----------------- | ----- | ---------------------------------------------------------- |
-| `hello`           | no    | `{ "heartbeatIntervalMs": 30000, "protocolVersion": 1 }`   |
+| `type`            | `seq` | `data`                                                              |
+| ----------------- | ----- | ------------------------------------------------------------------- |
+| `hello`           | no    | `{ "heartbeatIntervalMs": 30000, "protocolVersion": 1 }`            |
 | `ready`           | yes   | `{ "gatewaySessionId", "user": CurrentUser, "presence": Presence }` |
-| `resumed`         | no    | `{ "replayed": 3 }`                                        |
-| `invalid_session` | no    | `{}`                                                       |
-| `heartbeat_ack`   | no    | `{}`                                                       |
-| `error`           | no    | `{ "code": "unknown_type", "message": "…" }` (+ `id`)      |
-| `presence_update` | yes   | `Presence` of a user this device follows                   |
-| `user_update`     | yes   | `{ "user": CurrentUser }`, after the account changes        |
+| `resumed`         | no    | `{ "replayed": 3 }`                                                 |
+| `invalid_session` | no    | `{}`                                                                |
+| `heartbeat_ack`   | no    | `{}`                                                                |
+| `error`           | no    | `{ "code": "unknown_type", "message": "…" }` (+ `id`)               |
+| `presence_update` | yes   | `Presence` of a user this device follows                            |
+| `user_update`     | yes   | `{ "user": CurrentUser }`, after the account changes                |
 
 `CurrentUser` is the object from `GET /api/v1/users/me`. `Presence` is:
 
@@ -150,15 +150,15 @@ Friends and fellow server members are added when those features exist
 
 ## 7. Close codes
 
-| Code | Meaning                                      | Client should                   |
-| ---- | -------------------------------------------- | ------------------------------- |
-| 1000 | Normal close (server shutting down)          | Reconnect and `resume`          |
-| 4000 | Malformed frame (not JSON, too large)        | Fix the client; reconnect       |
-| 4003 | No `identify` or `resume` in time            | Reconnect                       |
-| 4004 | The token is invalid, expired or revoked     | Log in again; do not reconnect  |
-| 4005 | `identify` or `resume` sent twice            | Fix the client; reconnect       |
-| 4008 | Too many frames                              | Reconnect after backoff         |
-| 4009 | No heartbeat in time                         | Reconnect and `resume`          |
+| Code | Meaning                                  | Client should                  |
+| ---- | ---------------------------------------- | ------------------------------ |
+| 1000 | Normal close (server shutting down)      | Reconnect and `resume`         |
+| 4000 | Malformed frame (not JSON, too large)    | Fix the client; reconnect      |
+| 4003 | No `identify` or `resume` in time        | Reconnect                      |
+| 4004 | The token is invalid, expired or revoked | Log in again; do not reconnect |
+| 4005 | `identify` or `resume` sent twice        | Fix the client; reconnect      |
+| 4008 | Too many frames                          | Reconnect after backoff        |
+| 4009 | No heartbeat in time                     | Reconnect and `resume`         |
 
 ## 8. Versioning
 
