@@ -1,0 +1,10 @@
+# The flows run in this order: setup needs a fresh instance, and the later
+# flows use the admin it creates.
+flows:
+  - "*.yaml"
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - 1-setup
+    - 2-login
+    - 3-register

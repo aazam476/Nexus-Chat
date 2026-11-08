@@ -21,6 +21,9 @@ env:
   GO_LICENSES_VERSION: v2.0.1
   GOVULNCHECK_VERSION: v1.9.0
   GREMLINS_VERSION: v0.6.0
+  MAESTRO_VERSION: 2.12.1
+  # SHA-256 of maestro.zip from the official cli-2.12.1 release.
+  MAESTRO_SHA256: 54dbb0716425626604973cbb374c585ca30272375d9ce15177a1152765ddd9d7
   TRIVY_VERSION: 0.76.2
   # SHA-256 of trivy_0.76.2_Linux-64bit.tar.gz from the official release.
   # Pinned here so a replaced download cannot run in CI.
@@ -94,6 +97,83 @@ jobs:
         with:
           name: visual-differences
           path: tests/e2e/test-results
+          retention-days: 14
+
+  android:
+    name: Android app (Maestro)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+        env:
+          POSTGRES_PASSWORD: maestro
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Start a fresh instance on port 8080
+        run: |
+          (cd apps/server && go build -o "$RUNNER_TEMP/nexus-chat-server" ./cmd/nexus-chat-server)
+          mkdir -p "$RUNNER_TEMP/data"
+          DATABASE_URL="postgres://postgres:maestro@localhost:5432/postgres?sslmode=disable" \
+            DATA_DIR="$RUNNER_TEMP/data" ADMIN_EMAIL=admin@example.com HTTP_PORT=8080 \
+            nohup "$RUNNER_TEMP/nexus-chat-server" > "$RUNNER_TEMP/server.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            token=$(grep -o '"setup_token":"[A-Z2-7-]*"' "$RUNNER_TEMP/server.log" | cut -d'"' -f4 || true)
+            [ -n "$token" ] && break
+            sleep 1
+          done
+          [ -n "$token" ] || { cat "$RUNNER_TEMP/server.log"; exit 1; }
+          echo "SETUP_TOKEN=$token" >> "$GITHUB_ENV"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Build the release APK (plain HTTP allowed for the test instance only)
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @nexus-chat/api-client build
+          cd apps/client
+          NEXUS_E2E_CLEARTEXT=1 CI=1 npx expo prebuild --platform android --no-install
+          cd android && ./gradlew --no-daemon assembleRelease
+      - name: Install Maestro (checksum verified)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/maestro.zip" \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_SHA256}  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      - name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Maestro flows on an Android emulator
+        uses: ReactiveCircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: scripts/maestro-android.sh apps/client/android/app/build/outputs/apk/release/app-release.apk "$SETUP_TOKEN"
+      - name: Keep the server log and Maestro report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: maestro-android
+          path: |
+            ${{ runner.temp }}/server.log
+            maestro-report.xml
+            ~/.maestro/tests
           retention-days: 14
 
   mutation:

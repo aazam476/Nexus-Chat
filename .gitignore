@@ -27,3 +27,6 @@ data/
 apps/client/dist/
 test-results/
 playwright-report/
+apps/client/android/
+apps/client/ios/
+maestro-report.xml

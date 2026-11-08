@@ -1,0 +1,11 @@
+# Starts the app from nothing and connects to the instance in ${INSTANCE}.
+appId: org.nexuschat.app
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "instance-address"
+- inputText: ${INSTANCE}
+- hideKeyboard
+- tapOn:
+    id: "connect"

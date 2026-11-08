@@ -40,3 +40,22 @@ client. Tests live under `src/`, because every file in `app/` is a route.
 Strings live in `locales/en.json`; ESLint rejects text written into JSX.
 Platform differences live in sibling files (`*.web.ts`, `*.native.ts`)
 that the bundler picks.
+
+## Mobile end-to-end tests (Maestro)
+
+`.maestro/` holds the flows a person would follow on a phone: the setup
+wizard on a fresh instance, a wrong password, logging in and out, and
+signing up. CI builds the release APK, starts a fresh instance, and runs
+them on an Android emulator (`scripts/maestro-android.sh`).
+
+Android refuses plain-HTTP connections. The test instance in CI has no
+certificate, so CI builds with `NEXUS_E2E_CLEARTEXT=1`, which
+`app.config.ts` turns into permission for plain HTTP. Store builds never
+set it.
+
+To run them yourself against an emulator and an instance on port 8080:
+
+```bash
+NEXUS_E2E_CLEARTEXT=1 npx expo run:android --variant release
+maestro test .maestro -e INSTANCE=http://10.0.2.2:8080 -e SETUP_TOKEN=<token> -e PASSWORD="maestro admin password"
+```

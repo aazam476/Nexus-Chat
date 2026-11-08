@@ -1,0 +1,11 @@
+# Types ${TEXT} into the field with test ID ${FIELD}, scrolling to it first.
+appId: org.nexuschat.app
+---
+- scrollUntilVisible:
+    element:
+      id: ${FIELD}
+    centerElement: true
+- tapOn:
+    id: ${FIELD}
+- inputText: ${TEXT}
+- hideKeyboard

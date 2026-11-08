@@ -160,7 +160,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   wrapped button labels were left-aligned; certificate names ran together
   in one paragraph; names in sentences lacked bidirectional isolation.
 
-Still to do in M2: Maestro flows.
+- Maestro flows (`apps/client/.maestro`): setup wizard, wrong password,
+  login and logout, and sign-up, run in CI on an Android emulator against
+  a fresh instance with the release APK. The same flows run on the iOS
+  Simulator once the macOS build pipeline exists (M11), since iOS builds
+  need macOS runners.
 
 ## Known issues
 

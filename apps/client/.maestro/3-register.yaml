@@ -1,0 +1,20 @@
+# A second user signs up and lands on the home screen.
+appId: org.nexuschat.app
+name: Sign up
+---
+- runFlow: common/connect.yaml
+- scrollUntilVisible:
+    element:
+      id: "go-register"
+- tapOn:
+    id: "go-register"
+- runFlow: { file: common/fill.yaml, env: { FIELD: "register-username", TEXT: "grace" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "register-displayName", TEXT: "Grace Member" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "register-email", TEXT: "grace@example.com" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "register-password", TEXT: "second user password" } }
+- scrollUntilVisible:
+    element:
+      id: "register-submit"
+- tapOn:
+    id: "register-submit"
+- assertVisible: "Welcome, .*Grace Member.*"

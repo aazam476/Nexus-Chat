@@ -1,0 +1,29 @@
+# Password login: a wrong password is explained, the right one reaches the
+# home screen with live presence, and logging out returns to the login.
+appId: org.nexuschat.app
+name: Log in and out
+---
+- runFlow: common/connect.yaml
+- assertVisible:
+    id: "login-submit"
+- runFlow: { file: common/fill.yaml, env: { FIELD: "login-name", TEXT: "admin" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "login-password", TEXT: "not the password" } }
+- tapOn:
+    id: "login-submit"
+- assertVisible: "The username or password is wrong."
+- tapOn:
+    id: "login-password"
+- eraseText
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "login-submit"
+- assertVisible: "Welcome, .*Ada Admin.*"
+- assertVisible: "Others see you as: Online"
+- scrollUntilVisible:
+    element:
+      id: "logout"
+- tapOn:
+    id: "logout"
+- assertVisible:
+    id: "login-submit"

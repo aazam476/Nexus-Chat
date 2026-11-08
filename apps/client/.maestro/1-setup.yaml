@@ -1,0 +1,26 @@
+# The setup wizard on a fresh instance creates the first admin (spec §3.5).
+# Needs INSTANCE (e.g. http://10.0.2.2:8080), SETUP_TOKEN and PASSWORD.
+appId: org.nexuschat.app
+name: Setup wizard
+---
+- runFlow: common/connect.yaml
+- assertVisible:
+    id: "setup-token"
+- runFlow: { file: common/fill.yaml, env: { FIELD: "setup-token", TEXT: "${SETUP_TOKEN}" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "setup-username", TEXT: "admin" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "setup-displayName", TEXT: "Ada Admin" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "setup-email", TEXT: "admin@example.com" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "setup-password", TEXT: "${PASSWORD}" } }
+- runFlow: { file: common/fill.yaml, env: { FIELD: "setup-instanceName", TEXT: "Maestro" } }
+- scrollUntilVisible:
+    element:
+      id: "mode-open"
+- tapOn:
+    id: "mode-open"
+- scrollUntilVisible:
+    element:
+      id: "setup-submit"
+- tapOn:
+    id: "setup-submit"
+- assertVisible:
+    id: "setup-go-login"
