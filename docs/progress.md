@@ -130,7 +130,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   Permissions-Policy, Cross-Origin-Embedder-Policy and
   Cross-Origin-Resource-Policy headers.
 
-Still to do in M2: certificate expiry emails, Maestro flows, visual
+- Certificate expiry emails: 30, 7 and 1 days before the HTTPS certificate
+  expires, `ADMIN_EMAIL` gets an email through the instance's SMTP
+  settings, once per threshold and certificate, even across restarts.
+
+Still to do in M2: Maestro flows, visual
 snapshots with the worst-case fixtures, and the mutation-testing tool for
 auth.
 
@@ -149,5 +153,5 @@ auth.
   fixture of its own, because that would need a GPL module in `go.mod`.
 - Fuzz and property-based tests start with the first untrusted-input
   parsers (M2/M4); there are none yet.
-- Moved from M1 to M2 (they need the client UI or admin sessions):
-  certificate upload in the Admin panel and expiry emails.
+- Moved from M1 to M2 (it needs the client UI): certificate upload in the
+  Admin panel. The admin API for it is done.

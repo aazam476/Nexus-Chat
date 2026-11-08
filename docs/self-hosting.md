@@ -78,10 +78,11 @@ The server checks that the key matches, the chain is complete and trusted,
 the certificate is currently valid and covers `DOMAIN`. It then serves HTTPS
 on port 8443 (`HTTPS_PORT`) **without a restart**. Replace the files the
 same way when renewing; a broken replacement is rejected and the old
-certificate keeps working. The server logs a warning 30, 7 and 1 days before
-the certificate expires. (From milestone M2 you can also upload the
-certificate in the Admin panel, and expiry warnings appear there and by
-email.)
+certificate keeps working. 30, 7 and 1 days before the certificate
+expires, the server logs a warning and emails `ADMIN_EMAIL` (once SMTP is
+set up; each warning is sent once, even across restarts). Admins can also
+upload the certificate through the admin API, which the Admin panel will
+use.
 
 ### Option B: a reverse proxy with its own certificate
 

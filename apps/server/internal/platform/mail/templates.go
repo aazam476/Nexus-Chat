@@ -20,6 +20,8 @@ const (
 	TemplateVerifyEmail   = "verify-email"
 	TemplateResetPassword = "reset-password"
 	TemplateTestEmail     = "test-email"
+	// TemplateCertificateExpiring warns the admin before HTTPS breaks.
+	TemplateCertificateExpiring = "certificate-expiring"
 )
 
 // TemplateData fills in a template.
@@ -27,6 +29,11 @@ type TemplateData struct {
 	InstanceName string
 	DisplayName  string
 	Link         string
+	// For certificate warnings: the domain, the expiry date and the time
+	// left in words ("7 days").
+	Domain   string
+	Expires  string
+	DaysLeft string
 }
 
 // Render builds the message for template name addressed to to.

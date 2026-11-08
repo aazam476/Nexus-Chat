@@ -32,6 +32,16 @@ func TestRenderTestEmail(t *testing.T) {
 	assert.Contains(t, message.Text, "Hi Ada,")
 }
 
+func TestRenderCertificateWarning(t *testing.T) {
+	message, err := Render(TemplateCertificateExpiring, "admin@example.com", TemplateData{
+		InstanceName: "Example Chat", Domain: "chat.example.com", Expires: "8 December 2026 at 12:00 UTC", DaysLeft: "7 days",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "The HTTPS certificate of Example Chat expires in 7 days", message.Subject)
+	assert.Contains(t, message.Text, "(chat.example.com) expires on\n8 December 2026 at 12:00 UTC, in 7 days.")
+}
+
 func TestRenderUnknownTemplate(t *testing.T) {
 	_, err := Render("missing", "a@example.com", TemplateData{})
 

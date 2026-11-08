@@ -51,6 +51,26 @@ type Manager struct {
 	info     Info
 	modified time.Time
 	warned   time.Duration // smallest expiry threshold already warned about
+	expiring func(ctx context.Context, expiry Expiry)
+}
+
+// Expiry describes a certificate that has come within a warning threshold.
+type Expiry struct {
+	// Threshold is the warning crossed: 30, 7 or 1 days.
+	Threshold time.Duration
+	// Remaining is the time left until NotAfter.
+	Remaining time.Duration
+	// Certificate is the certificate that expires.
+	Certificate Info
+}
+
+// OnExpiring sets a function called once for each warning threshold the
+// certificate crosses, after the warning is logged. The server uses it to
+// email the admin. Set it before Watch starts.
+func (manager *Manager) OnExpiring(notify func(ctx context.Context, expiry Expiry)) {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+	manager.expiring = notify
 }
 
 // NewManager returns a Manager with no certificate loaded yet.
@@ -138,29 +158,43 @@ func readPair(directory string) ([]byte, []byte, error) {
 }
 
 // WarnIfExpiring logs a warning the first time the active certificate comes
-// within 30, 7 and 1 days of expiry. It returns the time left, or 0 when no
-// certificate is active.
+// within 30, 7 and 1 days of expiry, and calls the OnExpiring function. It
+// returns the time left, or 0 when no certificate is active.
 func (manager *Manager) WarnIfExpiring(ctx context.Context) time.Duration {
 	if !manager.Active() {
 		return 0
 	}
+	expiry, notify := manager.newlyCrossed()
+	if expiry.Threshold != 0 {
+		manager.options.Logger.WarnContext(ctx, "HTTPS certificate expires soon; replace it",
+			slog.Duration("remaining", expiry.Remaining.Round(time.Hour)), slog.Time("expires", expiry.Certificate.NotAfter))
+		if notify != nil {
+			notify(ctx, expiry) // outside the lock: sending email is slow
+		}
+	}
+	return expiry.Remaining
+}
+
+// newlyCrossed returns the expiry with the threshold crossed since the last
+// warning, or a zero Threshold when there is nothing new to warn about.
+func (manager *Manager) newlyCrossed() (Expiry, func(context.Context, Expiry)) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
-	remaining := manager.info.NotAfter.Sub(manager.options.Clock.Now())
+	expiry := Expiry{Remaining: manager.info.NotAfter.Sub(manager.options.Clock.Now()), Certificate: manager.info}
 	// Find the closest threshold already crossed, so a server that starts
 	// 5 days before expiry warns once (for 7 days), not twice.
 	var crossed time.Duration
 	for _, threshold := range expiryWarnings {
-		if remaining <= threshold {
+		if expiry.Remaining <= threshold {
 			crossed = threshold
 		}
 	}
-	if crossed != 0 && (manager.warned == 0 || crossed < manager.warned) {
-		manager.warned = crossed
-		manager.options.Logger.WarnContext(ctx, "HTTPS certificate expires soon; replace it",
-			slog.Duration("remaining", remaining.Round(time.Hour)), slog.Time("expires", manager.info.NotAfter))
+	if crossed == 0 || (manager.warned != 0 && crossed >= manager.warned) {
+		return expiry, nil
 	}
-	return remaining
+	manager.warned = crossed
+	expiry.Threshold = crossed
+	return expiry, manager.expiring
 }
 
 // Watch reloads the certificate and checks its expiry every interval until

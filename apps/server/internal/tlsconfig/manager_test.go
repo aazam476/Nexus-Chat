@@ -177,6 +177,8 @@ func TestExpiryWarningsFireOncePerThreshold(t *testing.T) {
 	require.NoError(t, fixture.manager.Reload(t.Context()))
 	expires := tlsconfigtest.Now().Add(90 * 24 * time.Hour)
 	warnings := func() int { return strings.Count(fixture.logs.String(), "expires soon") }
+	var notified []Expiry
+	fixture.manager.OnExpiring(func(_ context.Context, expiry Expiry) { notified = append(notified, expiry) })
 
 	fixture.manager.WarnIfExpiring(t.Context())
 	assert.Equal(t, 0, warnings(), "90 days left: no warning")
@@ -194,6 +196,12 @@ func TestExpiryWarningsFireOncePerThreshold(t *testing.T) {
 	remaining := fixture.manager.WarnIfExpiring(t.Context())
 	assert.Equal(t, 3, warnings(), "1-day warning")
 	assert.Equal(t, time.Hour, remaining)
+
+	require.Len(t, notified, 3, "the function hears each warning once")
+	day := 24 * time.Hour
+	assert.Equal(t, []time.Duration{30 * day, 7 * day, day}, []time.Duration{notified[0].Threshold, notified[1].Threshold, notified[2].Threshold})
+	assert.Equal(t, time.Hour, notified[2].Remaining)
+	assert.True(t, notified[2].Certificate.NotAfter.Equal(expires))
 }
 
 func TestStartingCloseToExpiryWarnsOnlyOnce(t *testing.T) {

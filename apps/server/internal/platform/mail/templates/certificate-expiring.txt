@@ -1,0 +1,16 @@
+The HTTPS certificate of {{.InstanceName}} expires in {{.DaysLeft}}
+Hello,
+
+The HTTPS certificate of {{.InstanceName}} ({{.Domain}}) expires on
+{{.Expires}}, in {{.DaysLeft}}.
+
+When it expires, apps and browsers will refuse to connect. Replace
+cert.pem and key.pem in the server's data/tls directory, or upload the new
+certificate through the admin API; the server picks it up within a minute,
+without a restart. The self-hosting guide (docs/self-hosting.md) has the
+steps.
+
+If a reverse proxy (Caddy, Nginx, Traefik) handles HTTPS for this instance,
+renew the certificate there instead.
+
+This email was sent to the address in ADMIN_EMAIL.

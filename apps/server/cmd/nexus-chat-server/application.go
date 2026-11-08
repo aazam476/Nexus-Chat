@@ -178,7 +178,8 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 		return httpserver.Features{}, err
 	}
 	authFeatures := app.buildAuthFeatures(authInputs{
-		hasher: hasher, validator: validator, domain: configuration.Domain, secondFactors: secondFactors, settingsBox: settingsBox,
+		hasher: hasher, validator: validator, domain: configuration.Domain, adminEmail: configuration.AdminEmail,
+		secondFactors: secondFactors, settingsBox: settingsBox,
 	})
 	authFeatures.Health = health.NewHandler(healthService)
 	authFeatures.Setup = setup.NewHandler(setupService)
@@ -190,6 +191,7 @@ type authInputs struct {
 	hasher        *password.Hasher
 	validator     *accounts.Validator
 	domain        string
+	adminEmail    string
 	secondFactors *mfa.Service
 	settingsBox   *secretbox.Box
 }
@@ -203,6 +205,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	accountTokens := tokens.NewService(tokensstore.New(app.pool), system)
 	mailSettings := newMailSettings(settings, inputs.settingsBox)
 	accountEmails := emails.NewService(accountTokens, mailSettings.Sender(), settings)
+	app.certificates.OnExpiring(admin.NewCertificateNotices(settings, mailSettings.Sender(), inputs.adminEmail, app.logger).Notify)
 	logins := login.NewService(login.Dependencies{
 		Accounts: accountQueries, Hasher: inputs.hasher, Sessions: app.sessions,
 		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), system), Clock: system,
