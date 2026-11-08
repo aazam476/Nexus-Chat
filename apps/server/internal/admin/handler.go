@@ -108,11 +108,11 @@ func (handler *Handler) GetSmtpSettings(ctx context.Context, _ api.GetSmtpSettin
 	if err != nil {
 		return nil, err
 	}
-	config, _, err := handler.mail.Current(ctx)
+	current, err := handler.mail.View(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return api.GetSmtpSettings200JSONResponse(smtpSettings(config)), nil
+	return api.GetSmtpSettings200JSONResponse(smtpSettings(current)), nil
 }
 
 // UpdateSmtpSettings answers PUT /api/v1/admin/smtp.
@@ -132,7 +132,7 @@ func (handler *Handler) UpdateSmtpSettings(ctx context.Context, request api.Upda
 	if body.Username != nil {
 		update.Username = *body.Username
 	}
-	config, err := handler.mail.Update(ctx, update)
+	saved, err := handler.mail.Update(ctx, update)
 	var problems *validation.Error
 	if errors.As(err, &problems) {
 		return api.UpdateSmtpSettings422JSONResponse{ValidationFailedJSONResponse: api.ValidationFailedJSONResponse(apiresponse.Validation(problems))}, nil
@@ -140,14 +140,14 @@ func (handler *Handler) UpdateSmtpSettings(ctx context.Context, request api.Upda
 	if err != nil {
 		return nil, err
 	}
-	return api.UpdateSmtpSettings200JSONResponse(smtpSettings(config)), nil
+	return api.UpdateSmtpSettings200JSONResponse(smtpSettings(saved)), nil
 }
 
-func smtpSettings(config mail.SMTPConfig) api.SmtpSettings {
+func smtpSettings(settings SMTPView) api.SmtpSettings {
 	return api.SmtpSettings{
-		Configured: config.Host != "", Host: config.Host, Port: int32(config.Port), //nolint:gosec // G115: saved ports are at most 65535
-		Security: api.SmtpSecurity(config.Security), Username: config.Username, From: config.From,
-		PasswordSet: config.Password != "",
+		Configured: settings.Host != "", Host: settings.Host, Port: int32(settings.Port), //nolint:gosec // G115: saved ports are at most 65535
+		Security: api.SmtpSecurity(settings.Security), Username: settings.Username, From: settings.From,
+		PasswordSet: settings.PasswordSet,
 	}
 }
 

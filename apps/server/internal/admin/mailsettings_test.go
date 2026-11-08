@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/validation"
 )
 
@@ -19,40 +20,88 @@ func validUpdate() SMTPUpdate {
 	}
 }
 
-func TestCurrentDefaultsBeforeAnythingIsSaved(t *testing.T) {
-	config, configured, err := newMailSettings(&fakeSettings{}, &fakeSender{}).Current(t.Context())
+func TestDefaultsBeforeAnythingIsSaved(t *testing.T) {
+	service := newMailSettings(t, &fakeSettings{}, &fakeSender{})
 
+	config, configured, err := service.Current(t.Context())
 	require.NoError(t, err)
 	assert.False(t, configured)
 	assert.Equal(t, mail.SMTPConfig{Port: 587, Security: mail.SecurityStartTLS}, config)
+
+	shown, err := service.View(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, SMTPView{Port: 587, Security: mail.SecurityStartTLS}, shown)
 }
 
-func TestUpdateSavesAndKeepsPasswordWhenLeftOut(t *testing.T) {
+func TestUpdateSealsThePasswordAndKeepsItWhenLeftOut(t *testing.T) {
 	settings := &fakeSettings{}
-	service := newMailSettings(settings, &fakeSender{})
+	service := newMailSettings(t, settings, &fakeSender{})
 
 	saved, err := service.Update(t.Context(), validUpdate())
 	require.NoError(t, err)
 	assert.Equal(t, "smtp.example.com", saved.Host, "whitespace is trimmed")
+	assert.True(t, saved.PasswordSet)
+	assert.NotContains(t, string(settings.smtp), "secret")
 
 	update := validUpdate()
 	update.Password = nil
 	update.Port = 465
 	update.Security = mail.SecurityTLS
-	saved, err = service.Update(t.Context(), update)
+	_, err = service.Update(t.Context(), update)
 	require.NoError(t, err)
-	assert.Equal(t, "secret", saved.Password)
+	config, configured, err := service.Current(t.Context())
+	require.NoError(t, err)
+	assert.True(t, configured)
+	assert.Equal(t, mail.SMTPConfig{
+		Host: "smtp.example.com", Port: 465, Security: mail.SecurityTLS, Username: "chat", Password: "secret", From: "chat@example.com",
+	}, config)
 
 	cleared := ""
 	update.Password = &cleared
 	saved, err = service.Update(t.Context(), update)
 	require.NoError(t, err)
-	assert.Empty(t, saved.Password)
+	assert.False(t, saved.PasswordSet)
+	config, _, err = service.Current(t.Context())
+	require.NoError(t, err)
+	assert.Empty(t, config.Password)
+}
 
-	config, configured, err := service.Current(t.Context())
+func TestAPasswordThatNoLongerOpensCanBeReplaced(t *testing.T) {
+	settings := &fakeSettings{smtp: []byte(`{"host":"smtp.example.com","port":587,"security":"starttls","from":"chat@example.com","sealedPassword":"AAAA"}`)}
+	service := newMailSettings(t, settings, &fakeSender{})
+
+	_, _, err := service.Current(t.Context())
+	require.ErrorIs(t, err, secretbox.ErrCannotOpen)
+	shown, err := service.View(t.Context())
+	require.NoError(t, err, "the Admin panel still shows the settings")
+	assert.True(t, shown.PasswordSet)
+
+	_, err = service.Update(t.Context(), validUpdate())
+	require.NoError(t, err)
+	config, _, err := service.Current(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "secret", config.Password)
+}
+
+func TestSenderUsesTheCurrentSettings(t *testing.T) {
+	var source mail.ConfigSource
+	service := NewMailSettings(MailDependencies{
+		Settings: &fakeSettings{}, Box: testBox(t),
+		NewSender: func(current mail.ConfigSource) mail.Sender {
+			source = current
+			return &fakeSender{}
+		},
+		TestLimiter: nil,
+	})
+	_, err := service.Update(t.Context(), validUpdate())
+	require.NoError(t, err)
+
+	config, configured, err := source(t.Context())
+
 	require.NoError(t, err)
 	assert.True(t, configured)
-	assert.Equal(t, saved, config)
+	assert.Equal(t, "secret", config.Password)
+	assert.NotNil(t, service.Sender())
 }
 
 func TestUpdateRejectsInvalidFields(t *testing.T) {
@@ -82,7 +131,7 @@ func TestUpdateRejectsInvalidFields(t *testing.T) {
 			update := validUpdate()
 			test.change(&update)
 
-			_, err := newMailSettings(settings, &fakeSender{}).Update(t.Context(), update)
+			_, err := newMailSettings(t, settings, &fakeSender{}).Update(t.Context(), update)
 
 			var problems *validation.Error
 			require.ErrorAs(t, err, &problems)
@@ -97,7 +146,7 @@ func TestUpdateAllowsUnencryptedRelays(t *testing.T) {
 	update := validUpdate()
 	update.Security = mail.SecurityNone
 	update.Host = "localhost"
-	_, err := newMailSettings(&fakeSettings{}, &fakeSender{}).Update(t.Context(), update)
+	_, err := newMailSettings(t, &fakeSettings{}, &fakeSender{}).Update(t.Context(), update)
 	require.NoError(t, err, "a password may go to a relay on this machine")
 
 	for _, host := range []string{"127.0.0.1", "::1", "relay.internal"} {
@@ -106,21 +155,42 @@ func TestUpdateAllowsUnencryptedRelays(t *testing.T) {
 			update.Password = nil
 			update.Username = ""
 		}
-		_, err := newMailSettings(&fakeSettings{}, &fakeSender{}).Update(t.Context(), update)
+		_, err := newMailSettings(t, &fakeSettings{}, &fakeSender{}).Update(t.Context(), update)
 		assert.NoError(t, err, host)
 	}
 }
 
 func TestUpdateReportsStoreFailures(t *testing.T) {
 	for _, method := range []string{"Load", "Save"} {
-		_, err := newMailSettings(&fakeSettings{failOn: method}, &fakeSender{}).Update(t.Context(), validUpdate())
-		assert.ErrorIs(t, err, errFailure, method)
+		_, err := newMailSettings(t, &fakeSettings{failOn: method}, &fakeSender{}).Update(t.Context(), validUpdate())
+		require.ErrorIs(t, err, errFailure, method)
 	}
+	failing := newMailSettings(t, &fakeSettings{failOn: "Load"}, &fakeSender{})
+	_, _, err := failing.Current(t.Context())
+	require.ErrorIs(t, err, errFailure)
+	_, err = failing.View(t.Context())
+	assert.ErrorIs(t, err, errFailure)
+}
+
+func TestUpdateRejectsAPlainTextPasswordKeptFromBefore(t *testing.T) {
+	settings := &fakeSettings{}
+	service := newMailSettings(t, settings, &fakeSender{})
+	_, err := service.Update(t.Context(), validUpdate())
+	require.NoError(t, err)
+	update := validUpdate()
+	update.Password = nil
+	update.Security = mail.SecurityNone
+
+	_, err = service.Update(t.Context(), update)
+
+	var problems *validation.Error
+	require.ErrorAs(t, err, &problems)
+	assert.Equal(t, "security", problems.Fields[0].Field)
 }
 
 func TestSendTest(t *testing.T) {
 	sender := &fakeSender{}
-	service := newMailSettings(&fakeSettings{}, sender)
+	service := newMailSettings(t, &fakeSettings{}, sender)
 
 	require.NoError(t, service.SendTest(t.Context(), "admin", "ada@example.com", "Ada"))
 
@@ -130,7 +200,7 @@ func TestSendTest(t *testing.T) {
 }
 
 func TestSendTestIsRateLimitedPerAdmin(t *testing.T) {
-	service := newMailSettings(&fakeSettings{}, &fakeSender{})
+	service := newMailSettings(t, &fakeSettings{}, &fakeSender{})
 	for range 3 {
 		require.NoError(t, service.SendTest(t.Context(), "admin", "ada@example.com", "Ada"))
 	}
@@ -140,9 +210,9 @@ func TestSendTestIsRateLimitedPerAdmin(t *testing.T) {
 }
 
 func TestSendTestReportsFailures(t *testing.T) {
-	err := newMailSettings(&fakeSettings{failOn: "InstanceName"}, &fakeSender{}).SendTest(t.Context(), "a", "ada@example.com", "Ada")
+	err := newMailSettings(t, &fakeSettings{failOn: "InstanceName"}, &fakeSender{}).SendTest(t.Context(), "a", "ada@example.com", "Ada")
 	require.ErrorIs(t, err, errFailure)
 
-	err = newMailSettings(&fakeSettings{}, &fakeSender{err: mail.ErrNotConfigured}).SendTest(t.Context(), "a", "ada@example.com", "Ada")
+	err = newMailSettings(t, &fakeSettings{}, &fakeSender{err: mail.ErrNotConfigured}).SendTest(t.Context(), "a", "ada@example.com", "Ada")
 	assert.ErrorIs(t, err, mail.ErrNotConfigured)
 }

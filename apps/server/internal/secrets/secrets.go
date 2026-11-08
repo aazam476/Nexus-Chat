@@ -21,6 +21,7 @@ const (
 	liveKitSecretFile   = "livekit-api-secret.txt"
 	turnSecretFile      = "turn-secret.txt"
 	totpKeyFile         = "totp-encryption.key"
+	settingsKeyFile     = "settings-encryption.key"
 )
 
 // Secrets holds every key the instance generates for itself.
@@ -42,6 +43,9 @@ type Secrets struct {
 	TURNSecret string
 	// TOTPKey encrypts TOTP secrets stored in the database (AES-256-GCM).
 	TOTPKey []byte
+	// SettingsKey encrypts secrets kept in instance settings, such as the
+	// SMTP password and OIDC client secrets (AES-256-GCM).
+	SettingsKey []byte
 }
 
 // LoadOrCreate returns the instance's secrets from directory, generating
@@ -53,35 +57,50 @@ func LoadOrCreate(directory string) (Secrets, error) {
 	}
 	store := fileStore{directory: directory}
 	var secrets Secrets
-	var err error
-
-	if secrets.TokenSigningKey, err = store.ed25519Key(tokenSigningKeyFile); err != nil {
+	if err := loadSigningKeys(store, &secrets); err != nil {
 		return Secrets{}, err
 	}
-	if secrets.FederationKey, err = store.ed25519Key(federationKeyFile); err != nil {
-		return Secrets{}, err
-	}
-	if secrets.PushRelayKey, err = store.ed25519Key(pushRelayKeyFile); err != nil {
-		return Secrets{}, err
-	}
-	if secrets.VAPIDKey, err = store.p256Key(vapidKeyFile); err != nil {
-		return Secrets{}, err
-	}
-	// LiveKit expects an API key that looks like an identifier, and a
-	// secret of at least 32 characters.
-	if secrets.LiveKitAPIKey, err = store.token(liveKitAPIKeyFile, liveKitAPIKey); err != nil {
-		return Secrets{}, err
-	}
-	if secrets.LiveKitAPISecret, err = store.token(liveKitSecretFile, longToken); err != nil {
-		return Secrets{}, err
-	}
-	if secrets.TURNSecret, err = store.token(turnSecretFile, longToken); err != nil {
-		return Secrets{}, err
-	}
-	if secrets.TOTPKey, err = store.symmetricKey(totpKeyFile); err != nil {
+	if err := loadSharedSecrets(store, &secrets); err != nil {
 		return Secrets{}, err
 	}
 	return secrets, nil
+}
+
+// loadSigningKeys loads the asymmetric keys.
+func loadSigningKeys(store fileStore, secrets *Secrets) error {
+	var err error
+	if secrets.TokenSigningKey, err = store.ed25519Key(tokenSigningKeyFile); err != nil {
+		return err
+	}
+	if secrets.FederationKey, err = store.ed25519Key(federationKeyFile); err != nil {
+		return err
+	}
+	if secrets.PushRelayKey, err = store.ed25519Key(pushRelayKeyFile); err != nil {
+		return err
+	}
+	secrets.VAPIDKey, err = store.p256Key(vapidKeyFile)
+	return err
+}
+
+// loadSharedSecrets loads the random strings and symmetric keys.
+func loadSharedSecrets(store fileStore, secrets *Secrets) error {
+	var err error
+	// LiveKit expects an API key that looks like an identifier, and a
+	// secret of at least 32 characters.
+	if secrets.LiveKitAPIKey, err = store.token(liveKitAPIKeyFile, liveKitAPIKey); err != nil {
+		return err
+	}
+	if secrets.LiveKitAPISecret, err = store.token(liveKitSecretFile, longToken); err != nil {
+		return err
+	}
+	if secrets.TURNSecret, err = store.token(turnSecretFile, longToken); err != nil {
+		return err
+	}
+	if secrets.TOTPKey, err = store.symmetricKey(totpKeyFile); err != nil {
+		return err
+	}
+	secrets.SettingsKey, err = store.symmetricKey(settingsKeyFile)
+	return err
 }
 
 // ensurePrivateDirectory creates the directory if needed and makes sure only

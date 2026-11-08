@@ -188,7 +188,10 @@ Everything is in two places: the database and the data folder
 (`DATA_DIR`, by default `./data`). The data folder contains the instance's
 keys; **keep backups private.** Message content is end-to-end encrypted, so
 a backup holds only ciphertext, but it does contain metadata (see the
-[threat model](threat-model.md)).
+[threat model](threat-model.md)). Server credentials kept in the database
+(the SMTP password, sign-in provider secrets, TOTP secrets) are encrypted
+with keys in `DATA_DIR/secrets`, so store the database dump and the data
+folder backup in different places.
 
 ```bash
 docker compose exec -T postgres pg_dump -U nexuschat --format=custom nexuschat > nexus-chat.dump

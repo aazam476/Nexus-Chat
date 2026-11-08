@@ -39,6 +39,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/database"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
 	registrationstore "github.com/aazam476/nexus-chat/apps/server/internal/registration/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/secrets"
@@ -162,7 +163,13 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 	if err != nil {
 		return httpserver.Features{}, err
 	}
-	authFeatures := app.buildAuthFeatures(authInputs{hasher: hasher, validator: validator, domain: configuration.Domain, secondFactors: secondFactors})
+	settingsBox, err := secretbox.New(app.secrets.SettingsKey)
+	if err != nil {
+		return httpserver.Features{}, err
+	}
+	authFeatures := app.buildAuthFeatures(authInputs{
+		hasher: hasher, validator: validator, domain: configuration.Domain, secondFactors: secondFactors, settingsBox: settingsBox,
+	})
 	authFeatures.Health = health.NewHandler(healthService)
 	authFeatures.Setup = setup.NewHandler(setupService)
 	return authFeatures, nil
@@ -174,6 +181,7 @@ type authInputs struct {
 	validator     *accounts.Validator
 	domain        string
 	secondFactors *mfa.Service
+	settingsBox   *secretbox.Box
 }
 
 // buildAuthFeatures creates login, registration, verification and
@@ -183,8 +191,12 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	accountQueries := accountsstore.New(app.pool)
 	settings := instanceconfig.NewService(instanceconfigstore.New(app.pool), system, inputs.domain)
 	accountTokens := tokens.NewService(tokensstore.New(app.pool), system)
-	mailer := newMailer(settings)
-	accountEmails := emails.NewService(accountTokens, mailer, settings)
+	// The limit on test emails stops a script from flooding the mail server.
+	mailSettings := admin.NewMailSettings(admin.MailDependencies{
+		Settings: settings, Box: inputs.settingsBox, NewSender: newMailer,
+		TestLimiter: ratelimit.New(ratelimit.PerMinute(3, 3), system),
+	})
+	accountEmails := emails.NewService(accountTokens, mailSettings.Sender(), settings)
 	logins := login.NewService(login.Dependencies{
 		Accounts: accountQueries, Hasher: inputs.hasher, Sessions: app.sessions,
 		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), system), Clock: system,
@@ -200,8 +212,6 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		Sessions: app.sessions, Emails: accountEmails, Settings: settings,
 		Limiter: ratelimit.New(ratelimit.PerMinute(5, 5), system), Clock: system, Logger: app.logger,
 	})
-	// The limit on test emails stops a script from flooding the mail server.
-	mailSettings := admin.NewMailSettings(settings, mailer, ratelimit.New(ratelimit.PerMinute(3, 3), system))
 	return httpserver.Features{
 		Accounts: accounts.NewHandler(accountQueries),
 		Admin:    admin.NewHandler(accountQueries, app.certificates, mailSettings),
@@ -221,12 +231,8 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 
 // newMailer sends email with the SMTP settings current at the time, so an
 // admin's change applies to the next message.
-func newMailer(settings *instanceconfig.Service) *mail.Configured {
-	return mail.NewConfigured(func(ctx context.Context) (mail.SMTPConfig, bool, error) {
-		var smtp mail.SMTPConfig
-		found, err := settings.Load(ctx, instanceconfig.KeySMTP, &smtp)
-		return smtp, found, err
-	}, clock.System{})
+func newMailer(source mail.ConfigSource) mail.Sender {
+	return mail.NewConfigured(source, clock.System{})
 }
 
 func (app *application) prepareDatabase(ctx context.Context) error {

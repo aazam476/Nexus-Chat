@@ -18,7 +18,7 @@ import (
 
 var allFiles = []string{
 	tokenSigningKeyFile, federationKeyFile, pushRelayKeyFile, vapidKeyFile,
-	liveKitAPIKeyFile, liveKitSecretFile, turnSecretFile, totpKeyFile,
+	liveKitAPIKeyFile, liveKitSecretFile, turnSecretFile, totpKeyFile, settingsKeyFile,
 }
 
 func TestLoadOrCreateGeneratesEverySecretOnFirstBoot(t *testing.T) {
@@ -35,6 +35,8 @@ func TestLoadOrCreateGeneratesEverySecretOnFirstBoot(t *testing.T) {
 	assert.Regexp(t, `^[A-Z2-7]{52}$`, secrets.LiveKitAPISecret)
 	assert.Regexp(t, `^[A-Z2-7]{52}$`, secrets.TURNSecret)
 	assert.Len(t, secrets.TOTPKey, 32)
+	assert.Len(t, secrets.SettingsKey, 32)
+	assert.NotEqual(t, secrets.TOTPKey, secrets.SettingsKey)
 	// Independent keys must never be the same key reused.
 	assert.NotEqual(t, secrets.TokenSigningKey, secrets.FederationKey)
 	assert.NotEqual(t, secrets.LiveKitAPISecret, secrets.TURNSecret)
@@ -71,6 +73,7 @@ func TestLoadOrCreateReturnsTheSameSecretsOnLaterBoots(t *testing.T) {
 	assert.Equal(t, first.LiveKitAPISecret, second.LiveKitAPISecret)
 	assert.Equal(t, first.TURNSecret, second.TURNSecret)
 	assert.Equal(t, first.TOTPKey, second.TOTPKey)
+	assert.Equal(t, first.SettingsKey, second.SettingsKey)
 }
 
 func TestLoadOrCreateGeneratesOnlyMissingSecrets(t *testing.T) {

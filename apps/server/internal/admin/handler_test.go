@@ -20,9 +20,10 @@ type handlerFixture struct {
 	sender       *fakeSender
 }
 
-func newHandlerFixture(users fakeUsers) handlerFixture {
+func newHandlerFixture(t *testing.T, users fakeUsers) handlerFixture {
+	t.Helper()
 	fixture := handlerFixture{certificates: &fakeCertificates{}, settings: &fakeSettings{}, sender: &fakeSender{}}
-	fixture.handler = NewHandler(users, fixture.certificates, newMailSettings(fixture.settings, fixture.sender))
+	fixture.handler = NewHandler(users, fixture.certificates, newMailSettings(t, fixture.settings, fixture.sender))
 	return fixture
 }
 
@@ -40,7 +41,7 @@ func everyOperation(ctx context.Context, handler *Handler) []any {
 }
 
 func TestEveryOperationRequiresAnInstanceAdmin(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: false})
+	fixture := newHandlerFixture(t, fakeUsers{admin: false})
 
 	responses := everyOperation(adminContext(t), fixture.handler)
 
@@ -56,7 +57,7 @@ func TestEveryOperationRequiresAnInstanceAdmin(t *testing.T) {
 }
 
 func TestEveryOperationReportsLookupFailures(t *testing.T) {
-	handler := newHandlerFixture(fakeUsers{err: errFailure}).handler
+	handler := newHandlerFixture(t, fakeUsers{err: errFailure}).handler
 	ctx := adminContext(t)
 	call := func(_ any, err error) error { return err }
 
@@ -73,7 +74,7 @@ func TestEveryOperationReportsLookupFailures(t *testing.T) {
 }
 
 func TestTlsLifecycle(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	ctx := adminContext(t)
 
 	status, err := fixture.handler.GetTlsStatus(ctx, api.GetTlsStatusRequestObject{})
@@ -94,7 +95,7 @@ func TestTlsLifecycle(t *testing.T) {
 }
 
 func TestInstallTlsCertificateErrors(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	fixture.certificates.installErr = &tlsconfig.RejectedError{Err: tlsconfig.ErrIncomplete}
 	request := api.InstallTlsCertificateRequestObject{Body: &api.InstallTlsCertificateRequest{}}
 
@@ -109,7 +110,7 @@ func TestInstallTlsCertificateErrors(t *testing.T) {
 }
 
 func TestRemoveTlsCertificateFailure(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	fixture.certificates.removeErr = errFailure
 
 	_, err := fixture.handler.RemoveTlsCertificate(adminContext(t), api.RemoveTlsCertificateRequestObject{})
@@ -118,7 +119,7 @@ func TestRemoveTlsCertificateFailure(t *testing.T) {
 }
 
 func TestSmtpSettingsRoundTripWithoutThePassword(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	ctx := adminContext(t)
 	username, password := "chat", "secret"
 	body := &api.UpdateSmtpSettingsRequest{
@@ -137,11 +138,14 @@ func TestSmtpSettingsRoundTripWithoutThePassword(t *testing.T) {
 	}
 	assert.Equal(t, api.UpdateSmtpSettings200JSONResponse(want), updated)
 	assert.Equal(t, api.GetSmtpSettings200JSONResponse(want), read)
-	assert.Equal(t, "secret", fixture.settings.smtp.Password)
+	assert.NotContains(t, string(fixture.settings.smtp), "secret", "the password is stored encrypted")
+	config, _, err := fixture.handler.mail.Current(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "secret", config.Password)
 }
 
 func TestUpdateSmtpSettingsErrors(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	request := api.UpdateSmtpSettingsRequestObject{Body: &api.UpdateSmtpSettingsRequest{Port: 587, Security: api.SmtpSecurityTls, From: "chat@example.com"}}
 
 	response, err := fixture.handler.UpdateSmtpSettings(adminContext(t), request)
@@ -170,7 +174,7 @@ func TestSendTestEmailResponses(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fixture := newHandlerFixture(fakeUsers{admin: true})
+			fixture := newHandlerFixture(t, fakeUsers{admin: true})
 			fixture.sender.err = test.sendErr
 
 			response, err := fixture.handler.SendTestEmail(adminContext(t), api.SendTestEmailRequestObject{})
@@ -182,7 +186,7 @@ func TestSendTestEmailResponses(t *testing.T) {
 }
 
 func TestSendTestEmailGoesToTheCallingAdmin(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	ctx := adminContext(t)
 
 	for range 3 {
@@ -198,7 +202,7 @@ func TestSendTestEmailGoesToTheCallingAdmin(t *testing.T) {
 }
 
 func TestSendTestEmailReportsUnexpectedFailures(t *testing.T) {
-	fixture := newHandlerFixture(fakeUsers{admin: true})
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
 	fixture.sender.err = errFailure
 
 	_, err := fixture.handler.SendTestEmail(adminContext(t), api.SendTestEmailRequestObject{})

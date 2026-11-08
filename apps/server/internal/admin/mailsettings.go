@@ -5,36 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/mail"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
-	"github.com/aazam476/nexus-chat/apps/server/internal/platform/validation"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
 )
 
-// Limits on SMTP fields. A host name is at most 253 characters (RFC 1035).
-const (
-	maximumHostLength     = 253
-	maximumUsernameLength = 320
-	maximumPasswordLength = 1024
-	maximumPort           = 65535
-	defaultSubmissionPort = 587
-)
-
-var (
-	// ErrTestRateLimited means an admin sent too many test emails.
-	ErrTestRateLimited = errors.New("too many test emails; wait a minute")
-
-	errHostRequired      = errors.New("is required")
-	errHostInvalid       = fmt.Errorf("must be a host name or IP address of at most %d characters", maximumHostLength)
-	errPortInvalid       = fmt.Errorf("must be between 1 and %d", maximumPort)
-	errSecurityInvalid   = errors.New("must be starttls, tls or none")
-	errPasswordUnsafe    = errors.New("a password is only sent over an encrypted connection; use starttls or tls, or a relay on localhost")
-	errUsernameTooLong   = fmt.Errorf("must be at most %d characters", maximumUsernameLength)
-	errPasswordTooLong   = fmt.Errorf("must be at most %d characters", maximumPasswordLength)
-	errFromAddressFormat = errors.New("must be a plain email address such as chat@example.com")
-)
+// ErrTestRateLimited means an admin sent too many test emails.
+var ErrTestRateLimited = errors.New("too many test emails; wait a minute")
 
 // SettingsStore reads and writes instance settings.
 type SettingsStore interface {
@@ -42,6 +21,11 @@ type SettingsStore interface {
 	Save(ctx context.Context, key string, value any) error
 	InstanceName(ctx context.Context) (string, error)
 }
+
+// passwordContext binds the sealed SMTP password to this one setting.
+//
+//nolint:gosec // G101: a context label for encryption, not a credential.
+const passwordContext = "nexus-chat smtp password"
 
 // SMTPUpdate is an admin's change to the mail server settings. A nil
 // Password keeps the stored one.
@@ -54,56 +38,134 @@ type SMTPUpdate struct {
 	From     string
 }
 
-// MailSettings manages the SMTP settings.
+// SMTPView is what the Admin panel shows: the settings without the password.
+type SMTPView struct {
+	Host        string
+	Port        int
+	Security    mail.Security
+	Username    string
+	From        string
+	PasswordSet bool
+}
+
+// storedSMTP is the JSON saved under instanceconfig.KeySMTP. The password
+// is kept only encrypted, so a database dump does not reveal it.
+type storedSMTP struct {
+	Host           string        `json:"host"`
+	Port           int           `json:"port"`
+	Security       mail.Security `json:"security"`
+	Username       string        `json:"username"`
+	From           string        `json:"from"`
+	SealedPassword []byte        `json:"sealedPassword,omitempty"`
+}
+
+// MailSettings manages the SMTP settings and sends mail with them.
 type MailSettings struct {
 	settings SettingsStore
+	box      *secretbox.Box
 	sender   mail.Sender
 	limiter  *ratelimit.Limiter
 }
 
-// NewMailSettings returns a MailSettings saving to settings. sender must
-// read the current settings for each message, as mail.Configured does, so
-// a test email checks what was just saved. limiter bounds test emails per
-// admin.
-func NewMailSettings(settings SettingsStore, sender mail.Sender, limiter *ratelimit.Limiter) *MailSettings {
-	return &MailSettings{settings: settings, sender: sender, limiter: limiter}
+// MailDependencies configure NewMailSettings.
+type MailDependencies struct {
+	Settings SettingsStore
+	// Box encrypts the stored password.
+	Box *secretbox.Box
+	// NewSender builds the Sender for every email the server sends from a
+	// source of the current settings; mail.NewConfigured in production.
+	NewSender func(source mail.ConfigSource) mail.Sender
+	// TestLimiter bounds test emails per admin.
+	TestLimiter *ratelimit.Limiter
 }
 
-// Current returns the stored settings, or the usual defaults if none are
-// stored. Configured reports whether a mail server is set.
+// NewMailSettings returns a MailSettings.
+func NewMailSettings(dependencies MailDependencies) *MailSettings {
+	service := &MailSettings{settings: dependencies.Settings, box: dependencies.Box, limiter: dependencies.TestLimiter}
+	service.sender = dependencies.NewSender(service.Current)
+	return service
+}
+
+// Sender sends email with whatever settings are current when it sends.
+func (service *MailSettings) Sender() mail.Sender {
+	return service.sender
+}
+
+// Current returns the settings to send with, password decrypted. It is a
+// mail.ConfigSource; configured is false until a mail server is set.
 func (service *MailSettings) Current(ctx context.Context) (mail.SMTPConfig, bool, error) {
-	config := mail.SMTPConfig{Port: defaultSubmissionPort, Security: mail.SecurityStartTLS}
-	if _, err := service.settings.Load(ctx, instanceconfig.KeySMTP, &config); err != nil {
+	stored, err := service.load(ctx)
+	if err != nil {
 		return mail.SMTPConfig{}, false, err
+	}
+	config := mail.SMTPConfig{
+		Host: stored.Host, Port: stored.Port, Security: stored.Security, Username: stored.Username, From: stored.From,
+	}
+	if stored.SealedPassword != nil {
+		password, err := service.box.Open(passwordContext, stored.SealedPassword)
+		if err != nil {
+			return mail.SMTPConfig{}, false, fmt.Errorf("SMTP password: %w", err)
+		}
+		config.Password = string(password)
 	}
 	return config, config.Host != "", nil
 }
 
-// Update validates and saves update, returning the saved settings.
-func (service *MailSettings) Update(ctx context.Context, update SMTPUpdate) (mail.SMTPConfig, error) {
-	current, _, err := service.Current(ctx)
+// View returns the stored settings without the password, or the usual
+// defaults if none are stored.
+func (service *MailSettings) View(ctx context.Context) (SMTPView, error) {
+	stored, err := service.load(ctx)
 	if err != nil {
-		return mail.SMTPConfig{}, err
+		return SMTPView{}, err
 	}
-	config := mail.SMTPConfig{
+	return view(stored), nil
+}
+
+func (service *MailSettings) load(ctx context.Context) (storedSMTP, error) {
+	stored := storedSMTP{Port: defaultSubmissionPort, Security: mail.SecurityStartTLS}
+	if _, err := service.settings.Load(ctx, instanceconfig.KeySMTP, &stored); err != nil {
+		return storedSMTP{}, err
+	}
+	return stored, nil
+}
+
+// Update validates and saves update. Keeping the old password needs no
+// decryption, so an admin can always fix settings whose password no
+// longer opens by entering it again.
+func (service *MailSettings) Update(ctx context.Context, update SMTPUpdate) (SMTPView, error) {
+	current, err := service.load(ctx)
+	if err != nil {
+		return SMTPView{}, err
+	}
+	stored := storedSMTP{
 		Host: strings.TrimSpace(update.Host), Port: update.Port, Security: update.Security,
-		Username: update.Username, Password: current.Password, From: strings.TrimSpace(update.From),
+		Username: update.Username, From: strings.TrimSpace(update.From), SealedPassword: current.SealedPassword,
+	}
+	if err := check(stored, update.Password); err != nil {
+		return SMTPView{}, err
 	}
 	if update.Password != nil {
-		config.Password = *update.Password
+		stored.SealedPassword = nil
+		if *update.Password != "" {
+			stored.SealedPassword = service.box.Seal(passwordContext, []byte(*update.Password))
+		}
 	}
-	if err := check(config); err != nil {
-		return mail.SMTPConfig{}, err
+	if err := service.settings.Save(ctx, instanceconfig.KeySMTP, stored); err != nil {
+		return SMTPView{}, err
 	}
-	if err := service.settings.Save(ctx, instanceconfig.KeySMTP, config); err != nil {
-		return mail.SMTPConfig{}, err
+	return view(stored), nil
+}
+
+func view(stored storedSMTP) SMTPView {
+	return SMTPView{
+		Host: stored.Host, Port: stored.Port, Security: stored.Security, Username: stored.Username,
+		From: stored.From, PasswordSet: stored.SealedPassword != nil,
 	}
-	return config, nil
 }
 
 // SendTest emails a test message to the admin at address. It returns
-// mail.ErrNotConfigured before SMTP is set up, and the mail server's
-// error if delivery fails.
+// mail.ErrNotConfigured before SMTP is set up, and a *mail.DeliveryError
+// if the mail server fails.
 func (service *MailSettings) SendTest(ctx context.Context, adminKey string, address string, displayName string) error {
 	if !service.limiter.Allow(adminKey) {
 		return ErrTestRateLimited
@@ -117,50 +179,4 @@ func (service *MailSettings) SendTest(ctx context.Context, adminKey string, addr
 		return err
 	}
 	return service.sender.Send(ctx, message)
-}
-
-func check(config mail.SMTPConfig) error {
-	var problems validation.Errors
-	problems.Add("host", checkHost(config.Host))
-	if config.Port < 1 || config.Port > maximumPort {
-		problems.Add("port", errPortInvalid)
-	}
-	switch config.Security {
-	case mail.SecurityStartTLS, mail.SecurityTLS:
-	case mail.SecurityNone:
-		// net/smtp refuses to send a password in the clear to any other
-		// host, so saving such settings would only fail later.
-		if config.Password != "" && !isLoopback(config.Host) {
-			problems.Add("security", errPasswordUnsafe)
-		}
-	default:
-		problems.Add("security", errSecurityInvalid)
-	}
-	if len(config.Username) > maximumUsernameLength {
-		problems.Add("username", errUsernameTooLong)
-	}
-	if len(config.Password) > maximumPasswordLength {
-		problems.Add("password", errPasswordTooLong)
-	}
-	if mail.CheckAddress(config.From) != nil {
-		problems.Add("from", errFromAddressFormat)
-	}
-	return problems.Err()
-}
-
-func checkHost(host string) error {
-	if host == "" {
-		return errHostRequired
-	}
-	if len(host) > maximumHostLength || strings.ContainsFunc(host, func(r rune) bool {
-		return unicode.IsSpace(r) || unicode.IsControl(r) || r == '/'
-	}) {
-		return errHostInvalid
-	}
-	return nil
-}
-
-// isLoopback matches the hosts net/smtp.PlainAuth accepts without TLS.
-func isLoopback(host string) bool {
-	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
