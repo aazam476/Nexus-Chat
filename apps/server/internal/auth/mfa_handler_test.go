@@ -53,12 +53,12 @@ func (fake *fakeManager) RemainingBackupCodes(context.Context, uuid.UUID) (int64
 }
 
 func signedIn(t *testing.T) context.Context {
-	return session.WithPrincipal(t.Context(), session.Principal{UserID: uuid.New(), SessionID: uuid.New()})
+	return session.WithPrincipal(t.Context(), session.Principal{UserID: uuid.New(), SessionID: uuid.New(), AuthenticatedAt: now})
 }
 
 func TestSecondFactorEndpoints(t *testing.T) {
 	manager := &fakeManager{confirmCodes: []string{"AAAAA-BBBBB"}}
-	handler := NewHandler(HandlerDependencies{MFA: manager, Users: fakeUsers{user: accountsstore.User{Username: "alice"}}})
+	handler := NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: manager, Users: fakeUsers{user: accountsstore.User{Username: "alice"}}})
 	ctx := signedIn(t)
 
 	listed, err := handler.GetSecondFactors(ctx, api.GetSecondFactorsRequestObject{})
@@ -85,7 +85,7 @@ func TestSecondFactorEndpoints(t *testing.T) {
 func TestSecondFactorEndpointErrors(t *testing.T) {
 	ctx := signedIn(t)
 	confirm := func(err error) any {
-		handler := NewHandler(HandlerDependencies{MFA: &fakeManager{confirmErr: err}})
+		handler := NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{confirmErr: err}})
 		response, handlerErr := handler.ConfirmTotp(ctx, api.ConfirmTotpRequestObject{Body: &api.CodeRequest{}})
 		if handlerErr != nil {
 			return handlerErr
@@ -96,31 +96,31 @@ func TestSecondFactorEndpointErrors(t *testing.T) {
 	assert.IsType(t, api.ConfirmTotp400JSONResponse{}, confirm(mfa.ErrEnrollmentNotFound))
 	assert.Implements(t, (*error)(nil), confirm(errors.New("down")))
 
-	noCodes, err := NewHandler(HandlerDependencies{MFA: &fakeManager{}}).ConfirmTotp(ctx, api.ConfirmTotpRequestObject{Body: &api.CodeRequest{}})
+	noCodes, err := NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{}}).ConfirmTotp(ctx, api.ConfirmTotpRequestObject{Body: &api.CodeRequest{}})
 	require.NoError(t, err)
 	assert.Nil(t, noCodes.(api.ConfirmTotp200JSONResponse).BackupCodes)
 
-	missing, err := NewHandler(HandlerDependencies{MFA: &fakeManager{removeErr: mfa.ErrNotFound}}).RemoveTotp(ctx, api.RemoveTotpRequestObject{})
+	missing, err := NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{removeErr: mfa.ErrNotFound}}).RemoveTotp(ctx, api.RemoveTotpRequestObject{})
 	require.NoError(t, err)
 	assert.IsType(t, api.RemoveTotp404JSONResponse{}, missing)
-	_, err = NewHandler(HandlerDependencies{MFA: &fakeManager{removeErr: errors.New("down")}}).RemoveTotp(ctx, api.RemoveTotpRequestObject{})
+	_, err = NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{removeErr: errors.New("down")}}).RemoveTotp(ctx, api.RemoveTotpRequestObject{})
 	require.Error(t, err)
 
-	failing := NewHandler(HandlerDependencies{MFA: &fakeManager{err: errors.New("down")}, Users: fakeUsers{}})
+	failing := NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{err: errors.New("down")}, Users: fakeUsers{}})
 	_, err = failing.GetSecondFactors(ctx, api.GetSecondFactorsRequestObject{})
 	require.Error(t, err)
 	_, err = failing.EnrollTotp(ctx, api.EnrollTotpRequestObject{Body: &api.EnrollTotpRequest{}})
 	require.Error(t, err)
 	_, err = failing.RegenerateBackupCodes(ctx, api.RegenerateBackupCodesRequestObject{})
 	require.Error(t, err)
-	_, err = NewHandler(HandlerDependencies{MFA: &fakeManager{remainingErr: errors.New("down")}}).GetSecondFactors(ctx, api.GetSecondFactorsRequestObject{})
+	_, err = NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{remainingErr: errors.New("down")}}).GetSecondFactors(ctx, api.GetSecondFactorsRequestObject{})
 	require.Error(t, err)
-	_, err = NewHandler(HandlerDependencies{MFA: &fakeManager{}, Users: fakeUsers{err: errors.New("down")}}).EnrollTotp(ctx, api.EnrollTotpRequestObject{Body: &api.EnrollTotpRequest{}})
+	_, err = NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{}, Users: fakeUsers{err: errors.New("down")}}).EnrollTotp(ctx, api.EnrollTotpRequestObject{Body: &api.EnrollTotpRequest{}})
 	assert.Error(t, err)
 }
 
 func TestSecondFactorEndpointsNeedAPrincipal(t *testing.T) {
-	handler := NewHandler(HandlerDependencies{MFA: &fakeManager{}})
+	handler := NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, MFA: &fakeManager{}})
 
 	_, err := handler.GetSecondFactors(t.Context(), api.GetSecondFactorsRequestObject{})
 	require.ErrorIs(t, err, errNoPrincipal)

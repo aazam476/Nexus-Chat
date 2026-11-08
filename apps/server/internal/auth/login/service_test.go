@@ -80,10 +80,20 @@ func (fake *fakeHasher) Verify(_ context.Context, plain string, encoded string) 
 
 func (fake *fakeHasher) NeedsRehash(string) bool { return fake.outdated }
 
-type fakeSessions struct{ err error }
+type fakeSessions struct {
+	err    error
+	marked *[]session.Principal
+}
 
 func (fake fakeSessions) Create(_ context.Context, userID uuid.UUID, device session.Device) (string, sessionstore.Session, error) {
 	return "nxs_token", sessionstore.Session{UserID: userID, DeviceName: device.Name}, fake.err
+}
+
+func (fake fakeSessions) MarkAuthenticated(_ context.Context, principal session.Principal) error {
+	if fake.marked != nil {
+		*fake.marked = append(*fake.marked, principal)
+	}
+	return fake.err
 }
 
 type fakeLimiter struct{ deny bool }

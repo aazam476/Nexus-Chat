@@ -60,6 +60,7 @@ type passwordHasher interface {
 
 type sessionCreator interface {
 	Create(ctx context.Context, userID uuid.UUID, device session.Device) (string, sessionstore.Session, error)
+	MarkAuthenticated(ctx context.Context, principal session.Principal) error
 }
 
 type attemptLimiter interface {

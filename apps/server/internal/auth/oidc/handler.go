@@ -109,6 +109,10 @@ func (handler *Handler) BeginProviderLink(ctx context.Context, request api.Begin
 	if !ok {
 		return nil, errNoPrincipal
 	}
+	// A linked provider is a way to log in, which a stolen session must not add.
+	if !handler.recent(principal) {
+		return api.BeginProviderLink403JSONResponse{ReauthenticationRequiredJSONResponse: reauthenticationRequired()}, nil
+	}
 	started, err := handler.signIn.Begin(ctx, BeginRequest{
 		ProviderID: request.ProviderId, ReturnTo: request.Body.ReturnTo, LinkUserID: &principal.UserID, ClientKey: clientKey(ctx),
 	})
@@ -204,4 +208,15 @@ func mfaChallenge(result login.Result) api.MfaChallenge {
 		methods = append(methods, api.MfaMethod(method))
 	}
 	return api.MfaChallenge{ChallengeToken: result.MFAChallenge, Methods: methods}
+}
+
+// recent reports whether principal logged in recently enough to change how
+// the account logs in (session.Principal.RequireRecent).
+func (handler *Handler) recent(principal session.Principal) bool {
+	return principal.RequireRecent(handler.signIn.dependencies.Clock.Now()) == nil
+}
+
+// reauthenticationRequired is the body of a 403 that asks for a recent login.
+func reauthenticationRequired() api.ReauthenticationRequiredJSONResponse {
+	return api.ReauthenticationRequiredJSONResponse(apiresponse.Error("reauthentication_required", session.ErrReauthenticationRequired))
 }

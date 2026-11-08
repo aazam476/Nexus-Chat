@@ -65,7 +65,7 @@ func requireSession(authenticator Authenticator, logger *slog.Logger) api.Strict
 			if err != nil {
 				return nil, err
 			}
-			ctx = session.WithPrincipal(ctx, session.Principal{UserID: found.UserID, SessionID: found.ID})
+			ctx = session.WithPrincipal(ctx, session.Principal{UserID: found.UserID, SessionID: found.ID, AuthenticatedAt: found.AuthenticatedAt})
 			return next(ctx, writer, request, body)
 		}
 	}

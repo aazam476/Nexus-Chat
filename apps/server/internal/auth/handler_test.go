@@ -81,6 +81,18 @@ func (memory *memorySessions) ListSessionsForUser(_ context.Context, arg session
 	}
 	return result, memory.fail
 }
+func (memory *memorySessions) MarkSessionAuthenticated(_ context.Context, arg sessionstore.MarkSessionAuthenticatedParams) (int64, error) {
+	if memory.fail != nil {
+		return 0, memory.fail
+	}
+	found, ok := memory.sessions[arg.ID]
+	if !ok || found.UserID != arg.UserID {
+		return 0, nil
+	}
+	found.AuthenticatedAt = arg.AuthenticatedAt
+	memory.sessions[arg.ID] = found
+	return 1, nil
+}
 func (memory *memorySessions) DeleteSession(_ context.Context, arg sessionstore.DeleteSessionParams) (int64, error) {
 	if memory.fail != nil {
 		return 0, memory.fail
@@ -111,7 +123,7 @@ func newFixture(deny bool) fixture {
 		Accounts: accounts, Hasher: plainHasher{}, Sessions: sessionService, Limiter: limiter{deny: deny}, Clock: clock.Fixed{Time: now},
 		SecondFactors: noFactors{}, Challenges: nil,
 	})
-	handler := NewHandler(HandlerDependencies{Logins: logins, Sessions: sessionService})
+	handler := NewHandler(HandlerDependencies{Logins: logins, Sessions: sessionService, Clock: clock.Fixed{Time: now}})
 	return fixture{accounts: accounts, sessions: sessions, handler: handler, user: user}
 }
 

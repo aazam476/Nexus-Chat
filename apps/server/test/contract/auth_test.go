@@ -99,3 +99,18 @@ func (server authenticatedServer) authorizedCall(t *testing.T, token string, met
 	t.Helper()
 	return server.callWithHeaders(t, requestSpec{method: method, path: path, headers: map[string]string{"Authorization": "Bearer " + token}}, wantStatus)
 }
+
+func TestReauthentication(t *testing.T) {
+	server := setUpInstance(t)
+	laptop := server.login(t, "Laptop")
+	reauthenticate := func(password string) requestSpec {
+		return requestSpec{method: http.MethodPost, path: "/api/v1/auth/reauthenticate", body: fmt.Sprintf(`{"password": %q}`, password)}
+	}
+
+	server.authorizedCallWithBody(t, laptop.Token, reauthenticate("a long password"), http.StatusNoContent)
+	wrong := server.authorizedCallWithBody(t, laptop.Token, reauthenticate("not the password"), http.StatusForbidden)
+	assert.Contains(t, string(wrong), `"code":"invalid_credentials"`)
+	// A fresh login counts as recent, so a sensitive change goes through.
+	server.authorizedCall(t, laptop.Token, http.MethodPost, "/api/v1/auth/mfa/backup-codes", http.StatusOK)
+	server.call(t, http.MethodPost, "/api/v1/auth/reauthenticate", `{"password": "x"}`, http.StatusUnauthorized)
+}

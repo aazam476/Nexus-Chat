@@ -1,6 +1,10 @@
 -- name: InsertSession :exec
-INSERT INTO sessions (id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+INSERT INTO sessions (id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at, authenticated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+
+-- name: MarkSessionAuthenticated :execrows
+-- Records that the session's user just confirmed their password.
+UPDATE sessions SET authenticated_at = $2 WHERE id = $1 AND user_id = $3;
 
 -- name: GetSessionByTokenHash :one
 SELECT * FROM sessions WHERE token_hash = $1;

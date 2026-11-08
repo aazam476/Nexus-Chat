@@ -75,14 +75,15 @@ type OidcProvider struct {
 }
 
 type Session struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	TokenHash  []byte
-	DeviceName string
-	UserAgent  string
-	CreatedAt  time.Time
-	LastSeenAt time.Time
-	ExpiresAt  time.Time
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	TokenHash       []byte
+	DeviceName      string
+	UserAgent       string
+	CreatedAt       time.Time
+	LastSeenAt      time.Time
+	ExpiresAt       time.Time
+	AuthenticatedAt time.Time
 }
 
 type TotpCredential struct {

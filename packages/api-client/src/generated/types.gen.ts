@@ -252,6 +252,10 @@ export type WebAuthnCredential = {
     lastUsedAt?: string;
 };
 
+export type ReauthenticateRequest = {
+    password: string;
+};
+
 export type LoginRequest = {
     /**
      * Username or email address.
@@ -1097,6 +1101,45 @@ export type CompleteLoginMfaResponses = {
 
 export type CompleteLoginMfaResponse = CompleteLoginMfaResponses[keyof CompleteLoginMfaResponses];
 
+export type ReauthenticateData = {
+    body: ReauthenticateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/reauthenticate';
+};
+
+export type ReauthenticateErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The password is wrong (`invalid_credentials`), or the account has
+     * no password and must log in again (`no_password`).
+     *
+     */
+    403: Error;
+    /**
+     * Too many attempts from this address (`rate_limited`) or for this account (`login_delayed`).
+     */
+    429: Error;
+};
+
+export type ReauthenticateError = ReauthenticateErrors[keyof ReauthenticateErrors];
+
+export type ReauthenticateResponses = {
+    /**
+     * Confirmed.
+     */
+    204: void;
+};
+
+export type ReauthenticateResponse = ReauthenticateResponses[keyof ReauthenticateResponses];
+
 export type GetSecondFactorsData = {
     body?: never;
     path?: never;
@@ -1197,6 +1240,13 @@ export type RemoveTotpErrors = {
      */
     401: Error;
     /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
+    /**
      * No such authenticator (`authenticator_not_found`).
      */
     404: Error;
@@ -1225,6 +1275,13 @@ export type RegenerateBackupCodesErrors = {
      * The request has no valid session token (`unauthorized`).
      */
     401: Error;
+    /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
 };
 
 export type RegenerateBackupCodesError = RegenerateBackupCodesErrors[keyof RegenerateBackupCodesErrors];
@@ -1404,6 +1461,13 @@ export type BeginWebAuthnRegistrationErrors = {
      */
     401: Error;
     /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
+    /**
      * Passkeys and security keys need the instance's domain to be set and HTTPS (`webauthn_unavailable`).
      */
     409: Error;
@@ -1463,6 +1527,13 @@ export type RemoveWebAuthnCredentialErrors = {
      * The request has no valid session token (`unauthorized`).
      */
     401: Error;
+    /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
     /**
      * No such credential (`credential_not_found`).
      */
@@ -1634,6 +1705,13 @@ export type BeginProviderLinkErrors = {
      */
     401: Error;
     /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
+    /**
      * There is no sign-in provider with this ID (`provider_not_found`).
      */
     404: Error;
@@ -1741,6 +1819,13 @@ export type UnlinkProviderErrors = {
      * The request has no valid session token (`unauthorized`).
      */
     401: Error;
+    /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
     /**
      * This account is not linked to that provider (`not_linked`).
      */

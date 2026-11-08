@@ -447,6 +447,11 @@ type ProviderFlow struct {
 	FlowId openapi_types.UUID `json:"flowId"`
 }
 
+// ReauthenticateRequest defines model for ReauthenticateRequest.
+type ReauthenticateRequest struct {
+	Password string `json:"password"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	DeviceName  string `json:"deviceName"`
@@ -723,6 +728,9 @@ type ProviderUnavailable = Error
 // RateLimited defines model for RateLimited.
 type RateLimited = Error
 
+// ReauthenticationRequired defines model for ReauthenticationRequired.
+type ReauthenticationRequired = Error
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Error
 
@@ -799,6 +807,9 @@ type RequestPasswordResetJSONRequestBody = PasswordResetRequest
 
 // CompletePasswordResetJSONRequestBody defines body for CompletePasswordReset for application/json ContentType.
 type CompletePasswordResetJSONRequestBody = CompletePasswordResetRequest
+
+// ReauthenticateJSONRequestBody defines body for Reauthenticate for application/json ContentType.
+type ReauthenticateJSONRequestBody = ReauthenticateRequest
 
 // RegisterJSONRequestBody defines body for Register for application/json ContentType.
 type RegisterJSONRequestBody = RegisterRequest
@@ -928,6 +939,9 @@ type ServerInterface interface {
 	// CompletePasswordReset Choose a new password
 	// (POST /api/v1/auth/password-reset/complete)
 	CompletePasswordReset(w http.ResponseWriter, r *http.Request)
+	// Reauthenticate Confirm my password before a sensitive change
+	// (POST /api/v1/auth/reauthenticate)
+	Reauthenticate(w http.ResponseWriter, r *http.Request)
 	// Register Create an account
 	// (POST /api/v1/auth/register)
 	Register(w http.ResponseWriter, r *http.Request)
@@ -1633,6 +1647,20 @@ func (siw *ServerInterfaceWrapper) CompletePasswordReset(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// Reauthenticate operation middleware
+func (siw *ServerInterfaceWrapper) Reauthenticate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Reauthenticate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // Register operation middleware
 func (siw *ServerInterfaceWrapper) Register(w http.ResponseWriter, r *http.Request) {
 
@@ -2156,6 +2184,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.UpdateSmtpSettings)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/smtp/test", wrapper.SendTestEmail)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login/mfa", wrapper.CompleteLoginMfa)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/reauthenticate", wrapper.Reauthenticate)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/mfa", wrapper.GetSecondFactors)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/totp", wrapper.EnrollTotp)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/totp/{enrollmentId}/confirm", wrapper.ConfirmTotp)
@@ -2211,6 +2240,8 @@ type ProviderNotFoundJSONResponse Error
 type ProviderUnavailableJSONResponse Error
 
 type RateLimitedJSONResponse Error
+
+type ReauthenticationRequiredJSONResponse Error
 
 type UnauthorizedJSONResponse Error
 
@@ -3458,6 +3489,22 @@ func (response RegenerateBackupCodes401JSONResponse) VisitRegenerateBackupCodesR
 	return err
 }
 
+type RegenerateBackupCodes403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response RegenerateBackupCodes403JSONResponse) VisitRegenerateBackupCodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type EnrollTotpRequestObject struct {
 	Body *EnrollTotpJSONRequestBody
 }
@@ -3534,6 +3581,22 @@ func (response RemoveTotp401JSONResponse) VisitRemoveTotpResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveTotp403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response RemoveTotp403JSONResponse) VisitRemoveTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -3810,6 +3873,22 @@ func (response UnlinkProvider401JSONResponse) VisitUnlinkProviderResponse(w http
 	return err
 }
 
+type UnlinkProvider403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response UnlinkProvider403JSONResponse) VisitUnlinkProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnlinkProvider404JSONResponse Error
 
 func (response UnlinkProvider404JSONResponse) VisitUnlinkProviderResponse(w http.ResponseWriter) error {
@@ -4077,6 +4156,22 @@ func (response BeginProviderLink401JSONResponse) VisitBeginProviderLinkResponse(
 	return err
 }
 
+type BeginProviderLink403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response BeginProviderLink403JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BeginProviderLink404JSONResponse struct{ ProviderNotFoundJSONResponse }
 
 func (response BeginProviderLink404JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
@@ -4334,6 +4429,88 @@ func (response CompletePasswordReset422JSONResponse) VisitCompletePasswordResetR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReauthenticateRequestObject struct {
+	Body *ReauthenticateJSONRequestBody
+}
+
+type ReauthenticateResponseObject interface {
+	VisitReauthenticateResponse(w http.ResponseWriter) error
+}
+
+type Reauthenticate204Response struct {
+}
+
+func (response Reauthenticate204Response) VisitReauthenticateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type Reauthenticate400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response Reauthenticate400JSONResponse) VisitReauthenticateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Reauthenticate401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response Reauthenticate401JSONResponse) VisitReauthenticateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Reauthenticate403JSONResponse Error
+
+func (response Reauthenticate403JSONResponse) VisitReauthenticateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Reauthenticate429ResponseHeaders struct {
+	RetryAfter *int
+}
+
+type Reauthenticate429JSONResponse struct {
+	Body    Error
+	Headers Reauthenticate429ResponseHeaders
+}
+
+func (response Reauthenticate429JSONResponse) VisitReauthenticateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -4667,6 +4844,22 @@ func (response BeginWebAuthnRegistration401JSONResponse) VisitBeginWebAuthnRegis
 	return err
 }
 
+type BeginWebAuthnRegistration403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response BeginWebAuthnRegistration403JSONResponse) VisitBeginWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BeginWebAuthnRegistration409JSONResponse struct {
 	WebAuthnUnavailableJSONResponse
 }
@@ -4759,6 +4952,22 @@ func (response RemoveWebAuthnCredential401JSONResponse) VisitRemoveWebAuthnCrede
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveWebAuthnCredential403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response RemoveWebAuthnCredential403JSONResponse) VisitRemoveWebAuthnCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -5487,6 +5696,9 @@ type StrictServerInterface interface {
 	// CompletePasswordReset Choose a new password
 	// (POST /api/v1/auth/password-reset/complete)
 	CompletePasswordReset(ctx context.Context, request CompletePasswordResetRequestObject) (CompletePasswordResetResponseObject, error)
+	// Reauthenticate Confirm my password before a sensitive change
+	// (POST /api/v1/auth/reauthenticate)
+	Reauthenticate(ctx context.Context, request ReauthenticateRequestObject) (ReauthenticateResponseObject, error)
 	// Register Create an account
 	// (POST /api/v1/auth/register)
 	Register(ctx context.Context, request RegisterRequestObject) (RegisterResponseObject, error)
@@ -6568,6 +6780,37 @@ func (sh *strictHandler) CompletePasswordReset(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CompletePasswordResetResponseObject); ok {
 		if err := validResponse.VisitCompletePasswordResetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Reauthenticate operation middleware
+func (sh *strictHandler) Reauthenticate(w http.ResponseWriter, r *http.Request) {
+	var request ReauthenticateRequestObject
+
+	var body ReauthenticateJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Reauthenticate(ctx, request.(ReauthenticateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Reauthenticate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReauthenticateResponseObject); ok {
+		if err := validResponse.VisitReauthenticateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

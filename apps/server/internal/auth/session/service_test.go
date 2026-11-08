@@ -24,6 +24,20 @@ type fakeStore struct {
 
 func newFakeStore() *fakeStore { return &fakeStore{sessions: map[string]store.Session{}} }
 
+func (fake *fakeStore) MarkSessionAuthenticated(_ context.Context, arg store.MarkSessionAuthenticatedParams) (int64, error) {
+	if fake.fail != nil {
+		return 0, fake.fail
+	}
+	for hash, found := range fake.sessions {
+		if found.ID == arg.ID && found.UserID == arg.UserID {
+			found.AuthenticatedAt = arg.AuthenticatedAt
+			fake.sessions[hash] = found
+			return 1, nil
+		}
+	}
+	return 0, nil
+}
+
 func (fake *fakeStore) InsertSession(_ context.Context, arg store.InsertSessionParams) error {
 	if fake.fail != nil {
 		return fake.fail
@@ -101,6 +115,7 @@ func TestCreateThenAuthenticate(t *testing.T) {
 	assert.Len(t, token, len("nxs_")+43) // 32 bytes in unpadded base64url
 	assert.NotContains(t, string(created.TokenHash), token, "only the hash is stored")
 	assert.Equal(t, start.Add(Lifetime), created.ExpiresAt)
+	assert.Equal(t, start, created.AuthenticatedAt, "logging in counts as authenticating")
 	found, err := service.Authenticate(t.Context(), token)
 	require.NoError(t, err)
 	assert.Equal(t, created.ID, found.ID)
@@ -214,4 +229,24 @@ func TestTouchErrorsArePassedOn(t *testing.T) {
 	_, err = service.Authenticate(t.Context(), token)
 
 	assert.ErrorContains(t, err, "touch failed")
+}
+
+func TestMarkAuthenticated(t *testing.T) {
+	sessions := newFakeStore()
+	clock := &stepClock{now: start}
+	service := NewService(sessions, clock)
+	token, created, err := service.Create(t.Context(), alice, device)
+	require.NoError(t, err)
+
+	clock.now = start.Add(time.Hour)
+	require.NoError(t, service.MarkAuthenticated(t.Context(), Principal{UserID: alice, SessionID: created.ID}))
+	found, err := service.Authenticate(t.Context(), token)
+	require.NoError(t, err)
+	assert.Equal(t, start.Add(time.Hour), found.AuthenticatedAt)
+
+	someoneElse := Principal{UserID: uuid.New(), SessionID: created.ID}
+	require.ErrorIs(t, service.MarkAuthenticated(t.Context(), someoneElse), ErrInvalidSession)
+
+	sessions.fail = errors.New("down")
+	require.ErrorIs(t, service.MarkAuthenticated(t.Context(), Principal{UserID: alice, SessionID: created.ID}), sessions.fail)
 }

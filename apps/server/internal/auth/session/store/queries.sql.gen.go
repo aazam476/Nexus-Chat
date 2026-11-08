@@ -51,7 +51,7 @@ func (q *Queries) DeleteSessionsForUser(ctx context.Context, userID uuid.UUID) e
 }
 
 const getSessionByTokenHash = `-- name: GetSessionByTokenHash :one
-SELECT id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at FROM sessions WHERE token_hash = $1
+SELECT id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at, authenticated_at FROM sessions WHERE token_hash = $1
 `
 
 func (q *Queries) GetSessionByTokenHash(ctx context.Context, tokenHash []byte) (Session, error) {
@@ -66,24 +66,26 @@ func (q *Queries) GetSessionByTokenHash(ctx context.Context, tokenHash []byte) (
 		&i.CreatedAt,
 		&i.LastSeenAt,
 		&i.ExpiresAt,
+		&i.AuthenticatedAt,
 	)
 	return i, err
 }
 
 const insertSession = `-- name: InsertSession :exec
-INSERT INTO sessions (id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO sessions (id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at, authenticated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type InsertSessionParams struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	TokenHash  []byte
-	DeviceName string
-	UserAgent  string
-	CreatedAt  time.Time
-	LastSeenAt time.Time
-	ExpiresAt  time.Time
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	TokenHash       []byte
+	DeviceName      string
+	UserAgent       string
+	CreatedAt       time.Time
+	LastSeenAt      time.Time
+	ExpiresAt       time.Time
+	AuthenticatedAt time.Time
 }
 
 func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) error {
@@ -96,12 +98,13 @@ func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) er
 		arg.CreatedAt,
 		arg.LastSeenAt,
 		arg.ExpiresAt,
+		arg.AuthenticatedAt,
 	)
 	return err
 }
 
 const listSessionsForUser = `-- name: ListSessionsForUser :many
-SELECT id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at FROM sessions WHERE user_id = $1 AND expires_at > $2 ORDER BY last_seen_at DESC
+SELECT id, user_id, token_hash, device_name, user_agent, created_at, last_seen_at, expires_at, authenticated_at FROM sessions WHERE user_id = $1 AND expires_at > $2 ORDER BY last_seen_at DESC
 `
 
 type ListSessionsForUserParams struct {
@@ -127,6 +130,7 @@ func (q *Queries) ListSessionsForUser(ctx context.Context, arg ListSessionsForUs
 			&i.CreatedAt,
 			&i.LastSeenAt,
 			&i.ExpiresAt,
+			&i.AuthenticatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -136,6 +140,25 @@ func (q *Queries) ListSessionsForUser(ctx context.Context, arg ListSessionsForUs
 		return nil, err
 	}
 	return items, nil
+}
+
+const markSessionAuthenticated = `-- name: MarkSessionAuthenticated :execrows
+UPDATE sessions SET authenticated_at = $2 WHERE id = $1 AND user_id = $3
+`
+
+type MarkSessionAuthenticatedParams struct {
+	ID              uuid.UUID
+	AuthenticatedAt time.Time
+	UserID          uuid.UUID
+}
+
+// Records that the session's user just confirmed their password.
+func (q *Queries) MarkSessionAuthenticated(ctx context.Context, arg MarkSessionAuthenticatedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markSessionAuthenticated, arg.ID, arg.AuthenticatedAt, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const touchSession = `-- name: TouchSession :exec

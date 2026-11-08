@@ -107,11 +107,14 @@ func (handler *Handler) ConfirmTotp(ctx context.Context, request api.ConfirmTotp
 
 // RemoveTotp answers DELETE /api/v1/auth/mfa/totp/{authenticatorId}.
 func (handler *Handler) RemoveTotp(ctx context.Context, request api.RemoveTotpRequestObject) (api.RemoveTotpResponseObject, error) {
-	principal, ok := session.PrincipalFrom(ctx)
-	if !ok {
-		return nil, errNoPrincipal
+	principal, recent, err := handler.recentPrincipal(ctx)
+	if err != nil {
+		return nil, err
 	}
-	err := handler.dependencies.MFA.RemoveTOTP(ctx, principal.UserID, request.AuthenticatorId)
+	if !recent {
+		return api.RemoveTotp403JSONResponse{ReauthenticationRequiredJSONResponse: reauthenticationRequired()}, nil
+	}
+	err = handler.dependencies.MFA.RemoveTOTP(ctx, principal.UserID, request.AuthenticatorId)
 	if errors.Is(err, mfa.ErrNotFound) {
 		return api.RemoveTotp404JSONResponse(apiresponse.Error("authenticator_not_found", err)), nil
 	}
@@ -123,9 +126,12 @@ func (handler *Handler) RemoveTotp(ctx context.Context, request api.RemoveTotpRe
 
 // RegenerateBackupCodes answers POST /api/v1/auth/mfa/backup-codes.
 func (handler *Handler) RegenerateBackupCodes(ctx context.Context, _ api.RegenerateBackupCodesRequestObject) (api.RegenerateBackupCodesResponseObject, error) {
-	principal, ok := session.PrincipalFrom(ctx)
-	if !ok {
-		return nil, errNoPrincipal
+	principal, recent, err := handler.recentPrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !recent {
+		return api.RegenerateBackupCodes403JSONResponse{ReauthenticationRequiredJSONResponse: reauthenticationRequired()}, nil
 	}
 	codes, err := handler.dependencies.MFA.GenerateBackupCodes(ctx, principal.UserID)
 	if err != nil {

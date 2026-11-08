@@ -42,6 +42,7 @@ type sessionStore interface {
 	TouchSession(ctx context.Context, arg store.TouchSessionParams) error
 	ListSessionsForUser(ctx context.Context, arg store.ListSessionsForUserParams) ([]store.Session, error)
 	DeleteSession(ctx context.Context, arg store.DeleteSessionParams) (int64, error)
+	MarkSessionAuthenticated(ctx context.Context, arg store.MarkSessionAuthenticatedParams) (int64, error)
 }
 
 // Device describes the client creating a session, as shown in the session
@@ -72,7 +73,7 @@ func (service *Service) Create(ctx context.Context, userID uuid.UUID, device Dev
 	session := store.Session{
 		ID: uuid.Must(uuid.NewV7()), UserID: userID, TokenHash: hashToken(token),
 		DeviceName: device.Name, UserAgent: device.UserAgent,
-		CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(Lifetime),
+		CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(Lifetime), AuthenticatedAt: now,
 	}
 	err := service.store.InsertSession(ctx, store.InsertSessionParams(session))
 	if err != nil {
@@ -106,6 +107,21 @@ func (service *Service) Authenticate(ctx context.Context, token string) (store.S
 		}
 	}
 	return session, nil
+}
+
+// MarkAuthenticated records that the user of principal's session just
+// confirmed their password.
+func (service *Service) MarkAuthenticated(ctx context.Context, principal Principal) error {
+	updated, err := service.store.MarkSessionAuthenticated(ctx, store.MarkSessionAuthenticatedParams{
+		ID: principal.SessionID, AuthenticatedAt: service.clock.Now(), UserID: principal.UserID,
+	})
+	if err != nil {
+		return fmt.Errorf("recording authentication: %w", err)
+	}
+	if updated == 0 {
+		return ErrInvalidSession // revoked in the meantime
+	}
+	return nil
 }
 
 // List returns the user's active sessions, most recently used first.

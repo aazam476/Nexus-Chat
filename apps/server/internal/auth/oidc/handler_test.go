@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,7 @@ func newHandlerFixture(t *testing.T, users fakeUsers) handlerFixture {
 	t.Helper()
 	fixture := handlerFixture{signInFixture: newSignInFixture(t), user: uuid.New()}
 	fixture.handler = NewHandler(fixture.service, fixture.providers, users, fixture.settings)
-	fixture.ctx = session.WithPrincipal(t.Context(), session.Principal{UserID: fixture.user})
+	fixture.ctx = session.WithPrincipal(t.Context(), session.Principal{UserID: fixture.user, AuthenticatedAt: testNow})
 	return fixture
 }
 
@@ -297,4 +298,18 @@ func TestSelfServiceHandlersNeedAPrincipal(t *testing.T) {
 	require.ErrorIs(t, err, errNoPrincipal)
 	_, err = handler.UnlinkProvider(ctx, api.UnlinkProviderRequestObject{})
 	assert.ErrorIs(t, err, errNoPrincipal)
+}
+
+func TestLinkingAndUnlinkingNeedARecentLogin(t *testing.T) {
+	fixture := newHandlerFixture(t, fakeUsers{})
+	stale := session.WithPrincipal(t.Context(), session.Principal{UserID: fixture.user, AuthenticatedAt: testNow.Add(-session.RecentAuthentication - time.Second)})
+
+	begun, err := fixture.handler.BeginProviderLink(stale, api.BeginProviderLinkRequestObject{ProviderId: "company", Body: &api.BeginProviderLinkRequest{ReturnTo: "/settings"}})
+	require.NoError(t, err)
+	assert.Equal(t, "reauthentication_required", begun.(api.BeginProviderLink403JSONResponse).Code) //nolint:forcetypeassert // the test fails otherwise
+	assert.Empty(t, fixture.store.flows, "no flow is started")
+
+	unlinked, err := fixture.handler.UnlinkProvider(stale, api.UnlinkProviderRequestObject{ProviderId: "company"})
+	require.NoError(t, err)
+	assert.IsType(t, api.UnlinkProvider403JSONResponse{}, unlinked)
 }

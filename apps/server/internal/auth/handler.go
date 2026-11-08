@@ -13,6 +13,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/apiresponse"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 )
 
 const rateLimitRetrySeconds = 60
@@ -42,6 +43,8 @@ type HandlerDependencies struct {
 	// PasskeyLimiter limits passkey-login starts per client IP; each one
 	// stores a challenge.
 	PasskeyLimiter attemptLimiter
+	// Clock decides whether a session logged in recently enough.
+	Clock clock.Clock
 }
 
 type attemptLimiter interface {

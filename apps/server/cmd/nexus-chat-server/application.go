@@ -234,6 +234,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 				Store: passkeysstore.New(app.pool), Users: accountQueries, Domain: settings, Clock: system,
 			}),
 			PasskeyLimiter: ratelimit.New(ratelimit.PerMinute(20, 10), system),
+			Clock:          system,
 		}),
 		Registration: registration.NewHandler(registrations, registration.NewInvites(registrationstore.New(app.pool), system), accountQueries),
 	}

@@ -134,15 +134,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   expires, `ADMIN_EMAIL` gets an email through the instance's SMTP
   settings, once per threshold and certificate, even across restarts.
 
+- Recent re-authentication: removing an authenticator app or a security
+  key or passkey, replacing backup codes, adding a passkey or security key,
+  and linking or unlinking a provider need the session to have logged in,
+  or confirmed its password (`POST /api/v1/auth/reauthenticate`), within
+  the last 10 minutes, so a stolen session cannot add its own way back in.
+  Account deletion (later) uses the same check.
+
 Still to do in M2: Maestro flows, visual
 snapshots with the worst-case fixtures, and the mutation-testing tool for
 auth.
 
 ## Known issues
-
-- Removing a second factor or regenerating backup codes needs only a valid
-  session; it should also ask for recent re-authentication (password or
-  passkey). Planned together with account deletion's re-authentication.
 
 - Mutation testing tool for Go is chosen in M2 (see ADR 0001).
 - Moderate and low `pnpm audit` findings remain in development-only tools

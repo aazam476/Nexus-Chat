@@ -459,6 +459,51 @@ paths:
                 $ref: "#/components/schemas/Error"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/reauthenticate:
+    post:
+      operationId: reauthenticate
+      summary: Confirm my password before a sensitive change
+      description: |
+        Marks this session as recently authenticated for 10 minutes, which
+        changes to how the account logs in require (removing a second
+        factor, adding a passkey, linking a provider). Accounts without a
+        password log in again instead. Wrong passwords count towards the
+        same per-account delays as login.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReauthenticateRequest"
+      responses:
+        "204":
+          description: Confirmed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            The password is wrong (`invalid_credentials`), or the account has
+            no password and must log in again (`no_password`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Too many attempts from this address (`rate_limited`) or for this account (`login_delayed`).
+          headers:
+            Retry-After:
+              description: Seconds to wait before trying again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/auth/mfa:
     get:
       operationId: getSecondFactors
@@ -557,6 +602,8 @@ paths:
           description: Removed.
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
         "404":
           description: No such authenticator (`authenticator_not_found`).
           content:
@@ -580,6 +627,8 @@ paths:
                 $ref: "#/components/schemas/BackupCodes"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
   /api/v1/auth/login/mfa/security-key/begin:
     post:
       operationId: beginSecurityKeyLogin
@@ -724,6 +773,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
         "409":
           $ref: "#/components/responses/WebAuthnUnavailable"
   /api/v1/auth/webauthn/register/finish:
@@ -776,6 +827,8 @@ paths:
           description: Removed.
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
         "404":
           description: No such credential (`credential_not_found`).
           content:
@@ -959,6 +1012,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
         "404":
           $ref: "#/components/responses/ProviderNotFound"
         "409":
@@ -1034,6 +1089,8 @@ paths:
           description: The provider no longer signs in to this account.
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
         "404":
           description: This account is not linked to that provider (`not_linked`).
           content:
@@ -1577,6 +1634,15 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    ReauthenticationRequired:
+      description: |
+        This change needs a recent login (`reauthentication_required`): the
+        session must have logged in, or confirmed the password with
+        `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Unauthorized:
       description: The request has no valid session token (`unauthorized`).
       content:
@@ -1953,6 +2019,13 @@ components:
         lastUsedAt:
           type: string
           format: date-time
+    ReauthenticateRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
     LoginRequest:
       type: object
       additionalProperties: false

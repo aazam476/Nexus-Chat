@@ -32,9 +32,12 @@ func (handler *Handler) ListWebAuthnCredentials(ctx context.Context, _ api.ListW
 
 // BeginWebAuthnRegistration answers POST /api/v1/auth/webauthn/register/begin.
 func (handler *Handler) BeginWebAuthnRegistration(ctx context.Context, request api.BeginWebAuthnRegistrationRequestObject) (api.BeginWebAuthnRegistrationResponseObject, error) {
-	principal, ok := session.PrincipalFrom(ctx)
-	if !ok {
-		return nil, errNoPrincipal
+	principal, recent, err := handler.recentPrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !recent {
+		return api.BeginWebAuthnRegistration403JSONResponse{ReauthenticationRequiredJSONResponse: reauthenticationRequired()}, nil
 	}
 	started, err := handler.dependencies.Passkeys.BeginRegistration(ctx, principal.UserID, string(request.Body.Kind), apiresponse.DeviceName(request.Body.Name))
 	if errors.Is(err, passkeys.ErrNoDomain) {
@@ -77,11 +80,14 @@ func (handler *Handler) FinishWebAuthnRegistration(ctx context.Context, request 
 
 // RemoveWebAuthnCredential answers DELETE /api/v1/auth/webauthn/{credentialId}.
 func (handler *Handler) RemoveWebAuthnCredential(ctx context.Context, request api.RemoveWebAuthnCredentialRequestObject) (api.RemoveWebAuthnCredentialResponseObject, error) {
-	principal, ok := session.PrincipalFrom(ctx)
-	if !ok {
-		return nil, errNoPrincipal
+	principal, recent, err := handler.recentPrincipal(ctx)
+	if err != nil {
+		return nil, err
 	}
-	err := handler.dependencies.Passkeys.Remove(ctx, principal.UserID, request.CredentialId)
+	if !recent {
+		return api.RemoveWebAuthnCredential403JSONResponse{ReauthenticationRequiredJSONResponse: reauthenticationRequired()}, nil
+	}
+	err = handler.dependencies.Passkeys.Remove(ctx, principal.UserID, request.CredentialId)
 	if errors.Is(err, passkeys.ErrNotFound) {
 		return api.RemoveWebAuthnCredential404JSONResponse(apiresponse.Error("credential_not_found", err)), nil
 	}

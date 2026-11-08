@@ -55,6 +55,9 @@ func (handler *Handler) UnlinkProvider(ctx context.Context, request api.UnlinkPr
 	if !ok {
 		return nil, errNoPrincipal
 	}
+	if !handler.recent(principal) {
+		return api.UnlinkProvider403JSONResponse{ReauthenticationRequiredJSONResponse: reauthenticationRequired()}, nil
+	}
 	err := handler.signIn.Unlink(ctx, principal.UserID, request.ProviderId)
 	switch {
 	case err == nil:

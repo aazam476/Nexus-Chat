@@ -10,10 +10,11 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 )
 
 func settingsHandler(keys fakePasskeys, manager *fakeManager) *Handler {
-	return NewHandler(HandlerDependencies{Passkeys: keys, MFA: manager})
+	return NewHandler(HandlerDependencies{Clock: clock.Fixed{Time: now}, Passkeys: keys, MFA: manager})
 }
 
 func TestWebAuthnSettings(t *testing.T) {
