@@ -31,3 +31,4 @@ apps/client/android/
 apps/client/ios/
 maestro-report.xml
 packages/crypto/vectors/
+maestro-debug/

@@ -1,7 +1,6 @@
 # Password login: a wrong password is explained, the right one reaches the
 # home screen with live presence, and logging out returns to the login.
 appId: org.nexuschat.app
-name: Log in and out
 ---
 - runFlow: common/connect.yaml
 - assertVisible:

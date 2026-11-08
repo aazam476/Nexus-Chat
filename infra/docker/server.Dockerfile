@@ -9,7 +9,11 @@ FROM --platform=$BUILDPLATFORM node:26.13.0-trixie-slim@sha256:5adad64f9a1fca2d5
 WORKDIR /src
 RUN npm install --global pnpm@12.18.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+# The lockfile also refers to the patched dependencies and to the test
+# fixtures the client's tests use, so both must be present to install.
+COPY patches/ patches/
 COPY packages/ packages/
+COPY tests/fixtures/ tests/fixtures/
 COPY apps/client/ apps/client/
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile

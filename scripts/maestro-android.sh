@@ -11,10 +11,22 @@ apk="$1"
 setup_token="$2"
 repository_root="$(cd "$(dirname "$0")/.." && pwd)"
 
+debug_output="$repository_root/maestro-debug"
+
 adb wait-for-device
+# The emulator reports booted before its package manager is ready.
+until adb shell pm path android >/dev/null 2>&1; do sleep 2; done
 adb install -r "$apk"
-maestro test "$repository_root/apps/client/.maestro" \
+if ! maestro test "$repository_root/apps/client/.maestro" \
   --format junit --output "$repository_root/maestro-report.xml" \
+  --debug-output "$debug_output" \
   -e INSTANCE=http://10.0.2.2:8080 \
   -e SETUP_TOKEN="$setup_token" \
-  -e PASSWORD="maestro admin password"
+  -e PASSWORD="maestro admin password"; then
+  # Maestro prints only which flows failed; its log says why.
+  echo "== Maestro report"
+  cat "$repository_root/maestro-report.xml" 2>/dev/null || true
+  echo "== Maestro log (last 200 lines)"
+  find "$debug_output" -name 'maestro.log' -exec tail -n 200 {} \; 2>/dev/null || true
+  exit 1
+fi

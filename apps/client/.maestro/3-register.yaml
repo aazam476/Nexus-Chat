@@ -1,6 +1,5 @@
 # A second user signs up and lands on the home screen.
 appId: org.nexuschat.app
-name: Sign up
 ---
 - runFlow: common/connect.yaml
 - scrollUntilVisible:

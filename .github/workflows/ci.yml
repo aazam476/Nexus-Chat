@@ -163,6 +163,7 @@ jobs:
           api-level: 35
           arch: x86_64
           target: google_apis
+          ram-size: 4096M
           disable-animations: true
           script: scripts/maestro-android.sh apps/client/android/app/build/outputs/apk/release/app-release.apk "$SETUP_TOKEN"
       - name: Keep the server log and Maestro report
@@ -173,7 +174,7 @@ jobs:
           path: |
             ${{ runner.temp }}/server.log
             maestro-report.xml
-            ~/.maestro/tests
+            maestro-debug
           retention-days: 14
 
   mutation:

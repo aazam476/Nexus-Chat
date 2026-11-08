@@ -1,7 +1,6 @@
 # The setup wizard on a fresh instance creates the first admin (spec §3.5).
 # Needs INSTANCE (e.g. http://10.0.2.2:8080), SETUP_TOKEN and PASSWORD.
 appId: org.nexuschat.app
-name: Setup wizard
 ---
 - runFlow: common/connect.yaml
 - assertVisible:
