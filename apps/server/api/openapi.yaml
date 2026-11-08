@@ -424,6 +424,208 @@ paths:
                 $ref: "#/components/schemas/BackupCodes"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/login/mfa/security-key/begin:
+    post:
+      operationId: beginSecurityKeyLogin
+      summary: Start the security-key step of a login
+      description: |
+        Uses up the MFA challenge and returns WebAuthn options for
+        `navigator.credentials.get()`. Finish with the ceremony ID.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChallengeRequest"
+      responses:
+        "200":
+          description: Pass `options` to the browser.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebAuthnCeremony"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The challenge is unknown or expired (`invalid_second_factor`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          $ref: "#/components/responses/WebAuthnUnavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/login/mfa/security-key/finish:
+    post:
+      operationId: finishSecurityKeyLogin
+      summary: Finish logging in with a security key
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebAuthnLoginAnswer"
+      responses:
+        "200":
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The key could not be verified or the request expired (`invalid_second_factor`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/passkey/begin:
+    post:
+      operationId: beginPasskeyLogin
+      summary: Start logging in with a passkey
+      description: No username or password is needed; the browser offers the passkeys it holds.
+      tags: [auth]
+      responses:
+        "200":
+          description: Pass `options` to `navigator.credentials.get()`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebAuthnCeremony"
+        "409":
+          $ref: "#/components/responses/WebAuthnUnavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/passkey/finish:
+    post:
+      operationId: finishPasskeyLogin
+      summary: Finish logging in with a passkey
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebAuthnLoginAnswer"
+      responses:
+        "200":
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The passkey could not be verified or the request expired (`invalid_passkey`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/webauthn:
+    get:
+      operationId: listWebAuthnCredentials
+      summary: My security keys and passkeys
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Every registered credential, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebAuthnCredential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/webauthn/register/begin:
+    post:
+      operationId: beginWebAuthnRegistration
+      summary: Start adding a security key or passkey
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebAuthnRegistrationRequest"
+      responses:
+        "200":
+          description: Pass `options` to `navigator.credentials.create()`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebAuthnCeremony"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/WebAuthnUnavailable"
+  /api/v1/auth/webauthn/register/finish:
+    post:
+      operationId: finishWebAuthnRegistration
+      summary: Finish adding a security key or passkey
+      description: |
+        When this is the account's first second factor, the response
+        includes ten backup codes, shown only this once.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebAuthnRegistrationAnswer"
+      responses:
+        "201":
+          description: The credential is registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotpConfirmation"
+        "400":
+          description: The credential could not be verified (`invalid_credential`) or the request expired (`ceremony_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/webauthn/{credentialId}:
+    delete:
+      operationId: removeWebAuthnCredential
+      summary: Remove a security key or passkey
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: credentialId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such credential (`credential_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/auth/logout:
     post:
       operationId: logout
@@ -594,6 +796,12 @@ components:
       scheme: bearer
       description: "A session token from `POST /api/v1/auth/login`, sent as `Authorization: Bearer nxs_…`."
   responses:
+    WebAuthnUnavailable:
+      description: Passkeys and security keys need the instance's domain to be set and HTTPS (`webauthn_unavailable`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Forbidden:
       description: Only instance admins may do this (`forbidden`).
       content:
@@ -813,7 +1021,7 @@ components:
             $ref: "#/components/schemas/MfaMethod"
     MfaMethod:
       type: string
-      enum: [totp, backup_code]
+      enum: [totp, security_key, backup_code]
     MfaLoginRequest:
       type: object
       additionalProperties: false
@@ -899,6 +1107,83 @@ components:
           type: array
           items:
             type: string
+    ChallengeRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeToken]
+      properties:
+        challengeToken:
+          type: string
+    WebAuthnCeremony:
+      type: object
+      additionalProperties: false
+      required: [ceremonyId, options]
+      properties:
+        ceremonyId:
+          type: string
+          format: uuid
+        options:
+          type: object
+          additionalProperties: true
+          description: WebAuthn options, as defined by the W3C WebAuthn specification.
+    WebAuthnLoginAnswer:
+      type: object
+      additionalProperties: false
+      required: [ceremonyId, credential, deviceName]
+      properties:
+        ceremonyId:
+          type: string
+          format: uuid
+        credential:
+          type: object
+          additionalProperties: true
+          description: The PublicKeyCredential from the browser, serialized as JSON.
+        deviceName:
+          type: string
+    WebAuthnRegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, name]
+      properties:
+        kind:
+          $ref: "#/components/schemas/WebAuthnKind"
+        name:
+          type: string
+    WebAuthnRegistrationAnswer:
+      type: object
+      additionalProperties: false
+      required: [ceremonyId, kind, credential]
+      properties:
+        ceremonyId:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/WebAuthnKind"
+        credential:
+          type: object
+          additionalProperties: true
+    WebAuthnKind:
+      type: string
+      enum: [passkey, security_key]
+      description: A passkey replaces the password; a security key is a second factor after it.
+    WebAuthnCredential:
+      type: object
+      additionalProperties: false
+      required: [id, kind, name, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/WebAuthnKind"
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
     LoginRequest:
       type: object
       additionalProperties: false

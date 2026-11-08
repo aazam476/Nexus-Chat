@@ -13,15 +13,20 @@ import (
 )
 
 type fakeFactors struct {
-	enabled   bool
-	totp      string
-	backup    string
-	err       error
-	enableErr error
+	enabled    bool
+	totp       string
+	backup     string
+	err        error
+	enableErr  error
+	methodsErr error
 }
 
 func (fake *fakeFactors) HasSecondFactor(context.Context, uuid.UUID) (bool, error) {
 	return fake.enabled, fake.enableErr
+}
+
+func (fake *fakeFactors) Methods(context.Context, uuid.UUID) ([]string, error) {
+	return []string{"totp", "backup_code"}, fake.methodsErr
 }
 
 func (fake *fakeFactors) VerifyTOTP(_ context.Context, _ uuid.UUID, code string) (bool, error) {
@@ -84,6 +89,7 @@ func TestPasswordAloneIsNotEnoughWithASecondFactor(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.MFAChallenge)
+	assert.Equal(t, []string{"totp", "backup_code"}, result.MFAMethods)
 	assert.Empty(t, result.Token, "no session before the second factor")
 }
 
@@ -161,4 +167,26 @@ func TestLoginFailsWhenSecondFactorsCannotBeRead(t *testing.T) {
 	})
 	_, err = setup.service.Login(t.Context(), attempt("alice", "right password"))
 	assert.ErrorIs(t, err, failure)
+}
+
+func TestLoginFailsWhenMethodsCannotBeListed(t *testing.T) {
+	setup := newFixture(func(d *Dependencies) { d.SecondFactors = &fakeFactors{enabled: true, methodsErr: errors.New("down")} })
+
+	_, err := setup.service.Login(t.Context(), attempt("alice", "right password"))
+
+	assert.Error(t, err)
+}
+
+func TestStartSessionAfterSecurityKey(t *testing.T) {
+	setup, _ := mfaFixture()
+	challenge := challengeFor(t, setup)
+
+	userID, err := setup.service.RedeemChallenge(t.Context(), challenge, "c")
+	require.NoError(t, err)
+	result, err := setup.service.StartSession(t.Context(), userID, attempt("", "").Device)
+
+	require.NoError(t, err)
+	assert.Equal(t, "nxs_token", result.Token)
+	_, err = setup.service.RedeemChallenge(t.Context(), challenge, "c")
+	assert.ErrorIs(t, err, ErrInvalidSecondFactor, "redeemed once")
 }

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -213,6 +213,101 @@ export const removeTotp = <ThrowOnError extends boolean = false>(options: Option
 export const regenerateBackupCodes = <ThrowOnError extends boolean = false>(options?: Options<RegenerateBackupCodesData, ThrowOnError>): RequestResult<RegenerateBackupCodesResponses, RegenerateBackupCodesErrors, ThrowOnError> => (options?.client ?? client).post<RegenerateBackupCodesResponses, RegenerateBackupCodesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/mfa/backup-codes',
+    ...options
+});
+
+/**
+ * Start the security-key step of a login
+ *
+ * Uses up the MFA challenge and returns WebAuthn options for
+ * `navigator.credentials.get()`. Finish with the ceremony ID.
+ *
+ */
+export const beginSecurityKeyLogin = <ThrowOnError extends boolean = false>(options: Options<BeginSecurityKeyLoginData, ThrowOnError>): RequestResult<BeginSecurityKeyLoginResponses, BeginSecurityKeyLoginErrors, ThrowOnError> => (options.client ?? client).post<BeginSecurityKeyLoginResponses, BeginSecurityKeyLoginErrors, ThrowOnError>({
+    url: '/api/v1/auth/login/mfa/security-key/begin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Finish logging in with a security key
+ */
+export const finishSecurityKeyLogin = <ThrowOnError extends boolean = false>(options: Options<FinishSecurityKeyLoginData, ThrowOnError>): RequestResult<FinishSecurityKeyLoginResponses, FinishSecurityKeyLoginErrors, ThrowOnError> => (options.client ?? client).post<FinishSecurityKeyLoginResponses, FinishSecurityKeyLoginErrors, ThrowOnError>({
+    url: '/api/v1/auth/login/mfa/security-key/finish',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Start logging in with a passkey
+ *
+ * No username or password is needed; the browser offers the passkeys it holds.
+ */
+export const beginPasskeyLogin = <ThrowOnError extends boolean = false>(options?: Options<BeginPasskeyLoginData, ThrowOnError>): RequestResult<BeginPasskeyLoginResponses, BeginPasskeyLoginErrors, ThrowOnError> => (options?.client ?? client).post<BeginPasskeyLoginResponses, BeginPasskeyLoginErrors, ThrowOnError>({ url: '/api/v1/auth/passkey/begin', ...options });
+
+/**
+ * Finish logging in with a passkey
+ */
+export const finishPasskeyLogin = <ThrowOnError extends boolean = false>(options: Options<FinishPasskeyLoginData, ThrowOnError>): RequestResult<FinishPasskeyLoginResponses, FinishPasskeyLoginErrors, ThrowOnError> => (options.client ?? client).post<FinishPasskeyLoginResponses, FinishPasskeyLoginErrors, ThrowOnError>({
+    url: '/api/v1/auth/passkey/finish',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * My security keys and passkeys
+ */
+export const listWebAuthnCredentials = <ThrowOnError extends boolean = false>(options?: Options<ListWebAuthnCredentialsData, ThrowOnError>): RequestResult<ListWebAuthnCredentialsResponses, ListWebAuthnCredentialsErrors, ThrowOnError> => (options?.client ?? client).get<ListWebAuthnCredentialsResponses, ListWebAuthnCredentialsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/webauthn',
+    ...options
+});
+
+/**
+ * Start adding a security key or passkey
+ */
+export const beginWebAuthnRegistration = <ThrowOnError extends boolean = false>(options: Options<BeginWebAuthnRegistrationData, ThrowOnError>): RequestResult<BeginWebAuthnRegistrationResponses, BeginWebAuthnRegistrationErrors, ThrowOnError> => (options.client ?? client).post<BeginWebAuthnRegistrationResponses, BeginWebAuthnRegistrationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/webauthn/register/begin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Finish adding a security key or passkey
+ *
+ * When this is the account's first second factor, the response
+ * includes ten backup codes, shown only this once.
+ *
+ */
+export const finishWebAuthnRegistration = <ThrowOnError extends boolean = false>(options: Options<FinishWebAuthnRegistrationData, ThrowOnError>): RequestResult<FinishWebAuthnRegistrationResponses, FinishWebAuthnRegistrationErrors, ThrowOnError> => (options.client ?? client).post<FinishWebAuthnRegistrationResponses, FinishWebAuthnRegistrationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/webauthn/register/finish',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a security key or passkey
+ */
+export const removeWebAuthnCredential = <ThrowOnError extends boolean = false>(options: Options<RemoveWebAuthnCredentialData, ThrowOnError>): RequestResult<RemoveWebAuthnCredentialResponses, RemoveWebAuthnCredentialErrors, ThrowOnError> => (options.client ?? client).delete<RemoveWebAuthnCredentialResponses, RemoveWebAuthnCredentialErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/webauthn/{credentialId}',
     ...options
 });
 

@@ -291,3 +291,20 @@ func TestListTOTP(t *testing.T) {
 	_, err = service.ListTOTP(t.Context(), alice)
 	assert.Error(t, err)
 }
+
+func TestMethods(t *testing.T) {
+	service, fake, clock := newService(t)
+	methods, err := service.Methods(t.Context(), alice)
+	require.NoError(t, err)
+	assert.Empty(t, methods)
+
+	enrolled(t, service, clock)
+	fake.webauthn = 1
+	methods, err = service.Methods(t.Context(), alice)
+	require.NoError(t, err)
+	assert.Equal(t, []string{MethodTOTP, MethodSecurityKey, MethodBackupCode}, methods)
+
+	fake.fail, fake.failOn = errors.New("down"), "CountFactorsByKind"
+	_, err = service.Methods(t.Context(), alice)
+	assert.Error(t, err)
+}

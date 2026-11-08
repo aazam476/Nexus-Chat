@@ -23,6 +23,7 @@ type secondFactorManager interface {
 	RemoveTOTP(ctx context.Context, userID uuid.UUID, id uuid.UUID) error
 	GenerateBackupCodes(ctx context.Context, userID uuid.UUID) ([]string, error)
 	RemainingBackupCodes(ctx context.Context, userID uuid.UUID) (int64, error)
+	BackupCodesIfFirstFactor(ctx context.Context, userID uuid.UUID) ([]string, error)
 }
 
 // CompleteLoginMfa answers POST /api/v1/auth/login/mfa.

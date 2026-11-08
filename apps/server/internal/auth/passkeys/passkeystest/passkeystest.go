@@ -1,4 +1,8 @@
-package passkeys
+// Package passkeystest provides a software FIDO2 authenticator for tests.
+// It produces the bytes a real authenticator would (W3C WebAuthn §6.1
+// authenticator data, "none" attestation, ES256 signatures), so the real
+// verification in go-webauthn runs against it.
+package passkeystest
 
 import (
 	"crypto/ecdsa"
@@ -14,33 +18,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// softwareAuthenticator is a minimal FIDO2 authenticator for tests. It
-// produces the same bytes a real one would (W3C WebAuthn §6.1 authenticator
-// data, "none" attestation, ES256 signatures), so the library's real
-// verification runs against it.
-type softwareAuthenticator struct {
+// Authenticator is one software security key or passkey.
+type Authenticator struct {
 	key          *ecdsa.PrivateKey
 	credentialID []byte
 	signCount    uint32
-	userHandle   []byte
+	// rpID is the domain the authenticator signs for.
+	rpID string
+	// UserHandle is sent with assertions when set, as a passkey does.
+	UserHandle []byte
 }
 
-const testOrigin = "https://chat.example.com"
-const testRPID = "chat.example.com"
-
-func newSoftwareAuthenticator(t *testing.T) *softwareAuthenticator {
+// New returns an authenticator with a fresh key for rpID.
+func New(t testing.TB, rpID string) *Authenticator {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 	credentialID := make([]byte, 16)
 	_, _ = rand.Read(credentialID)
-	return &softwareAuthenticator{key: key, credentialID: credentialID}
+	return &Authenticator{key: key, credentialID: credentialID, rpID: rpID}
 }
 
-var encode = base64.RawURLEncoding.EncodeToString
+// encode is the base64url form WebAuthn uses on the wire.
+func encode(data []byte) string {
+	return base64.RawURLEncoding.EncodeToString(data)
+}
 
 // challengeFrom pulls publicKey.challenge out of the options the server sent.
-func challengeFrom(t *testing.T, options []byte) string {
+func challengeFrom(t testing.TB, options []byte) string {
 	t.Helper()
 	var decoded struct {
 		PublicKey struct {
@@ -52,7 +57,7 @@ func challengeFrom(t *testing.T, options []byte) string {
 	return decoded.PublicKey.Challenge
 }
 
-func clientData(t *testing.T, kind string, challenge string, origin string) []byte {
+func clientData(t testing.TB, kind string, challenge string, origin string) []byte {
 	t.Helper()
 	data, err := json.Marshal(map[string]string{"type": kind, "challenge": challenge, "origin": origin})
 	require.NoError(t, err)
@@ -61,9 +66,9 @@ func clientData(t *testing.T, kind string, challenge string, origin string) []by
 
 // authenticatorData: RP ID hash, flags, counter, and (when registering)
 // the attested credential data with the public key in COSE form.
-func (authenticator *softwareAuthenticator) authenticatorData(t *testing.T, rpID string, attested bool) []byte {
+func (authenticator *Authenticator) authenticatorData(t testing.TB, attested bool) []byte {
 	t.Helper()
-	rpHash := sha256.Sum256([]byte(rpID))
+	rpHash := sha256.Sum256([]byte(authenticator.rpID))
 	flags := byte(0x01 | 0x04) // user present, user verified
 	if attested {
 		flags |= 0x40
@@ -86,11 +91,12 @@ func (authenticator *softwareAuthenticator) authenticatorData(t *testing.T, rpID
 	return append(data, publicKey...)
 }
 
-// register answers navigator.credentials.create().
-func (authenticator *softwareAuthenticator) register(t *testing.T, options []byte, origin string) []byte {
+// Register answers navigator.credentials.create() for options, as if the
+// page were served from origin.
+func (authenticator *Authenticator) Register(t testing.TB, options []byte, origin string) []byte {
 	t.Helper()
 	attestation, err := cbor.Marshal(map[string]any{
-		"fmt": "none", "attStmt": map[string]any{}, "authData": authenticator.authenticatorData(t, testRPID, true),
+		"fmt": "none", "attStmt": map[string]any{}, "authData": authenticator.authenticatorData(t, true),
 	})
 	require.NoError(t, err)
 	return authenticator.credentialJSON(t, map[string]any{
@@ -99,11 +105,11 @@ func (authenticator *softwareAuthenticator) register(t *testing.T, options []byt
 	})
 }
 
-// assert answers navigator.credentials.get().
-func (authenticator *softwareAuthenticator) assert(t *testing.T, options []byte) []byte {
+// Assert answers navigator.credentials.get() for options from origin.
+func (authenticator *Authenticator) Assert(t testing.TB, options []byte, origin string) []byte {
 	t.Helper()
-	data := authenticator.authenticatorData(t, testRPID, false)
-	client := clientData(t, "webauthn.get", challengeFrom(t, options), testOrigin)
+	data := authenticator.authenticatorData(t, false)
+	client := clientData(t, "webauthn.get", challengeFrom(t, options), origin)
 	clientHash := sha256.Sum256(client)
 	digest := sha256.Sum256(append(append([]byte{}, data...), clientHash[:]...))
 	signature, err := ecdsa.SignASN1(rand.Reader, authenticator.key, digest[:])
@@ -111,13 +117,13 @@ func (authenticator *softwareAuthenticator) assert(t *testing.T, options []byte)
 	response := map[string]any{
 		"clientDataJSON": encode(client), "authenticatorData": encode(data), "signature": encode(signature),
 	}
-	if authenticator.userHandle != nil {
-		response["userHandle"] = encode(authenticator.userHandle)
+	if authenticator.UserHandle != nil {
+		response["userHandle"] = encode(authenticator.UserHandle)
 	}
 	return authenticator.credentialJSON(t, response)
 }
 
-func (authenticator *softwareAuthenticator) credentialJSON(t *testing.T, response map[string]any) []byte {
+func (authenticator *Authenticator) credentialJSON(t testing.TB, response map[string]any) []byte {
 	t.Helper()
 	encoded, err := json.Marshal(map[string]any{
 		"id": encode(authenticator.credentialID), "rawId": encode(authenticator.credentialID),

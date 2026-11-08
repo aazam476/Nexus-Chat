@@ -60,3 +60,48 @@ func hashBackupCode(code string) [sha256.Size]byte {
 	normalized := strings.ToUpper(strings.NewReplacer("-", "", " ", "").Replace(strings.TrimSpace(code)))
 	return sha256.Sum256([]byte(normalized))
 }
+
+// Second-factor method names, as offered on the login screen.
+const (
+	MethodTOTP        = "totp"
+	MethodSecurityKey = "security_key"
+	MethodBackupCode  = "backup_code"
+)
+
+// Methods returns the second-factor methods the user can log in with.
+func (service *Service) Methods(ctx context.Context, userID uuid.UUID) ([]string, error) {
+	counts, err := service.store.CountFactorsByKind(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("counting second factors: %w", err)
+	}
+	var methods []string
+	if counts.Totp > 0 {
+		methods = append(methods, MethodTOTP)
+	}
+	if counts.Webauthn > 0 {
+		methods = append(methods, MethodSecurityKey)
+	}
+	if counts.BackupCodes > 0 {
+		methods = append(methods, MethodBackupCode)
+	}
+	return methods, nil
+}
+
+// BackupCodesIfFirstFactor creates backup codes when the user has just set
+// up their first second factor and has none yet, and returns them (shown
+// once). Otherwise it returns nil. Security-key and passkey registration
+// call it, matching what ConfirmTOTP does for authenticator apps.
+func (service *Service) BackupCodesIfFirstFactor(ctx context.Context, userID uuid.UUID) ([]string, error) {
+	factors, err := service.store.CountSecondFactors(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("counting second factors: %w", err)
+	}
+	remaining, err := service.RemainingBackupCodes(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if factors != 1 || remaining > 0 {
+		return nil, nil
+	}
+	return service.GenerateBackupCodes(ctx, userID)
+}

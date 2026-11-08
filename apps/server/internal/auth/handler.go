@@ -38,6 +38,14 @@ type HandlerDependencies struct {
 	Emails   verificationSender
 	Users    accounts.UserReader
 	MFA      secondFactorManager
+	Passkeys passkeyService
+	// PasskeyLimiter limits passkey-login starts per client IP; each one
+	// stores a challenge.
+	PasskeyLimiter attemptLimiter
+}
+
+type attemptLimiter interface {
+	Allow(key string) bool
 }
 
 // Handler serves the auth endpoints.
@@ -69,10 +77,11 @@ func (handler *Handler) Login(ctx context.Context, request api.LoginRequestObjec
 	case err != nil:
 		return nil, err
 	case result.MFAChallenge != "":
-		return api.Login202JSONResponse{
-			ChallengeToken: result.MFAChallenge,
-			Methods:        []api.MfaMethod{api.MfaMethodTotp, api.MfaMethodBackupCode},
-		}, nil
+		methods := make([]api.MfaMethod, 0, len(result.MFAMethods))
+		for _, method := range result.MFAMethods {
+			methods = append(methods, api.MfaMethod(method))
+		}
+		return api.Login202JSONResponse{ChallengeToken: result.MFAChallenge, Methods: methods}, nil
 	}
 	return api.Login200JSONResponse{
 		Token:   result.Token,

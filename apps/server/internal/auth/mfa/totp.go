@@ -45,6 +45,7 @@ type mfaStore interface {
 	InsertBackupCode(ctx context.Context, arg store.InsertBackupCodeParams) error
 	UseBackupCode(ctx context.Context, arg store.UseBackupCodeParams) (int64, error)
 	CountBackupCodes(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountFactorsByKind(ctx context.Context, userID uuid.UUID) (store.CountFactorsByKindRow, error)
 }
 
 // Service manages a user's TOTP authenticators and backup codes.

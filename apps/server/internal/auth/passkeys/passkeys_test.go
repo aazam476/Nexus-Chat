@@ -9,7 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys/passkeystest"
+
 	accountsstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
+)
+
+const (
+	testOrigin = "https://chat.example.com"
+	testRPID   = "chat.example.com"
 )
 
 var alice = accountsstore.User{ID: uuid.MustParse("01900000-0000-7000-8000-0000000000a1"), Username: "alice", DisplayName: "Alice"}
@@ -34,14 +41,14 @@ func newFixture(domain fixedDomain) fixture {
 func defaultFixture() fixture { return newFixture(fixedDomain{domain: testRPID}) }
 
 // registered adds a credential of kind for alice and returns its authenticator.
-func registered(t *testing.T, setup fixture, kind string) *softwareAuthenticator {
+func registered(t *testing.T, setup fixture, kind string) *passkeystest.Authenticator {
 	t.Helper()
-	authenticator := newSoftwareAuthenticator(t)
+	authenticator := passkeystest.New(t, testRPID)
 	started, err := setup.service.BeginRegistration(t.Context(), alice.ID, kind, "My key")
 	require.NoError(t, err)
-	response := authenticator.register(t, started.Options, testOrigin)
+	response := authenticator.Register(t, started.Options, testOrigin)
 	require.NoError(t, setup.service.FinishRegistration(t.Context(), Answer{UserID: alice.ID, CeremonyID: started.CeremonyID, Kind: kind, Response: response}))
-	authenticator.userHandle = alice.ID[:]
+	authenticator.UserHandle = alice.ID[:]
 	return authenticator
 }
 
@@ -58,7 +65,7 @@ func TestRegisterAndUseASecurityKey(t *testing.T) {
 
 	started, err := setup.service.BeginSecondFactor(t.Context(), alice.ID)
 	require.NoError(t, err)
-	userID, err := setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, authenticator.assert(t, started.Options))
+	userID, err := setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, authenticator.Assert(t, started.Options, testOrigin))
 
 	require.NoError(t, err)
 	assert.Equal(t, alice.ID, userID)
@@ -73,7 +80,7 @@ func TestPasskeyLoginWithoutAPassword(t *testing.T) {
 
 	started, err := setup.service.BeginPasskeyLogin(t.Context())
 	require.NoError(t, err)
-	userID, err := setup.service.FinishPasskeyLogin(t.Context(), started.CeremonyID, authenticator.assert(t, started.Options))
+	userID, err := setup.service.FinishPasskeyLogin(t.Context(), started.CeremonyID, authenticator.Assert(t, started.Options, testOrigin))
 
 	require.NoError(t, err)
 	assert.Equal(t, alice.ID, userID)
@@ -85,11 +92,11 @@ func TestPasskeyLoginRejectsUnknownOwners(t *testing.T) {
 
 	for name, handle := range map[string][]byte{"not a uuid": []byte("x"), "unknown account": func() []byte { id := uuid.New(); return id[:] }()} {
 		t.Run(name, func(t *testing.T) {
-			authenticator.userHandle = handle
+			authenticator.UserHandle = handle
 			started, err := setup.service.BeginPasskeyLogin(t.Context())
 			require.NoError(t, err)
 
-			_, err = setup.service.FinishPasskeyLogin(t.Context(), started.CeremonyID, authenticator.assert(t, started.Options))
+			_, err = setup.service.FinishPasskeyLogin(t.Context(), started.CeremonyID, authenticator.Assert(t, started.Options, testOrigin))
 
 			assert.ErrorIs(t, err, ErrVerificationFails)
 		})
@@ -101,7 +108,7 @@ func TestCeremoniesAreSingleUseAndExpire(t *testing.T) {
 	authenticator := registered(t, setup, KindSecurityKey)
 	started, err := setup.service.BeginSecondFactor(t.Context(), alice.ID)
 	require.NoError(t, err)
-	answer := authenticator.assert(t, started.Options)
+	answer := authenticator.Assert(t, started.Options, testOrigin)
 
 	_, err = setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, answer)
 	require.NoError(t, err)
@@ -111,18 +118,18 @@ func TestCeremoniesAreSingleUseAndExpire(t *testing.T) {
 	late, err := setup.service.BeginSecondFactor(t.Context(), alice.ID)
 	require.NoError(t, err)
 	setup.clock.now = setup.clock.now.Add(6 * time.Minute)
-	_, err = setup.service.FinishSecondFactor(t.Context(), late.CeremonyID, authenticator.assert(t, late.Options))
+	_, err = setup.service.FinishSecondFactor(t.Context(), late.CeremonyID, authenticator.Assert(t, late.Options, testOrigin))
 	assert.ErrorIs(t, err, ErrCeremonyNotFound)
 }
 
 func TestWrongOriginOrResponseIsRejected(t *testing.T) {
 	setup := defaultFixture()
-	authenticator := newSoftwareAuthenticator(t)
+	authenticator := passkeystest.New(t, testRPID)
 	started, err := setup.service.BeginRegistration(t.Context(), alice.ID, KindPasskey, "Phishing")
 	require.NoError(t, err)
 
 	err = setup.service.FinishRegistration(t.Context(), Answer{UserID: alice.ID, CeremonyID: started.CeremonyID, Kind: KindPasskey,
-		Response: authenticator.register(t, started.Options, "https://evil.example.net")})
+		Response: authenticator.Register(t, started.Options, "https://evil.example.net")})
 	require.ErrorIs(t, err, ErrVerificationFails, "a response made for another site must fail")
 
 	again, err := setup.service.BeginRegistration(t.Context(), alice.ID, KindPasskey, "Broken")
@@ -133,10 +140,10 @@ func TestWrongOriginOrResponseIsRejected(t *testing.T) {
 
 func TestCeremoniesAreBoundToPurposeAndUser(t *testing.T) {
 	setup := defaultFixture()
-	authenticator := newSoftwareAuthenticator(t)
+	authenticator := passkeystest.New(t, testRPID)
 	started, err := setup.service.BeginRegistration(t.Context(), alice.ID, KindPasskey, "Phone")
 	require.NoError(t, err)
-	response := authenticator.register(t, started.Options, testOrigin)
+	response := authenticator.Register(t, started.Options, testOrigin)
 
 	err = setup.service.FinishRegistration(t.Context(), Answer{UserID: alice.ID, CeremonyID: started.CeremonyID, Kind: KindSecurityKey, Response: response})
 	require.ErrorIs(t, err, ErrCeremonyNotFound, "a passkey ceremony cannot register a security key")

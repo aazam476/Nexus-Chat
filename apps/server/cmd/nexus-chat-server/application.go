@@ -22,6 +22,8 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa"
 	mfastore "github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys"
+	passkeysstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password/breached"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passwordreset"
@@ -205,6 +207,10 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 			Logins: logins, Sessions: app.sessions, Resets: resets,
 			Verifier: emails.NewVerifier(accountTokens, accountQueries, system), Emails: accountEmails, Users: accountQueries,
 			MFA: inputs.secondFactors,
+			Passkeys: passkeys.NewService(passkeys.Dependencies{
+				Store: passkeysstore.New(app.pool), Users: accountQueries, Domain: settings, Clock: system,
+			}),
+			PasskeyLimiter: ratelimit.New(ratelimit.PerMinute(20, 10), system),
 		}),
 		Registration: registration.NewHandler(registrations, registration.NewInvites(registrationstore.New(app.pool), system), accountQueries),
 	}

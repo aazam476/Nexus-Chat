@@ -71,6 +71,7 @@ type secondFactors interface {
 	HasSecondFactor(ctx context.Context, userID uuid.UUID) (bool, error)
 	VerifyTOTP(ctx context.Context, userID uuid.UUID, code string) (bool, error)
 	UseBackupCode(ctx context.Context, userID uuid.UUID, code string) (bool, error)
+	Methods(ctx context.Context, userID uuid.UUID) ([]string, error)
 }
 
 // challengeTokens is satisfied by *tokens.Service.
@@ -100,12 +101,13 @@ type Request struct {
 
 // Result is a successful login. If MFAChallenge is set, the password was
 // right but the account has a second factor: no session exists yet, and the
-// client must call CompleteMFA with the challenge.
+// client must finish with one of MFAMethods.
 type Result struct {
 	Token        string
 	Session      sessionstore.Session
 	User         accountsstore.User
 	MFAChallenge string
+	MFAMethods   []string
 }
 
 // Service performs logins.
@@ -132,11 +134,15 @@ func (service *Service) Login(ctx context.Context, request Request) (Result, err
 	if !needsSecondFactor {
 		return service.startSession(ctx, user, request.Device)
 	}
+	methods, err := service.dependencies.SecondFactors.Methods(ctx, user.ID)
+	if err != nil {
+		return Result{}, err
+	}
 	challenge, err := service.dependencies.Challenges.Issue(ctx, user.ID, tokens.MFALogin)
 	if err != nil {
 		return Result{}, err
 	}
-	return Result{MFAChallenge: challenge}, nil
+	return Result{MFAChallenge: challenge, MFAMethods: methods}, nil
 }
 
 // authenticate applies the rate limit and lockout and checks the password.

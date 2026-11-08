@@ -41,3 +41,11 @@ DELETE FROM backup_codes WHERE user_id = $1 AND code_hash = $2;
 
 -- name: CountBackupCodes :one
 SELECT count(*) FROM backup_codes WHERE user_id = $1;
+
+-- name: CountFactorsByKind :one
+-- How many of each kind of second factor the user has, to tell the login
+-- screen which methods to offer.
+SELECT
+    (SELECT count(*) FROM totp_credentials t WHERE t.user_id = $1 AND t.confirmed_at IS NOT NULL)::bigint AS totp,
+    (SELECT count(*) FROM webauthn_credentials w WHERE w.user_id = $1)::bigint AS webauthn,
+    (SELECT count(*) FROM backup_codes b WHERE b.user_id = $1)::bigint AS backup_codes;

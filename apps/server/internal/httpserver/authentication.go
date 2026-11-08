@@ -16,16 +16,20 @@ import (
 // closed. TestPublicOperationsMatchTheContract checks this list against the
 // `security` declarations in api/openapi.yaml.
 var publicOperations = map[string]bool{ //nolint:gochecknoglobals // constant lookup table
-	"GetLiveness":           true,
-	"GetReadiness":          true,
-	"GetSetupStatus":        true,
-	"CompleteSetup":         true,
-	"Login":                 true,
-	"Register":              true,
-	"VerifyEmail":           true,
-	"RequestPasswordReset":  true,
-	"CompletePasswordReset": true,
-	"CompleteLoginMfa":      true,
+	"GetLiveness":            true,
+	"GetReadiness":           true,
+	"GetSetupStatus":         true,
+	"CompleteSetup":          true,
+	"Login":                  true,
+	"Register":               true,
+	"VerifyEmail":            true,
+	"RequestPasswordReset":   true,
+	"CompletePasswordReset":  true,
+	"CompleteLoginMfa":       true,
+	"BeginSecurityKeyLogin":  true,
+	"FinishSecurityKeyLogin": true,
+	"BeginPasskeyLogin":      true,
+	"FinishPasskeyLogin":     true,
 }
 
 // Authenticator checks session tokens; *session.Service satisfies it.

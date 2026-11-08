@@ -219,6 +219,7 @@ func discard() *slog.Logger { return slog.New(slog.DiscardHandler) }
 type noFactors struct{}
 
 func (noFactors) HasSecondFactor(context.Context, uuid.UUID) (bool, error) { return false, nil }
+func (noFactors) Methods(context.Context, uuid.UUID) ([]string, error)     { return nil, nil }
 func (noFactors) VerifyTOTP(context.Context, uuid.UUID, string) (bool, error) {
 	return false, nil
 }

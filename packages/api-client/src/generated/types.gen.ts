@@ -147,7 +147,7 @@ export type MfaChallenge = {
     methods: Array<MfaMethod>;
 };
 
-export type MfaMethod = 'totp' | 'backup_code';
+export type MfaMethod = 'totp' | 'security_key' | 'backup_code';
 
 export type MfaLoginRequest = {
     challengeToken: string;
@@ -199,6 +199,57 @@ export type TotpConfirmation = {
 
 export type BackupCodes = {
     codes: Array<string>;
+};
+
+export type ChallengeRequest = {
+    challengeToken: string;
+};
+
+export type WebAuthnCeremony = {
+    ceremonyId: string;
+    /**
+     * WebAuthn options, as defined by the W3C WebAuthn specification.
+     */
+    options: {
+        [key: string]: unknown;
+    };
+};
+
+export type WebAuthnLoginAnswer = {
+    ceremonyId: string;
+    /**
+     * The PublicKeyCredential from the browser, serialized as JSON.
+     */
+    credential: {
+        [key: string]: unknown;
+    };
+    deviceName: string;
+};
+
+export type WebAuthnRegistrationRequest = {
+    kind: WebAuthnKind;
+    name: string;
+};
+
+export type WebAuthnRegistrationAnswer = {
+    ceremonyId: string;
+    kind: WebAuthnKind;
+    credential: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * A passkey replaces the password; a security key is a second factor after it.
+ */
+export type WebAuthnKind = 'passkey' | 'security_key';
+
+export type WebAuthnCredential = {
+    id: string;
+    kind: WebAuthnKind;
+    name: string;
+    createdAt: string;
+    lastUsedAt?: string;
 };
 
 export type LoginRequest = {
@@ -728,6 +779,248 @@ export type RegenerateBackupCodesResponses = {
 };
 
 export type RegenerateBackupCodesResponse = RegenerateBackupCodesResponses[keyof RegenerateBackupCodesResponses];
+
+export type BeginSecurityKeyLoginData = {
+    body: ChallengeRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login/mfa/security-key/begin';
+};
+
+export type BeginSecurityKeyLoginErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The challenge is unknown or expired (`invalid_second_factor`).
+     */
+    401: Error;
+    /**
+     * Passkeys and security keys need the instance's domain to be set and HTTPS (`webauthn_unavailable`).
+     */
+    409: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type BeginSecurityKeyLoginError = BeginSecurityKeyLoginErrors[keyof BeginSecurityKeyLoginErrors];
+
+export type BeginSecurityKeyLoginResponses = {
+    /**
+     * Pass `options` to the browser.
+     */
+    200: WebAuthnCeremony;
+};
+
+export type BeginSecurityKeyLoginResponse = BeginSecurityKeyLoginResponses[keyof BeginSecurityKeyLoginResponses];
+
+export type FinishSecurityKeyLoginData = {
+    body: WebAuthnLoginAnswer;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login/mfa/security-key/finish';
+};
+
+export type FinishSecurityKeyLoginErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The key could not be verified or the request expired (`invalid_second_factor`).
+     */
+    401: Error;
+};
+
+export type FinishSecurityKeyLoginError = FinishSecurityKeyLoginErrors[keyof FinishSecurityKeyLoginErrors];
+
+export type FinishSecurityKeyLoginResponses = {
+    /**
+     * Logged in.
+     */
+    200: LoginResult;
+};
+
+export type FinishSecurityKeyLoginResponse = FinishSecurityKeyLoginResponses[keyof FinishSecurityKeyLoginResponses];
+
+export type BeginPasskeyLoginData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/passkey/begin';
+};
+
+export type BeginPasskeyLoginErrors = {
+    /**
+     * Passkeys and security keys need the instance's domain to be set and HTTPS (`webauthn_unavailable`).
+     */
+    409: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type BeginPasskeyLoginError = BeginPasskeyLoginErrors[keyof BeginPasskeyLoginErrors];
+
+export type BeginPasskeyLoginResponses = {
+    /**
+     * Pass `options` to `navigator.credentials.get()`.
+     */
+    200: WebAuthnCeremony;
+};
+
+export type BeginPasskeyLoginResponse = BeginPasskeyLoginResponses[keyof BeginPasskeyLoginResponses];
+
+export type FinishPasskeyLoginData = {
+    body: WebAuthnLoginAnswer;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/passkey/finish';
+};
+
+export type FinishPasskeyLoginErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The passkey could not be verified or the request expired (`invalid_passkey`).
+     */
+    401: Error;
+};
+
+export type FinishPasskeyLoginError = FinishPasskeyLoginErrors[keyof FinishPasskeyLoginErrors];
+
+export type FinishPasskeyLoginResponses = {
+    /**
+     * Logged in.
+     */
+    200: LoginResult;
+};
+
+export type FinishPasskeyLoginResponse = FinishPasskeyLoginResponses[keyof FinishPasskeyLoginResponses];
+
+export type ListWebAuthnCredentialsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/webauthn';
+};
+
+export type ListWebAuthnCredentialsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListWebAuthnCredentialsError = ListWebAuthnCredentialsErrors[keyof ListWebAuthnCredentialsErrors];
+
+export type ListWebAuthnCredentialsResponses = {
+    /**
+     * Every registered credential, oldest first.
+     */
+    200: Array<WebAuthnCredential>;
+};
+
+export type ListWebAuthnCredentialsResponse = ListWebAuthnCredentialsResponses[keyof ListWebAuthnCredentialsResponses];
+
+export type BeginWebAuthnRegistrationData = {
+    body: WebAuthnRegistrationRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/webauthn/register/begin';
+};
+
+export type BeginWebAuthnRegistrationErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Passkeys and security keys need the instance's domain to be set and HTTPS (`webauthn_unavailable`).
+     */
+    409: Error;
+};
+
+export type BeginWebAuthnRegistrationError = BeginWebAuthnRegistrationErrors[keyof BeginWebAuthnRegistrationErrors];
+
+export type BeginWebAuthnRegistrationResponses = {
+    /**
+     * Pass `options` to `navigator.credentials.create()`.
+     */
+    200: WebAuthnCeremony;
+};
+
+export type BeginWebAuthnRegistrationResponse = BeginWebAuthnRegistrationResponses[keyof BeginWebAuthnRegistrationResponses];
+
+export type FinishWebAuthnRegistrationData = {
+    body: WebAuthnRegistrationAnswer;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/webauthn/register/finish';
+};
+
+export type FinishWebAuthnRegistrationErrors = {
+    /**
+     * The credential could not be verified (`invalid_credential`) or the request expired (`ceremony_not_found`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type FinishWebAuthnRegistrationError = FinishWebAuthnRegistrationErrors[keyof FinishWebAuthnRegistrationErrors];
+
+export type FinishWebAuthnRegistrationResponses = {
+    /**
+     * The credential is registered.
+     */
+    201: TotpConfirmation;
+};
+
+export type FinishWebAuthnRegistrationResponse = FinishWebAuthnRegistrationResponses[keyof FinishWebAuthnRegistrationResponses];
+
+export type RemoveWebAuthnCredentialData = {
+    body?: never;
+    path: {
+        credentialId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/webauthn/{credentialId}';
+};
+
+export type RemoveWebAuthnCredentialErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such credential (`credential_not_found`).
+     */
+    404: Error;
+};
+
+export type RemoveWebAuthnCredentialError = RemoveWebAuthnCredentialErrors[keyof RemoveWebAuthnCredentialErrors];
+
+export type RemoveWebAuthnCredentialResponses = {
+    /**
+     * Removed.
+     */
+    204: void;
+};
+
+export type RemoveWebAuthnCredentialResponse = RemoveWebAuthnCredentialResponses[keyof RemoveWebAuthnCredentialResponses];
 
 export type LogoutData = {
     body?: never;

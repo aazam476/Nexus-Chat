@@ -41,6 +41,28 @@ func (q *Queries) CountBackupCodes(ctx context.Context, userID uuid.UUID) (int64
 	return count, err
 }
 
+const countFactorsByKind = `-- name: CountFactorsByKind :one
+SELECT
+    (SELECT count(*) FROM totp_credentials t WHERE t.user_id = $1 AND t.confirmed_at IS NOT NULL)::bigint AS totp,
+    (SELECT count(*) FROM webauthn_credentials w WHERE w.user_id = $1)::bigint AS webauthn,
+    (SELECT count(*) FROM backup_codes b WHERE b.user_id = $1)::bigint AS backup_codes
+`
+
+type CountFactorsByKindRow struct {
+	Totp        int64
+	Webauthn    int64
+	BackupCodes int64
+}
+
+// How many of each kind of second factor the user has, to tell the login
+// screen which methods to offer.
+func (q *Queries) CountFactorsByKind(ctx context.Context, userID uuid.UUID) (CountFactorsByKindRow, error) {
+	row := q.db.QueryRow(ctx, countFactorsByKind, userID)
+	var i CountFactorsByKindRow
+	err := row.Scan(&i.Totp, &i.Webauthn, &i.BackupCodes)
+	return i, err
+}
+
 const countSecondFactors = `-- name: CountSecondFactors :one
 SELECT ((SELECT count(*) FROM totp_credentials t WHERE t.user_id = $1 AND t.confirmed_at IS NOT NULL)
      + (SELECT count(*) FROM webauthn_credentials w WHERE w.user_id = $1))::bigint AS count

@@ -37,14 +37,17 @@ func (e HealthState) Valid() bool {
 
 // Defines values for MfaMethod.
 const (
-	MfaMethodBackupCode MfaMethod = "backup_code"
-	MfaMethodTotp       MfaMethod = "totp"
+	MfaMethodBackupCode  MfaMethod = "backup_code"
+	MfaMethodSecurityKey MfaMethod = "security_key"
+	MfaMethodTotp        MfaMethod = "totp"
 )
 
 // Valid indicates whether the value is a known member of the MfaMethod enum.
 func (e MfaMethod) Valid() bool {
 	switch e {
 	case MfaMethodBackupCode:
+		return true
+	case MfaMethodSecurityKey:
 		return true
 	case MfaMethodTotp:
 		return true
@@ -74,6 +77,24 @@ func (e RegistrationMode) Valid() bool {
 	}
 }
 
+// Defines values for WebAuthnKind.
+const (
+	WebAuthnKindPasskey     WebAuthnKind = "passkey"
+	WebAuthnKindSecurityKey WebAuthnKind = "security_key"
+)
+
+// Valid indicates whether the value is a known member of the WebAuthnKind enum.
+func (e WebAuthnKind) Valid() bool {
+	switch e {
+	case WebAuthnKindPasskey:
+		return true
+	case WebAuthnKindSecurityKey:
+		return true
+	default:
+		return false
+	}
+}
+
 // Authenticator defines model for Authenticator.
 type Authenticator struct {
 	CreatedAt time.Time          `json:"createdAt"`
@@ -84,6 +105,11 @@ type Authenticator struct {
 // BackupCodes defines model for BackupCodes.
 type BackupCodes struct {
 	Codes []string `json:"codes"`
+}
+
+// ChallengeRequest defines model for ChallengeRequest.
+type ChallengeRequest struct {
+	ChallengeToken string `json:"challengeToken"`
 }
 
 // CodeRequest defines model for CodeRequest.
@@ -327,6 +353,53 @@ type TotpEnrollment struct {
 	Secret string `json:"secret"`
 }
 
+// WebAuthnCeremony defines model for WebAuthnCeremony.
+type WebAuthnCeremony struct {
+	CeremonyId openapi_types.UUID `json:"ceremonyId"`
+
+	// Options WebAuthn options, as defined by the W3C WebAuthn specification.
+	Options map[string]interface{} `json:"options"`
+}
+
+// WebAuthnCredential defines model for WebAuthnCredential.
+type WebAuthnCredential struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind A passkey replaces the password; a security key is a second factor after it.
+	Kind       WebAuthnKind `json:"kind"`
+	LastUsedAt *time.Time   `json:"lastUsedAt,omitempty"`
+	Name       string       `json:"name"`
+}
+
+// WebAuthnKind A passkey replaces the password; a security key is a second factor after it.
+type WebAuthnKind string
+
+// WebAuthnLoginAnswer defines model for WebAuthnLoginAnswer.
+type WebAuthnLoginAnswer struct {
+	CeremonyId openapi_types.UUID `json:"ceremonyId"`
+
+	// Credential The PublicKeyCredential from the browser, serialized as JSON.
+	Credential map[string]interface{} `json:"credential"`
+	DeviceName string                 `json:"deviceName"`
+}
+
+// WebAuthnRegistrationAnswer defines model for WebAuthnRegistrationAnswer.
+type WebAuthnRegistrationAnswer struct {
+	CeremonyId openapi_types.UUID     `json:"ceremonyId"`
+	Credential map[string]interface{} `json:"credential"`
+
+	// Kind A passkey replaces the password; a security key is a second factor after it.
+	Kind WebAuthnKind `json:"kind"`
+}
+
+// WebAuthnRegistrationRequest defines model for WebAuthnRegistrationRequest.
+type WebAuthnRegistrationRequest struct {
+	// Kind A passkey replaces the password; a security key is a second factor after it.
+	Kind WebAuthnKind `json:"kind"`
+	Name string       `json:"name"`
+}
+
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
 
@@ -342,6 +415,9 @@ type Unauthorized = Error
 // ValidationFailed defines model for ValidationFailed.
 type ValidationFailed = Error
 
+// WebAuthnUnavailable defines model for WebAuthnUnavailable.
+type WebAuthnUnavailable = Error
+
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
 
@@ -351,11 +427,20 @@ type LoginJSONRequestBody = LoginRequest
 // CompleteLoginMfaJSONRequestBody defines body for CompleteLoginMfa for application/json ContentType.
 type CompleteLoginMfaJSONRequestBody = MfaLoginRequest
 
+// BeginSecurityKeyLoginJSONRequestBody defines body for BeginSecurityKeyLogin for application/json ContentType.
+type BeginSecurityKeyLoginJSONRequestBody = ChallengeRequest
+
+// FinishSecurityKeyLoginJSONRequestBody defines body for FinishSecurityKeyLogin for application/json ContentType.
+type FinishSecurityKeyLoginJSONRequestBody = WebAuthnLoginAnswer
+
 // EnrollTotpJSONRequestBody defines body for EnrollTotp for application/json ContentType.
 type EnrollTotpJSONRequestBody = EnrollTotpRequest
 
 // ConfirmTotpJSONRequestBody defines body for ConfirmTotp for application/json ContentType.
 type ConfirmTotpJSONRequestBody = CodeRequest
+
+// FinishPasskeyLoginJSONRequestBody defines body for FinishPasskeyLogin for application/json ContentType.
+type FinishPasskeyLoginJSONRequestBody = WebAuthnLoginAnswer
 
 // RequestPasswordResetJSONRequestBody defines body for RequestPasswordReset for application/json ContentType.
 type RequestPasswordResetJSONRequestBody = PasswordResetRequest
@@ -368,6 +453,12 @@ type RegisterJSONRequestBody = RegisterRequest
 
 // VerifyEmailJSONRequestBody defines body for VerifyEmail for application/json ContentType.
 type VerifyEmailJSONRequestBody = TokenRequest
+
+// BeginWebAuthnRegistrationJSONRequestBody defines body for BeginWebAuthnRegistration for application/json ContentType.
+type BeginWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationRequest
+
+// FinishWebAuthnRegistrationJSONRequestBody defines body for FinishWebAuthnRegistration for application/json ContentType.
+type FinishWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationAnswer
 
 // CompleteSetupJSONRequestBody defines body for CompleteSetup for application/json ContentType.
 type CompleteSetupJSONRequestBody = SetupRequest
@@ -389,6 +480,12 @@ type ServerInterface interface {
 	// CompleteLoginMfa Finish logging in with a second factor
 	// (POST /api/v1/auth/login/mfa)
 	CompleteLoginMfa(w http.ResponseWriter, r *http.Request)
+	// BeginSecurityKeyLogin Start the security-key step of a login
+	// (POST /api/v1/auth/login/mfa/security-key/begin)
+	BeginSecurityKeyLogin(w http.ResponseWriter, r *http.Request)
+	// FinishSecurityKeyLogin Finish logging in with a security key
+	// (POST /api/v1/auth/login/mfa/security-key/finish)
+	FinishSecurityKeyLogin(w http.ResponseWriter, r *http.Request)
 	// Logout Log out
 	// (POST /api/v1/auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
@@ -407,6 +504,12 @@ type ServerInterface interface {
 	// ConfirmTotp Finish adding an authenticator app
 	// (POST /api/v1/auth/mfa/totp/{enrollmentId}/confirm)
 	ConfirmTotp(w http.ResponseWriter, r *http.Request, enrollmentId openapi_types.UUID)
+	// BeginPasskeyLogin Start logging in with a passkey
+	// (POST /api/v1/auth/passkey/begin)
+	BeginPasskeyLogin(w http.ResponseWriter, r *http.Request)
+	// FinishPasskeyLogin Finish logging in with a passkey
+	// (POST /api/v1/auth/passkey/finish)
+	FinishPasskeyLogin(w http.ResponseWriter, r *http.Request)
 	// RequestPasswordReset Ask for a password reset link
 	// (POST /api/v1/auth/password-reset)
 	RequestPasswordReset(w http.ResponseWriter, r *http.Request)
@@ -428,6 +531,18 @@ type ServerInterface interface {
 	// ResendVerificationEmail Send the verification email again
 	// (POST /api/v1/auth/verify-email/resend)
 	ResendVerificationEmail(w http.ResponseWriter, r *http.Request)
+	// ListWebAuthnCredentials My security keys and passkeys
+	// (GET /api/v1/auth/webauthn)
+	ListWebAuthnCredentials(w http.ResponseWriter, r *http.Request)
+	// BeginWebAuthnRegistration Start adding a security key or passkey
+	// (POST /api/v1/auth/webauthn/register/begin)
+	BeginWebAuthnRegistration(w http.ResponseWriter, r *http.Request)
+	// FinishWebAuthnRegistration Finish adding a security key or passkey
+	// (POST /api/v1/auth/webauthn/register/finish)
+	FinishWebAuthnRegistration(w http.ResponseWriter, r *http.Request)
+	// RemoveWebAuthnCredential Remove a security key or passkey
+	// (DELETE /api/v1/auth/webauthn/{credentialId})
+	RemoveWebAuthnCredential(w http.ResponseWriter, r *http.Request, credentialId openapi_types.UUID)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(w http.ResponseWriter, r *http.Request)
@@ -527,6 +642,34 @@ func (siw *ServerInterfaceWrapper) CompleteLoginMfa(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CompleteLoginMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BeginSecurityKeyLogin operation middleware
+func (siw *ServerInterfaceWrapper) BeginSecurityKeyLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginSecurityKeyLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FinishSecurityKeyLogin operation middleware
+func (siw *ServerInterfaceWrapper) FinishSecurityKeyLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FinishSecurityKeyLogin(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -644,6 +787,34 @@ func (siw *ServerInterfaceWrapper) ConfirmTotp(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// BeginPasskeyLogin operation middleware
+func (siw *ServerInterfaceWrapper) BeginPasskeyLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginPasskeyLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FinishPasskeyLogin operation middleware
+func (siw *ServerInterfaceWrapper) FinishPasskeyLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FinishPasskeyLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RequestPasswordReset operation middleware
 func (siw *ServerInterfaceWrapper) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 
@@ -745,6 +916,74 @@ func (siw *ServerInterfaceWrapper) ResendVerificationEmail(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResendVerificationEmail(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListWebAuthnCredentials operation middleware
+func (siw *ServerInterfaceWrapper) ListWebAuthnCredentials(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWebAuthnCredentials(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BeginWebAuthnRegistration operation middleware
+func (siw *ServerInterfaceWrapper) BeginWebAuthnRegistration(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginWebAuthnRegistration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FinishWebAuthnRegistration operation middleware
+func (siw *ServerInterfaceWrapper) FinishWebAuthnRegistration(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FinishWebAuthnRegistration(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveWebAuthnCredential operation middleware
+func (siw *ServerInterfaceWrapper) RemoveWebAuthnCredential(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "credentialId" -------------
+	var credentialId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "credentialId", r.PathValue("credentialId"), &credentialId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "credentialId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveWebAuthnCredential(w, r, credentialId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -959,6 +1198,14 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/totp/{enrollmentId}/confirm", wrapper.ConfirmTotp)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/mfa/totp/{authenticatorId}", wrapper.RemoveTotp)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/backup-codes", wrapper.RegenerateBackupCodes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login/mfa/security-key/begin", wrapper.BeginSecurityKeyLogin)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login/mfa/security-key/finish", wrapper.FinishSecurityKeyLogin)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/passkey/begin", wrapper.BeginPasskeyLogin)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/passkey/finish", wrapper.FinishPasskeyLogin)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/webauthn", wrapper.ListWebAuthnCredentials)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/webauthn/register/begin", wrapper.BeginWebAuthnRegistration)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/webauthn/register/finish", wrapper.FinishWebAuthnRegistration)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/webauthn/{credentialId}", wrapper.RemoveWebAuthnCredential)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/sessions", wrapper.ListSessions)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/sessions/{sessionId}", wrapper.RevokeSession)
@@ -980,6 +1227,8 @@ type RateLimitedJSONResponse Error
 type UnauthorizedJSONResponse Error
 
 type ValidationFailedJSONResponse Error
+
+type WebAuthnUnavailableJSONResponse Error
 
 type ListInvitesRequestObject struct {
 }
@@ -1318,6 +1567,136 @@ func (response CompleteLoginMfa429JSONResponse) VisitCompleteLoginMfaResponse(w 
 	return err
 }
 
+type BeginSecurityKeyLoginRequestObject struct {
+	Body *BeginSecurityKeyLoginJSONRequestBody
+}
+
+type BeginSecurityKeyLoginResponseObject interface {
+	VisitBeginSecurityKeyLoginResponse(w http.ResponseWriter) error
+}
+
+type BeginSecurityKeyLogin200JSONResponse WebAuthnCeremony
+
+func (response BeginSecurityKeyLogin200JSONResponse) VisitBeginSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginSecurityKeyLogin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BeginSecurityKeyLogin400JSONResponse) VisitBeginSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginSecurityKeyLogin401JSONResponse Error
+
+func (response BeginSecurityKeyLogin401JSONResponse) VisitBeginSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginSecurityKeyLogin409JSONResponse struct {
+	WebAuthnUnavailableJSONResponse
+}
+
+func (response BeginSecurityKeyLogin409JSONResponse) VisitBeginSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginSecurityKeyLogin429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response BeginSecurityKeyLogin429JSONResponse) VisitBeginSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishSecurityKeyLoginRequestObject struct {
+	Body *FinishSecurityKeyLoginJSONRequestBody
+}
+
+type FinishSecurityKeyLoginResponseObject interface {
+	VisitFinishSecurityKeyLoginResponse(w http.ResponseWriter) error
+}
+
+type FinishSecurityKeyLogin200JSONResponse LoginResult
+
+func (response FinishSecurityKeyLogin200JSONResponse) VisitFinishSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishSecurityKeyLogin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response FinishSecurityKeyLogin400JSONResponse) VisitFinishSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishSecurityKeyLogin401JSONResponse Error
+
+func (response FinishSecurityKeyLogin401JSONResponse) VisitFinishSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type LogoutRequestObject struct {
 }
 
@@ -1551,6 +1930,107 @@ func (response ConfirmTotp400JSONResponse) VisitConfirmTotpResponse(w http.Respo
 type ConfirmTotp401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response ConfirmTotp401JSONResponse) VisitConfirmTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginPasskeyLoginRequestObject struct {
+}
+
+type BeginPasskeyLoginResponseObject interface {
+	VisitBeginPasskeyLoginResponse(w http.ResponseWriter) error
+}
+
+type BeginPasskeyLogin200JSONResponse WebAuthnCeremony
+
+func (response BeginPasskeyLogin200JSONResponse) VisitBeginPasskeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginPasskeyLogin409JSONResponse struct {
+	WebAuthnUnavailableJSONResponse
+}
+
+func (response BeginPasskeyLogin409JSONResponse) VisitBeginPasskeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginPasskeyLogin429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response BeginPasskeyLogin429JSONResponse) VisitBeginPasskeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishPasskeyLoginRequestObject struct {
+	Body *FinishPasskeyLoginJSONRequestBody
+}
+
+type FinishPasskeyLoginResponseObject interface {
+	VisitFinishPasskeyLoginResponse(w http.ResponseWriter) error
+}
+
+type FinishPasskeyLogin200JSONResponse LoginResult
+
+func (response FinishPasskeyLogin200JSONResponse) VisitFinishPasskeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishPasskeyLogin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response FinishPasskeyLogin400JSONResponse) VisitFinishPasskeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishPasskeyLogin401JSONResponse Error
+
+func (response FinishPasskeyLogin401JSONResponse) VisitFinishPasskeyLoginResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1894,6 +2374,201 @@ func (response ResendVerificationEmail503JSONResponse) VisitResendVerificationEm
 	return err
 }
 
+type ListWebAuthnCredentialsRequestObject struct {
+}
+
+type ListWebAuthnCredentialsResponseObject interface {
+	VisitListWebAuthnCredentialsResponse(w http.ResponseWriter) error
+}
+
+type ListWebAuthnCredentials200JSONResponse []WebAuthnCredential
+
+func (response ListWebAuthnCredentials200JSONResponse) VisitListWebAuthnCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWebAuthnCredentials401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListWebAuthnCredentials401JSONResponse) VisitListWebAuthnCredentialsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginWebAuthnRegistrationRequestObject struct {
+	Body *BeginWebAuthnRegistrationJSONRequestBody
+}
+
+type BeginWebAuthnRegistrationResponseObject interface {
+	VisitBeginWebAuthnRegistrationResponse(w http.ResponseWriter) error
+}
+
+type BeginWebAuthnRegistration200JSONResponse WebAuthnCeremony
+
+func (response BeginWebAuthnRegistration200JSONResponse) VisitBeginWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginWebAuthnRegistration400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BeginWebAuthnRegistration400JSONResponse) VisitBeginWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginWebAuthnRegistration401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BeginWebAuthnRegistration401JSONResponse) VisitBeginWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginWebAuthnRegistration409JSONResponse struct {
+	WebAuthnUnavailableJSONResponse
+}
+
+func (response BeginWebAuthnRegistration409JSONResponse) VisitBeginWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishWebAuthnRegistrationRequestObject struct {
+	Body *FinishWebAuthnRegistrationJSONRequestBody
+}
+
+type FinishWebAuthnRegistrationResponseObject interface {
+	VisitFinishWebAuthnRegistrationResponse(w http.ResponseWriter) error
+}
+
+type FinishWebAuthnRegistration201JSONResponse TotpConfirmation
+
+func (response FinishWebAuthnRegistration201JSONResponse) VisitFinishWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishWebAuthnRegistration400JSONResponse Error
+
+func (response FinishWebAuthnRegistration400JSONResponse) VisitFinishWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishWebAuthnRegistration401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response FinishWebAuthnRegistration401JSONResponse) VisitFinishWebAuthnRegistrationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveWebAuthnCredentialRequestObject struct {
+	CredentialId openapi_types.UUID `json:"credentialId"`
+}
+
+type RemoveWebAuthnCredentialResponseObject interface {
+	VisitRemoveWebAuthnCredentialResponse(w http.ResponseWriter) error
+}
+
+type RemoveWebAuthnCredential204Response struct {
+}
+
+func (response RemoveWebAuthnCredential204Response) VisitRemoveWebAuthnCredentialResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveWebAuthnCredential401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveWebAuthnCredential401JSONResponse) VisitRemoveWebAuthnCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveWebAuthnCredential404JSONResponse Error
+
+func (response RemoveWebAuthnCredential404JSONResponse) VisitRemoveWebAuthnCredentialResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSetupStatusRequestObject struct {
 }
 
@@ -2115,6 +2790,12 @@ type StrictServerInterface interface {
 	// CompleteLoginMfa Finish logging in with a second factor
 	// (POST /api/v1/auth/login/mfa)
 	CompleteLoginMfa(ctx context.Context, request CompleteLoginMfaRequestObject) (CompleteLoginMfaResponseObject, error)
+	// BeginSecurityKeyLogin Start the security-key step of a login
+	// (POST /api/v1/auth/login/mfa/security-key/begin)
+	BeginSecurityKeyLogin(ctx context.Context, request BeginSecurityKeyLoginRequestObject) (BeginSecurityKeyLoginResponseObject, error)
+	// FinishSecurityKeyLogin Finish logging in with a security key
+	// (POST /api/v1/auth/login/mfa/security-key/finish)
+	FinishSecurityKeyLogin(ctx context.Context, request FinishSecurityKeyLoginRequestObject) (FinishSecurityKeyLoginResponseObject, error)
 	// Logout Log out
 	// (POST /api/v1/auth/logout)
 	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
@@ -2133,6 +2814,12 @@ type StrictServerInterface interface {
 	// ConfirmTotp Finish adding an authenticator app
 	// (POST /api/v1/auth/mfa/totp/{enrollmentId}/confirm)
 	ConfirmTotp(ctx context.Context, request ConfirmTotpRequestObject) (ConfirmTotpResponseObject, error)
+	// BeginPasskeyLogin Start logging in with a passkey
+	// (POST /api/v1/auth/passkey/begin)
+	BeginPasskeyLogin(ctx context.Context, request BeginPasskeyLoginRequestObject) (BeginPasskeyLoginResponseObject, error)
+	// FinishPasskeyLogin Finish logging in with a passkey
+	// (POST /api/v1/auth/passkey/finish)
+	FinishPasskeyLogin(ctx context.Context, request FinishPasskeyLoginRequestObject) (FinishPasskeyLoginResponseObject, error)
 	// RequestPasswordReset Ask for a password reset link
 	// (POST /api/v1/auth/password-reset)
 	RequestPasswordReset(ctx context.Context, request RequestPasswordResetRequestObject) (RequestPasswordResetResponseObject, error)
@@ -2154,6 +2841,18 @@ type StrictServerInterface interface {
 	// ResendVerificationEmail Send the verification email again
 	// (POST /api/v1/auth/verify-email/resend)
 	ResendVerificationEmail(ctx context.Context, request ResendVerificationEmailRequestObject) (ResendVerificationEmailResponseObject, error)
+	// ListWebAuthnCredentials My security keys and passkeys
+	// (GET /api/v1/auth/webauthn)
+	ListWebAuthnCredentials(ctx context.Context, request ListWebAuthnCredentialsRequestObject) (ListWebAuthnCredentialsResponseObject, error)
+	// BeginWebAuthnRegistration Start adding a security key or passkey
+	// (POST /api/v1/auth/webauthn/register/begin)
+	BeginWebAuthnRegistration(ctx context.Context, request BeginWebAuthnRegistrationRequestObject) (BeginWebAuthnRegistrationResponseObject, error)
+	// FinishWebAuthnRegistration Finish adding a security key or passkey
+	// (POST /api/v1/auth/webauthn/register/finish)
+	FinishWebAuthnRegistration(ctx context.Context, request FinishWebAuthnRegistrationRequestObject) (FinishWebAuthnRegistrationResponseObject, error)
+	// RemoveWebAuthnCredential Remove a security key or passkey
+	// (DELETE /api/v1/auth/webauthn/{credentialId})
+	RemoveWebAuthnCredential(ctx context.Context, request RemoveWebAuthnCredentialRequestObject) (RemoveWebAuthnCredentialResponseObject, error)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
@@ -2353,6 +3052,68 @@ func (sh *strictHandler) CompleteLoginMfa(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// BeginSecurityKeyLogin operation middleware
+func (sh *strictHandler) BeginSecurityKeyLogin(w http.ResponseWriter, r *http.Request) {
+	var request BeginSecurityKeyLoginRequestObject
+
+	var body BeginSecurityKeyLoginJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginSecurityKeyLogin(ctx, request.(BeginSecurityKeyLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginSecurityKeyLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginSecurityKeyLoginResponseObject); ok {
+		if err := validResponse.VisitBeginSecurityKeyLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FinishSecurityKeyLogin operation middleware
+func (sh *strictHandler) FinishSecurityKeyLogin(w http.ResponseWriter, r *http.Request) {
+	var request FinishSecurityKeyLoginRequestObject
+
+	var body FinishSecurityKeyLoginJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FinishSecurityKeyLogin(ctx, request.(FinishSecurityKeyLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FinishSecurityKeyLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FinishSecurityKeyLoginResponseObject); ok {
+		if err := validResponse.VisitFinishSecurityKeyLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Logout operation middleware
 func (sh *strictHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var request LogoutRequestObject
@@ -2508,6 +3269,61 @@ func (sh *strictHandler) ConfirmTotp(w http.ResponseWriter, r *http.Request, enr
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ConfirmTotpResponseObject); ok {
 		if err := validResponse.VisitConfirmTotpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BeginPasskeyLogin operation middleware
+func (sh *strictHandler) BeginPasskeyLogin(w http.ResponseWriter, r *http.Request) {
+	var request BeginPasskeyLoginRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginPasskeyLogin(ctx, request.(BeginPasskeyLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginPasskeyLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginPasskeyLoginResponseObject); ok {
+		if err := validResponse.VisitBeginPasskeyLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FinishPasskeyLogin operation middleware
+func (sh *strictHandler) FinishPasskeyLogin(w http.ResponseWriter, r *http.Request) {
+	var request FinishPasskeyLoginRequestObject
+
+	var body FinishPasskeyLoginJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FinishPasskeyLogin(ctx, request.(FinishPasskeyLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FinishPasskeyLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FinishPasskeyLoginResponseObject); ok {
+		if err := validResponse.VisitFinishPasskeyLoginResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2706,6 +3522,118 @@ func (sh *strictHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ResendVerificationEmailResponseObject); ok {
 		if err := validResponse.VisitResendVerificationEmailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListWebAuthnCredentials operation middleware
+func (sh *strictHandler) ListWebAuthnCredentials(w http.ResponseWriter, r *http.Request) {
+	var request ListWebAuthnCredentialsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWebAuthnCredentials(ctx, request.(ListWebAuthnCredentialsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWebAuthnCredentials")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWebAuthnCredentialsResponseObject); ok {
+		if err := validResponse.VisitListWebAuthnCredentialsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BeginWebAuthnRegistration operation middleware
+func (sh *strictHandler) BeginWebAuthnRegistration(w http.ResponseWriter, r *http.Request) {
+	var request BeginWebAuthnRegistrationRequestObject
+
+	var body BeginWebAuthnRegistrationJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginWebAuthnRegistration(ctx, request.(BeginWebAuthnRegistrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginWebAuthnRegistration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginWebAuthnRegistrationResponseObject); ok {
+		if err := validResponse.VisitBeginWebAuthnRegistrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FinishWebAuthnRegistration operation middleware
+func (sh *strictHandler) FinishWebAuthnRegistration(w http.ResponseWriter, r *http.Request) {
+	var request FinishWebAuthnRegistrationRequestObject
+
+	var body FinishWebAuthnRegistrationJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FinishWebAuthnRegistration(ctx, request.(FinishWebAuthnRegistrationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FinishWebAuthnRegistration")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FinishWebAuthnRegistrationResponseObject); ok {
+		if err := validResponse.VisitFinishWebAuthnRegistrationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveWebAuthnCredential operation middleware
+func (sh *strictHandler) RemoveWebAuthnCredential(w http.ResponseWriter, r *http.Request, credentialId openapi_types.UUID) {
+	var request RemoveWebAuthnCredentialRequestObject
+
+	request.CredentialId = credentialId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveWebAuthnCredential(ctx, request.(RemoveWebAuthnCredentialRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveWebAuthnCredential")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveWebAuthnCredentialResponseObject); ok {
+		if err := validResponse.VisitRemoveWebAuthnCredentialResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

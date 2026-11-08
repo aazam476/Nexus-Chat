@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
 )
@@ -30,15 +32,33 @@ type MFARequest struct {
 	ClientKey string
 }
 
-// CompleteMFA checks the second factor and starts the session.
-func (service *Service) CompleteMFA(ctx context.Context, request MFARequest) (Result, error) {
-	if !service.dependencies.Limiter.Allow(request.ClientKey) {
-		return Result{}, ErrRateLimited
+// RedeemChallenge uses up an MFA challenge and returns whose login it is.
+// Security keys call it when their ceremony starts, so the challenge still
+// allows only one attempt.
+func (service *Service) RedeemChallenge(ctx context.Context, challenge string, clientKey string) (uuid.UUID, error) {
+	if !service.dependencies.Limiter.Allow(clientKey) {
+		return uuid.Nil, ErrRateLimited
 	}
-	userID, err := service.dependencies.Challenges.Redeem(ctx, tokens.MFALogin, request.Challenge)
+	userID, err := service.dependencies.Challenges.Redeem(ctx, tokens.MFALogin, challenge)
 	if errors.Is(err, tokens.ErrInvalidToken) {
-		return Result{}, ErrInvalidSecondFactor
+		return uuid.Nil, ErrInvalidSecondFactor
 	}
+	return userID, err
+}
+
+// StartSession logs userID in once every factor has been checked elsewhere
+// (a security key, or a passkey alone).
+func (service *Service) StartSession(ctx context.Context, userID uuid.UUID, device session.Device) (Result, error) {
+	user, err := service.dependencies.Accounts.GetUserByID(ctx, userID)
+	if err != nil {
+		return Result{}, fmt.Errorf("loading account: %w", err)
+	}
+	return service.startSession(ctx, user, device)
+}
+
+// CompleteMFA checks a TOTP or backup code and starts the session.
+func (service *Service) CompleteMFA(ctx context.Context, request MFARequest) (Result, error) {
+	userID, err := service.RedeemChallenge(ctx, request.Challenge, request.ClientKey)
 	if err != nil {
 		return Result{}, err
 	}
@@ -55,9 +75,5 @@ func (service *Service) CompleteMFA(ctx context.Context, request MFARequest) (Re
 	if !accepted {
 		return Result{}, ErrInvalidSecondFactor
 	}
-	user, err := service.dependencies.Accounts.GetUserByID(ctx, userID)
-	if err != nil {
-		return Result{}, fmt.Errorf("loading account: %w", err)
-	}
-	return service.startSession(ctx, user, request.Device)
+	return service.StartSession(ctx, userID, request.Device)
 }

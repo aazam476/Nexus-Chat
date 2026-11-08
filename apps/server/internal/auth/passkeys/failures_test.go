@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys/passkeystest"
 )
 
 var errFailure = errors.New("failure")
@@ -85,10 +87,10 @@ func TestSavingFailures(t *testing.T) {
 	for _, method := range []string{"InsertCredential", "UpdateCredentialAfterUse"} {
 		t.Run(method, func(t *testing.T) {
 			setup := defaultFixture()
-			authenticator := newSoftwareAuthenticator(t)
+			authenticator := passkeystest.New(t, testRPID)
 			started, err := setup.service.BeginRegistration(t.Context(), alice.ID, KindPasskey, "x")
 			require.NoError(t, err)
-			response := authenticator.register(t, started.Options, testOrigin)
+			response := authenticator.Register(t, started.Options, testOrigin)
 			if method == "InsertCredential" {
 				setup.store.fail, setup.store.failOn = errFailure, method
 			}
@@ -98,11 +100,11 @@ func TestSavingFailures(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			authenticator.userHandle = alice.ID[:]
+			authenticator.UserHandle = alice.ID[:]
 			login, err := setup.service.BeginPasskeyLogin(t.Context())
 			require.NoError(t, err)
 			setup.store.fail, setup.store.failOn = errFailure, method
-			_, err = setup.service.FinishPasskeyLogin(t.Context(), login.CeremonyID, authenticator.assert(t, login.Options))
+			_, err = setup.service.FinishPasskeyLogin(t.Context(), login.CeremonyID, authenticator.Assert(t, login.Options, testOrigin))
 			assert.ErrorIs(t, err, errFailure)
 		})
 	}
@@ -115,13 +117,13 @@ func TestFinishFailsWhenTheDomainOrAccountBreaksMeanwhile(t *testing.T) {
 	second, err := setup.service.BeginSecondFactor(t.Context(), alice.ID)
 	require.NoError(t, err)
 	setup.users.err = errFailure
-	_, err = setup.service.FinishSecondFactor(t.Context(), second.CeremonyID, authenticator.assert(t, second.Options))
+	_, err = setup.service.FinishSecondFactor(t.Context(), second.CeremonyID, authenticator.Assert(t, second.Options, testOrigin))
 	require.ErrorIs(t, err, errFailure, "account lookup fails during finish")
 	setup.users.err = nil
 
 	registration, err := setup.service.BeginRegistration(t.Context(), alice.ID, KindPasskey, "x")
 	require.NoError(t, err)
-	response := newSoftwareAuthenticator(t).register(t, registration.Options, testOrigin)
+	response := passkeystest.New(t, testRPID).Register(t, registration.Options, testOrigin)
 	setup.users.err = errFailure
 	err = setup.service.FinishRegistration(t.Context(), Answer{UserID: alice.ID, CeremonyID: registration.CeremonyID, Kind: KindPasskey, Response: response})
 	require.ErrorIs(t, err, errFailure)
@@ -130,10 +132,10 @@ func TestFinishFailsWhenTheDomainOrAccountBreaksMeanwhile(t *testing.T) {
 	for name, finish := range map[string]func(Started) error{
 		"registration": func(started Started) error {
 			return setup.service.FinishRegistration(t.Context(), Answer{UserID: alice.ID, CeremonyID: started.CeremonyID, Kind: KindPasskey,
-				Response: newSoftwareAuthenticator(t).register(t, started.Options, testOrigin)})
+				Response: passkeystest.New(t, testRPID).Register(t, started.Options, testOrigin)})
 		},
 		"second factor": func(started Started) error {
-			_, err := setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, authenticator.assert(t, started.Options))
+			_, err := setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, authenticator.Assert(t, started.Options, testOrigin))
 			return err
 		},
 	} {
@@ -172,10 +174,10 @@ func TestSecondFactorRejectsBadAnswers(t *testing.T) {
 	_, err = setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, []byte("{}"))
 	require.ErrorIs(t, err, ErrVerificationFails)
 
-	stranger := newSoftwareAuthenticator(t)
+	stranger := passkeystest.New(t, testRPID)
 	started, err = setup.service.BeginSecondFactor(t.Context(), alice.ID)
 	require.NoError(t, err)
-	_, err = setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, stranger.assert(t, started.Options))
+	_, err = setup.service.FinishSecondFactor(t.Context(), started.CeremonyID, stranger.Assert(t, started.Options, testOrigin))
 	require.ErrorIs(t, err, ErrVerificationFails, "a key alice never registered")
 
 	started, err = setup.service.BeginPasskeyLogin(t.Context())

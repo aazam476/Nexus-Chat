@@ -17,6 +17,8 @@ type fakeStore struct {
 	fail        error
 	// failOn names the one method that returns fail; "" means every method.
 	failOn string
+	// webauthn is how many security keys the user has (kept elsewhere).
+	webauthn int64
 }
 
 // failure returns the configured error if method should fail.
@@ -133,4 +135,13 @@ func (fake *fakeStore) CountBackupCodes(_ context.Context, userID uuid.UUID) (in
 		}
 	}
 	return count, fake.failure("CountBackupCodes")
+}
+
+func (fake *fakeStore) CountFactorsByKind(ctx context.Context, userID uuid.UUID) (store.CountFactorsByKindRow, error) {
+	if err := fake.failure("CountFactorsByKind"); err != nil {
+		return store.CountFactorsByKindRow{}, err
+	}
+	totp, _ := fake.CountSecondFactors(ctx, userID)
+	codes, _ := fake.CountBackupCodes(ctx, userID)
+	return store.CountFactorsByKindRow{Totp: totp, Webauthn: fake.webauthn, BackupCodes: codes}, nil
 }

@@ -26,6 +26,8 @@ type fakeManager struct {
 	confirmErr   error
 	removeErr    error
 	remainingErr error
+	firstCodes   []string
+	firstErr     error
 }
 
 func (fake *fakeManager) EnrollTOTP(_ context.Context, _ uuid.UUID, accountName string, name string) (mfa.Enrollment, error) {
@@ -42,6 +44,9 @@ func (fake *fakeManager) RemoveTOTP(context.Context, uuid.UUID, uuid.UUID) error
 }
 func (fake *fakeManager) GenerateBackupCodes(context.Context, uuid.UUID) ([]string, error) {
 	return []string{"AAAAA-BBBBB"}, fake.err
+}
+func (fake *fakeManager) BackupCodesIfFirstFactor(context.Context, uuid.UUID) ([]string, error) {
+	return fake.firstCodes, fake.firstErr
 }
 func (fake *fakeManager) RemainingBackupCodes(context.Context, uuid.UUID) (int64, error) {
 	return 9, fake.remainingErr
@@ -133,6 +138,9 @@ func TestSecondFactorEndpointsNeedAPrincipal(t *testing.T) {
 type alwaysFactors struct{ accept bool }
 
 func (alwaysFactors) HasSecondFactor(context.Context, uuid.UUID) (bool, error) { return true, nil }
+func (alwaysFactors) Methods(context.Context, uuid.UUID) ([]string, error) {
+	return []string{"totp", "backup_code"}, nil
+}
 func (factors alwaysFactors) VerifyTOTP(context.Context, uuid.UUID, string) (bool, error) {
 	return factors.accept, nil
 }
