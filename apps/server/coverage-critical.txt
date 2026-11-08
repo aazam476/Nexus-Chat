@@ -3,3 +3,4 @@
 ./internal/auth/login
 ./internal/auth
 ./internal/auth/passwordreset
+./internal/auth/mfa

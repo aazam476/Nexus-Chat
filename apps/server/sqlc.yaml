@@ -61,3 +61,10 @@ sql:
       go:
         <<: *go-options
         out: internal/registration/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/auth/mfa/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/auth/mfa/store

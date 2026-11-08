@@ -19,6 +19,11 @@ type AccountToken struct {
 	ExpiresAt time.Time
 }
 
+type BackupCode struct {
+	UserID   uuid.UUID
+	CodeHash []byte
+}
+
 type InstanceInvite struct {
 	ID        uuid.UUID
 	CodeHash  []byte
@@ -44,6 +49,16 @@ type Session struct {
 	CreatedAt  time.Time
 	LastSeenAt time.Time
 	ExpiresAt  time.Time
+}
+
+type TotpCredential struct {
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	Name            string
+	EncryptedSecret []byte
+	ConfirmedAt     *time.Time
+	LastUsedStep    int64
+	CreatedAt       time.Time
 }
 
 type User struct {

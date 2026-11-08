@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -105,6 +106,23 @@ func liveKitAPIKey() string {
 // rand.Text alone gives 128 bits; two calls double that.
 func longToken() string {
 	return rand.Text() + rand.Text()
+}
+
+// symmetricKey loads or creates a 256-bit key stored as base64 text.
+func (store fileStore) symmetricKey(name string) ([]byte, error) {
+	encoded, err := store.token(name, func() string {
+		key := make([]byte, 32)
+		_, _ = rand.Read(key) // crypto/rand.Read never fails (Go 1.24+)
+		return base64.StdEncoding.EncodeToString(key)
+	})
+	if err != nil {
+		return nil, err
+	}
+	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil || len(key) != 32 {
+		return nil, fmt.Errorf("%s must hold a base64-encoded 32-byte key; delete it to generate a new one", name)
+	}
+	return key, nil
 }
 
 // token loads or creates a random string produced by generate.

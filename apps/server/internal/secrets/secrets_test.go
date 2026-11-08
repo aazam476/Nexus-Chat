@@ -18,7 +18,7 @@ import (
 
 var allFiles = []string{
 	tokenSigningKeyFile, federationKeyFile, pushRelayKeyFile, vapidKeyFile,
-	liveKitAPIKeyFile, liveKitSecretFile, turnSecretFile,
+	liveKitAPIKeyFile, liveKitSecretFile, turnSecretFile, totpKeyFile,
 }
 
 func TestLoadOrCreateGeneratesEverySecretOnFirstBoot(t *testing.T) {
@@ -34,6 +34,7 @@ func TestLoadOrCreateGeneratesEverySecretOnFirstBoot(t *testing.T) {
 	assert.Regexp(t, `^API[A-Z2-7]{12}$`, secrets.LiveKitAPIKey)
 	assert.Regexp(t, `^[A-Z2-7]{52}$`, secrets.LiveKitAPISecret)
 	assert.Regexp(t, `^[A-Z2-7]{52}$`, secrets.TURNSecret)
+	assert.Len(t, secrets.TOTPKey, 32)
 	// Independent keys must never be the same key reused.
 	assert.NotEqual(t, secrets.TokenSigningKey, secrets.FederationKey)
 	assert.NotEqual(t, secrets.LiveKitAPISecret, secrets.TURNSecret)
@@ -69,6 +70,7 @@ func TestLoadOrCreateReturnsTheSameSecretsOnLaterBoots(t *testing.T) {
 	assert.Equal(t, first.LiveKitAPIKey, second.LiveKitAPIKey)
 	assert.Equal(t, first.LiveKitAPISecret, second.LiveKitAPISecret)
 	assert.Equal(t, first.TURNSecret, second.TURNSecret)
+	assert.Equal(t, first.TOTPKey, second.TOTPKey)
 }
 
 func TestLoadOrCreateGeneratesOnlyMissingSecrets(t *testing.T) {
@@ -112,6 +114,9 @@ func TestLoadOrCreateRejectsDamagedFiles(t *testing.T) {
 		{"p256 key where ed25519 expected", tokenSigningKeyFile, p256PEM(t), "does not contain an Ed25519 key"},
 		{"ed25519 key where p256 expected", vapidKeyFile, ed25519PEM(t), "does not contain a P-256 key"},
 		{"empty token", turnSecretFile, []byte("  \n"), "is empty"},
+		{"key not base64", totpKeyFile, []byte("!!!"), "base64-encoded 32-byte key"},
+		{"key too short", totpKeyFile, []byte("c2hvcnQ="), "base64-encoded 32-byte key"},
+		{"key file empty", totpKeyFile, []byte("\n"), "is empty"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

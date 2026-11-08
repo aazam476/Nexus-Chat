@@ -20,6 +20,7 @@ const (
 	liveKitAPIKeyFile   = "livekit-api-key.txt"
 	liveKitSecretFile   = "livekit-api-secret.txt"
 	turnSecretFile      = "turn-secret.txt"
+	totpKeyFile         = "totp-encryption.key"
 )
 
 // Secrets holds every key the instance generates for itself.
@@ -39,6 +40,8 @@ type Secrets struct {
 	LiveKitAPISecret string
 	// TURNSecret is the shared secret for time-limited TURN credentials.
 	TURNSecret string
+	// TOTPKey encrypts TOTP secrets stored in the database (AES-256-GCM).
+	TOTPKey []byte
 }
 
 // LoadOrCreate returns the instance's secrets from directory, generating
@@ -73,6 +76,9 @@ func LoadOrCreate(directory string) (Secrets, error) {
 		return Secrets{}, err
 	}
 	if secrets.TURNSecret, err = store.token(turnSecretFile, longToken); err != nil {
+		return Secrets{}, err
+	}
+	if secrets.TOTPKey, err = store.symmetricKey(totpKeyFile); err != nil {
 		return Secrets{}, err
 	}
 	return secrets, nil
