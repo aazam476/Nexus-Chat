@@ -69,12 +69,31 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
 
 ## Next
 
-**M2: Accounts and client shell** (in progress). Done so far: sessions
-(hashed tokens, sliding 90-day expiry, list and revoke), password login with
-per-IP rate limits and progressive per-account delays, `GET /users/me`, and
-default-deny authentication checked against the OpenAPI contract.
+**M2: Accounts and client shell** (in progress). Server side done so far:
+
+- Sessions: hashed 256-bit tokens, sliding 90-day expiry, list and revoke,
+  default-deny authentication checked against the OpenAPI contract.
+- Password login with per-IP rate limits, progressive per-account delays
+  and timing-equalized unknown accounts; breached-password check (bundled
+  SecLists list, MIT).
+- Registration (open, invite-only, closed) with admin-managed invites;
+  email verification and password reset through an SMTP mailer with
+  embedded templates; reset logs out every session.
+- Second factors: TOTP apps (secrets encrypted at rest, replay-proof),
+  ten single-use backup codes, FIDO2 security keys, and passwordless
+  passkey login (go-webauthn, tested end to end with a software
+  authenticator). An MFA challenge allows exactly one attempt.
+
+Still to do in M2: OIDC providers; profile, avatar and status; the
+WebSocket gateway and presence; Admin panel APIs (certificate upload,
+SMTP); and the client: Expo app shell, setup wizard, login screens, HTTPS
+banner, Electron shell, Playwright release gate and ZAP scan.
 
 ## Known issues
+
+- Removing a second factor or regenerating backup codes needs only a valid
+  session; it should also ask for recent re-authentication (password or
+  passkey). Planned together with account deletion's re-authentication.
 
 - Mutation testing tool for Go is chosen in M2 (see ADR 0001).
 - Moderate and low `pnpm audit` findings remain in development-only tools
