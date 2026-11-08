@@ -34,6 +34,9 @@ func (fake *fakeAccounts) GetUserByLogin(context.Context, string) (accountsstore
 	}
 	return fake.user, nil
 }
+func (fake *fakeAccounts) GetUserByID(context.Context, uuid.UUID) (accountsstore.User, error) {
+	return fake.user, fake.lookupErr
+}
 func (*fakeAccounts) RecordFailedLogin(context.Context, accountsstore.RecordFailedLoginParams) error {
 	return nil
 }
@@ -106,6 +109,7 @@ func newFixture(deny bool) fixture {
 	sessionService := session.NewService(sessions, clock.Fixed{Time: now})
 	logins := login.NewService(login.Dependencies{
 		Accounts: accounts, Hasher: plainHasher{}, Sessions: sessionService, Limiter: limiter{deny: deny}, Clock: clock.Fixed{Time: now},
+		SecondFactors: noFactors{}, Challenges: nil,
 	})
 	handler := NewHandler(HandlerDependencies{Logins: logins, Sessions: sessionService})
 	return fixture{accounts: accounts, sessions: sessions, handler: handler, user: user}
@@ -210,3 +214,14 @@ func TestProtectedHandlersRequireAPrincipal(t *testing.T) {
 }
 
 func discard() *slog.Logger { return slog.New(slog.DiscardHandler) }
+
+// noFactors reports that no account has a second factor.
+type noFactors struct{}
+
+func (noFactors) HasSecondFactor(context.Context, uuid.UUID) (bool, error) { return false, nil }
+func (noFactors) VerifyTOTP(context.Context, uuid.UUID, string) (bool, error) {
+	return false, nil
+}
+func (noFactors) UseBackupCode(context.Context, uuid.UUID, string) (bool, error) {
+	return false, nil
+}

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSetupStatusData, GetSetupStatusResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegisterData, RegisterErrors, RegisterResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -140,6 +140,79 @@ export const createInvite = <ThrowOnError extends boolean = false>(options: Opti
 export const deleteInvite = <ThrowOnError extends boolean = false>(options: Options<DeleteInviteData, ThrowOnError>): RequestResult<DeleteInviteResponses, DeleteInviteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteInviteResponses, DeleteInviteErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/admin/invites/{inviteId}',
+    ...options
+});
+
+/**
+ * Finish logging in with a second factor
+ */
+export const completeLoginMfa = <ThrowOnError extends boolean = false>(options: Options<CompleteLoginMfaData, ThrowOnError>): RequestResult<CompleteLoginMfaResponses, CompleteLoginMfaErrors, ThrowOnError> => (options.client ?? client).post<CompleteLoginMfaResponses, CompleteLoginMfaErrors, ThrowOnError>({
+    url: '/api/v1/auth/login/mfa',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * My second factors
+ */
+export const getSecondFactors = <ThrowOnError extends boolean = false>(options?: Options<GetSecondFactorsData, ThrowOnError>): RequestResult<GetSecondFactorsResponses, GetSecondFactorsErrors, ThrowOnError> => (options?.client ?? client).get<GetSecondFactorsResponses, GetSecondFactorsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/mfa',
+    ...options
+});
+
+/**
+ * Start adding an authenticator app
+ *
+ * Returns a secret and an `otpauth://` URL to show as a QR code. Confirm with a code to finish.
+ */
+export const enrollTotp = <ThrowOnError extends boolean = false>(options: Options<EnrollTotpData, ThrowOnError>): RequestResult<EnrollTotpResponses, EnrollTotpErrors, ThrowOnError> => (options.client ?? client).post<EnrollTotpResponses, EnrollTotpErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/mfa/totp',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Finish adding an authenticator app
+ *
+ * Activates the authenticator. When it is the account's first second
+ * factor, the response includes ten backup codes, shown only this once.
+ *
+ */
+export const confirmTotp = <ThrowOnError extends boolean = false>(options: Options<ConfirmTotpData, ThrowOnError>): RequestResult<ConfirmTotpResponses, ConfirmTotpErrors, ThrowOnError> => (options.client ?? client).post<ConfirmTotpResponses, ConfirmTotpErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/mfa/totp/{enrollmentId}/confirm',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove an authenticator app
+ */
+export const removeTotp = <ThrowOnError extends boolean = false>(options: Options<RemoveTotpData, ThrowOnError>): RequestResult<RemoveTotpResponses, RemoveTotpErrors, ThrowOnError> => (options.client ?? client).delete<RemoveTotpResponses, RemoveTotpErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/mfa/totp/{authenticatorId}',
+    ...options
+});
+
+/**
+ * Replace my backup codes
+ *
+ * Creates ten new backup codes. The old ones stop working.
+ */
+export const regenerateBackupCodes = <ThrowOnError extends boolean = false>(options?: Options<RegenerateBackupCodesData, ThrowOnError>): RequestResult<RegenerateBackupCodesResponses, RegenerateBackupCodesErrors, ThrowOnError> => (options?.client ?? client).post<RegenerateBackupCodesResponses, RegenerateBackupCodesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/mfa/backup-codes',
     ...options
 });
 

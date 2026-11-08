@@ -31,12 +31,16 @@ type Purpose string
 const (
 	VerifyEmail   Purpose = "verify_email"
 	ResetPassword Purpose = "reset_password"
+	// MFALogin is a login that passed the password check and still needs a
+	// second factor.
+	MFALogin Purpose = "mfa_login"
 )
 
 // lifetimes: a reset link is short-lived because it grants account access.
 var lifetimes = map[Purpose]time.Duration{ //nolint:gochecknoglobals // constant lookup table
 	VerifyEmail:   48 * time.Hour,
 	ResetPassword: time.Hour,
+	MFALogin:      5 * time.Minute,
 }
 
 // ErrInvalidToken means the token is unknown, already used, expired, or for

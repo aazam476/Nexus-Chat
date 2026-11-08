@@ -45,6 +45,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResult"
+        "202":
+          description: |
+            The password is right, but the account has a second factor. Send
+            the challenge with a code to `POST /api/v1/auth/login/mfa` within
+            five minutes. The challenge allows one attempt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaChallenge"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -266,6 +275,155 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/auth/login/mfa:
+    post:
+      operationId: completeLoginMfa
+      summary: Finish logging in with a second factor
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaLoginRequest"
+      responses:
+        "200":
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The code is wrong or the challenge expired (`invalid_second_factor`). Log in with the password again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/mfa:
+    get:
+      operationId: getSecondFactors
+      summary: My second factors
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The account's authenticator apps and remaining backup codes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecondFactors"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/mfa/totp:
+    post:
+      operationId: enrollTotp
+      summary: Start adding an authenticator app
+      description: Returns a secret and an `otpauth://` URL to show as a QR code. Confirm with a code to finish.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnrollTotpRequest"
+      responses:
+        "201":
+          description: The pending authenticator.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotpEnrollment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/mfa/totp/{enrollmentId}/confirm:
+    post:
+      operationId: confirmTotp
+      summary: Finish adding an authenticator app
+      description: |
+        Activates the authenticator. When it is the account's first second
+        factor, the response includes ten backup codes, shown only this once.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeRequest"
+      responses:
+        "200":
+          description: The authenticator is active.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotpConfirmation"
+        "400":
+          description: Wrong code (`invalid_code`), unknown setup (`enrollment_not_found`), or malformed body (`bad_request`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/mfa/totp/{authenticatorId}:
+    delete:
+      operationId: removeTotp
+      summary: Remove an authenticator app
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: authenticatorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such authenticator (`authenticator_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/mfa/backup-codes:
+    post:
+      operationId: regenerateBackupCodes
+      summary: Replace my backup codes
+      description: Creates ten new backup codes. The old ones stop working.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The new codes, shown only this once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupCodes"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/v1/auth/logout:
     post:
       operationId: logout
@@ -642,6 +800,105 @@ components:
         code:
           type: string
           description: The invite code. Shown only this once.
+    MfaChallenge:
+      type: object
+      additionalProperties: false
+      required: [challengeToken, methods]
+      properties:
+        challengeToken:
+          type: string
+        methods:
+          type: array
+          items:
+            $ref: "#/components/schemas/MfaMethod"
+    MfaMethod:
+      type: string
+      enum: [totp, backup_code]
+    MfaLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeToken, method, code, deviceName]
+      properties:
+        challengeToken:
+          type: string
+        method:
+          $ref: "#/components/schemas/MfaMethod"
+        code:
+          type: string
+        deviceName:
+          type: string
+    SecondFactors:
+      type: object
+      additionalProperties: false
+      required: [authenticators, backupCodesRemaining]
+      properties:
+        authenticators:
+          type: array
+          items:
+            $ref: "#/components/schemas/Authenticator"
+        backupCodesRemaining:
+          type: integer
+          format: int64
+    Authenticator:
+      type: object
+      additionalProperties: false
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    EnrollTotpRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: A label such as "Phone", 1–64 characters.
+    TotpEnrollment:
+      type: object
+      additionalProperties: false
+      required: [enrollmentId, secret, otpauthUrl]
+      properties:
+        enrollmentId:
+          type: string
+          format: uuid
+        secret:
+          type: string
+          description: Base32 secret, for typing into an app by hand.
+        otpauthUrl:
+          type: string
+          description: Show this as a QR code.
+    CodeRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+    TotpConfirmation:
+      type: object
+      additionalProperties: false
+      properties:
+        backupCodes:
+          type: array
+          items:
+            type: string
+          description: Present only when this is the first second factor.
+    BackupCodes:
+      type: object
+      additionalProperties: false
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          items:
+            type: string
     LoginRequest:
       type: object
       additionalProperties: false

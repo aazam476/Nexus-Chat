@@ -25,6 +25,7 @@ var publicOperations = map[string]bool{ //nolint:gochecknoglobals // constant lo
 	"VerifyEmail":           true,
 	"RequestPasswordReset":  true,
 	"CompletePasswordReset": true,
+	"CompleteLoginMfa":      true,
 }
 
 // Authenticator checks session tokens; *session.Service satisfies it.

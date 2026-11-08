@@ -40,6 +40,13 @@ func (fake *fakeAccounts) GetUserByLogin(_ context.Context, login string) (accou
 	return fake.user, nil
 }
 
+func (fake *fakeAccounts) GetUserByID(_ context.Context, id uuid.UUID) (accountsstore.User, error) {
+	if fake.lookupErr != nil {
+		return accountsstore.User{}, fake.lookupErr
+	}
+	return fake.user, nil
+}
+
 func (fake *fakeAccounts) RecordFailedLogin(_ context.Context, arg accountsstore.RecordFailedLoginParams) error {
 	fake.recorded = append(fake.recorded, arg)
 	return fake.writeErr
@@ -99,7 +106,10 @@ func newFixture(change func(*Dependencies)) fixture {
 		ID: uuid.New(), Username: "alice", Email: "alice@example.com", PasswordHash: passwordHash("right password"),
 	}}
 	hasher := &fakeHasher{}
-	dependencies := Dependencies{Accounts: accounts, Hasher: hasher, Sessions: fakeSessions{}, Limiter: fakeLimiter{}, Clock: clock.Fixed{Time: now}}
+	dependencies := Dependencies{
+		Accounts: accounts, Hasher: hasher, Sessions: fakeSessions{}, Limiter: fakeLimiter{}, Clock: clock.Fixed{Time: now},
+		SecondFactors: &fakeFactors{}, Challenges: newFakeChallenges(),
+	}
 	if change != nil {
 		change(&dependencies)
 	}

@@ -20,6 +20,8 @@ import (
 	tokensstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa"
+	mfastore "github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password/breached"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passwordreset"
@@ -149,7 +151,13 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 	}
 	healthService := health.NewService([]health.NamedChecker{{Name: "database", Checker: app.pool}})
 	app.sessions = session.NewService(sessionstore.New(app.pool), clock.System{})
-	authFeatures := app.buildAuthFeatures(authInputs{hasher: hasher, validator: validator, domain: configuration.Domain})
+	// Authenticator apps show "Nexus Chat" next to the code. The instance
+	// name can change later, which would not update apps already set up.
+	secondFactors, err := mfa.NewService(mfastore.New(app.pool), app.secrets.TOTPKey, clock.System{}, "Nexus Chat")
+	if err != nil {
+		return httpserver.Features{}, err
+	}
+	authFeatures := app.buildAuthFeatures(authInputs{hasher: hasher, validator: validator, domain: configuration.Domain, secondFactors: secondFactors})
 	authFeatures.Health = health.NewHandler(healthService)
 	authFeatures.Setup = setup.NewHandler(setupService)
 	return authFeatures, nil
@@ -157,9 +165,10 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 
 // authInputs are the shared pieces the account features are built from.
 type authInputs struct {
-	hasher    *password.Hasher
-	validator *accounts.Validator
-	domain    string
+	hasher        *password.Hasher
+	validator     *accounts.Validator
+	domain        string
+	secondFactors *mfa.Service
 }
 
 // buildAuthFeatures creates login, registration, verification and
@@ -178,6 +187,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	logins := login.NewService(login.Dependencies{
 		Accounts: accountQueries, Hasher: inputs.hasher, Sessions: app.sessions,
 		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), system), Clock: system,
+		SecondFactors: inputs.secondFactors, Challenges: accountTokens,
 	})
 	resets := passwordreset.NewService(passwordreset.Dependencies{
 		Accounts: accountQueries, Sessions: sessionstore.New(app.pool), Tokens: accountTokens, Mailer: accountEmails,
@@ -194,6 +204,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		Auth: auth.NewHandler(auth.HandlerDependencies{
 			Logins: logins, Sessions: app.sessions, Resets: resets,
 			Verifier: emails.NewVerifier(accountTokens, accountQueries, system), Emails: accountEmails, Users: accountQueries,
+			MFA: inputs.secondFactors,
 		}),
 		Registration: registration.NewHandler(registrations, registration.NewInvites(registrationstore.New(app.pool), system), accountQueries),
 	}

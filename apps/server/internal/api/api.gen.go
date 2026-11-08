@@ -35,6 +35,24 @@ func (e HealthState) Valid() bool {
 	}
 }
 
+// Defines values for MfaMethod.
+const (
+	MfaMethodBackupCode MfaMethod = "backup_code"
+	MfaMethodTotp       MfaMethod = "totp"
+)
+
+// Valid indicates whether the value is a known member of the MfaMethod enum.
+func (e MfaMethod) Valid() bool {
+	switch e {
+	case MfaMethodBackupCode:
+		return true
+	case MfaMethodTotp:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RegistrationMode.
 const (
 	RegistrationModeClosed     RegistrationMode = "closed"
@@ -54,6 +72,23 @@ func (e RegistrationMode) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Authenticator defines model for Authenticator.
+type Authenticator struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
+}
+
+// BackupCodes defines model for BackupCodes.
+type BackupCodes struct {
+	Codes []string `json:"codes"`
+}
+
+// CodeRequest defines model for CodeRequest.
+type CodeRequest struct {
+	Code string `json:"code"`
 }
 
 // CompletePasswordResetRequest defines model for CompletePasswordResetRequest.
@@ -86,6 +121,12 @@ type CurrentUser struct {
 	Id              openapi_types.UUID `json:"id"`
 	IsInstanceAdmin bool               `json:"isInstanceAdmin"`
 	Username        string             `json:"username"`
+}
+
+// EnrollTotpRequest defines model for EnrollTotpRequest.
+type EnrollTotpRequest struct {
+	// Name A label such as "Phone", 1–64 characters.
+	Name string `json:"name"`
 }
 
 // Error defines model for Error.
@@ -154,6 +195,23 @@ type LoginResult struct {
 	User  CurrentUser `json:"user"`
 }
 
+// MfaChallenge defines model for MfaChallenge.
+type MfaChallenge struct {
+	ChallengeToken string      `json:"challengeToken"`
+	Methods        []MfaMethod `json:"methods"`
+}
+
+// MfaLoginRequest defines model for MfaLoginRequest.
+type MfaLoginRequest struct {
+	ChallengeToken string    `json:"challengeToken"`
+	Code           string    `json:"code"`
+	DeviceName     string    `json:"deviceName"`
+	Method         MfaMethod `json:"method"`
+}
+
+// MfaMethod defines model for MfaMethod.
+type MfaMethod string
+
 // PasswordResetRequest defines model for PasswordResetRequest.
 type PasswordResetRequest struct {
 	Email string `json:"email"`
@@ -173,6 +231,12 @@ type RegisterRequest struct {
 
 // RegistrationMode Who may create accounts.
 type RegistrationMode string
+
+// SecondFactors defines model for SecondFactors.
+type SecondFactors struct {
+	Authenticators       []Authenticator `json:"authenticators"`
+	BackupCodesRemaining int64           `json:"backupCodesRemaining"`
+}
 
 // Session defines model for Session.
 type Session struct {
@@ -246,6 +310,23 @@ type TokenRequest struct {
 	Token string `json:"token"`
 }
 
+// TotpConfirmation defines model for TotpConfirmation.
+type TotpConfirmation struct {
+	// BackupCodes Present only when this is the first second factor.
+	BackupCodes *[]string `json:"backupCodes,omitempty"`
+}
+
+// TotpEnrollment defines model for TotpEnrollment.
+type TotpEnrollment struct {
+	EnrollmentId openapi_types.UUID `json:"enrollmentId"`
+
+	// OtpauthUrl Show this as a QR code.
+	OtpauthUrl string `json:"otpauthUrl"`
+
+	// Secret Base32 secret, for typing into an app by hand.
+	Secret string `json:"secret"`
+}
+
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
 
@@ -266,6 +347,15 @@ type CreateInviteJSONRequestBody = CreateInviteRequest
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
+
+// CompleteLoginMfaJSONRequestBody defines body for CompleteLoginMfa for application/json ContentType.
+type CompleteLoginMfaJSONRequestBody = MfaLoginRequest
+
+// EnrollTotpJSONRequestBody defines body for EnrollTotp for application/json ContentType.
+type EnrollTotpJSONRequestBody = EnrollTotpRequest
+
+// ConfirmTotpJSONRequestBody defines body for ConfirmTotp for application/json ContentType.
+type ConfirmTotpJSONRequestBody = CodeRequest
 
 // RequestPasswordResetJSONRequestBody defines body for RequestPasswordReset for application/json ContentType.
 type RequestPasswordResetJSONRequestBody = PasswordResetRequest
@@ -296,9 +386,27 @@ type ServerInterface interface {
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
+	// CompleteLoginMfa Finish logging in with a second factor
+	// (POST /api/v1/auth/login/mfa)
+	CompleteLoginMfa(w http.ResponseWriter, r *http.Request)
 	// Logout Log out
 	// (POST /api/v1/auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
+	// GetSecondFactors My second factors
+	// (GET /api/v1/auth/mfa)
+	GetSecondFactors(w http.ResponseWriter, r *http.Request)
+	// RegenerateBackupCodes Replace my backup codes
+	// (POST /api/v1/auth/mfa/backup-codes)
+	RegenerateBackupCodes(w http.ResponseWriter, r *http.Request)
+	// EnrollTotp Start adding an authenticator app
+	// (POST /api/v1/auth/mfa/totp)
+	EnrollTotp(w http.ResponseWriter, r *http.Request)
+	// RemoveTotp Remove an authenticator app
+	// (DELETE /api/v1/auth/mfa/totp/{authenticatorId})
+	RemoveTotp(w http.ResponseWriter, r *http.Request, authenticatorId openapi_types.UUID)
+	// ConfirmTotp Finish adding an authenticator app
+	// (POST /api/v1/auth/mfa/totp/{enrollmentId}/confirm)
+	ConfirmTotp(w http.ResponseWriter, r *http.Request, enrollmentId openapi_types.UUID)
 	// RequestPasswordReset Ask for a password reset link
 	// (POST /api/v1/auth/password-reset)
 	RequestPasswordReset(w http.ResponseWriter, r *http.Request)
@@ -414,11 +522,119 @@ func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// CompleteLoginMfa operation middleware
+func (siw *ServerInterfaceWrapper) CompleteLoginMfa(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteLoginMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // Logout operation middleware
 func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Logout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSecondFactors operation middleware
+func (siw *ServerInterfaceWrapper) GetSecondFactors(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSecondFactors(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RegenerateBackupCodes operation middleware
+func (siw *ServerInterfaceWrapper) RegenerateBackupCodes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RegenerateBackupCodes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EnrollTotp operation middleware
+func (siw *ServerInterfaceWrapper) EnrollTotp(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EnrollTotp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveTotp operation middleware
+func (siw *ServerInterfaceWrapper) RemoveTotp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "authenticatorId" -------------
+	var authenticatorId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "authenticatorId", r.PathValue("authenticatorId"), &authenticatorId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "authenticatorId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveTotp(w, r, authenticatorId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmTotp operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmTotp(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "enrollmentId" -------------
+	var enrollmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "enrollmentId", r.PathValue("enrollmentId"), &enrollmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "enrollmentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmTotp(w, r, enrollmentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -737,6 +953,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/invites", wrapper.ListInvites)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/invites", wrapper.CreateInvite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/invites/{inviteId}", wrapper.DeleteInvite)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login/mfa", wrapper.CompleteLoginMfa)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/mfa", wrapper.GetSecondFactors)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/totp", wrapper.EnrollTotp)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/totp/{enrollmentId}/confirm", wrapper.ConfirmTotp)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/mfa/totp/{authenticatorId}", wrapper.RemoveTotp)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/backup-codes", wrapper.RegenerateBackupCodes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/sessions", wrapper.ListSessions)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/sessions/{sessionId}", wrapper.RevokeSession)
@@ -966,6 +1188,20 @@ func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) e
 	return err
 }
 
+type Login202JSONResponse MfaChallenge
+
+func (response Login202JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type Login400JSONResponse struct{ BadRequestJSONResponse }
 
 func (response Login400JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
@@ -1018,6 +1254,70 @@ func (response Login429JSONResponse) VisitLoginResponse(w http.ResponseWriter) e
 	return err
 }
 
+type CompleteLoginMfaRequestObject struct {
+	Body *CompleteLoginMfaJSONRequestBody
+}
+
+type CompleteLoginMfaResponseObject interface {
+	VisitCompleteLoginMfaResponse(w http.ResponseWriter) error
+}
+
+type CompleteLoginMfa200JSONResponse LoginResult
+
+func (response CompleteLoginMfa200JSONResponse) VisitCompleteLoginMfaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteLoginMfa400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompleteLoginMfa400JSONResponse) VisitCompleteLoginMfaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteLoginMfa401JSONResponse Error
+
+func (response CompleteLoginMfa401JSONResponse) VisitCompleteLoginMfaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteLoginMfa429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response CompleteLoginMfa429JSONResponse) VisitCompleteLoginMfaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type LogoutRequestObject struct {
 }
 
@@ -1036,6 +1336,221 @@ func (response Logout204Response) VisitLogoutResponse(w http.ResponseWriter) err
 type Logout401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response Logout401JSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSecondFactorsRequestObject struct {
+}
+
+type GetSecondFactorsResponseObject interface {
+	VisitGetSecondFactorsResponse(w http.ResponseWriter) error
+}
+
+type GetSecondFactors200JSONResponse SecondFactors
+
+func (response GetSecondFactors200JSONResponse) VisitGetSecondFactorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSecondFactors401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetSecondFactors401JSONResponse) VisitGetSecondFactorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegenerateBackupCodesRequestObject struct {
+}
+
+type RegenerateBackupCodesResponseObject interface {
+	VisitRegenerateBackupCodesResponse(w http.ResponseWriter) error
+}
+
+type RegenerateBackupCodes200JSONResponse BackupCodes
+
+func (response RegenerateBackupCodes200JSONResponse) VisitRegenerateBackupCodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegenerateBackupCodes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RegenerateBackupCodes401JSONResponse) VisitRegenerateBackupCodesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnrollTotpRequestObject struct {
+	Body *EnrollTotpJSONRequestBody
+}
+
+type EnrollTotpResponseObject interface {
+	VisitEnrollTotpResponse(w http.ResponseWriter) error
+}
+
+type EnrollTotp201JSONResponse TotpEnrollment
+
+func (response EnrollTotp201JSONResponse) VisitEnrollTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnrollTotp400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response EnrollTotp400JSONResponse) VisitEnrollTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnrollTotp401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response EnrollTotp401JSONResponse) VisitEnrollTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveTotpRequestObject struct {
+	AuthenticatorId openapi_types.UUID `json:"authenticatorId"`
+}
+
+type RemoveTotpResponseObject interface {
+	VisitRemoveTotpResponse(w http.ResponseWriter) error
+}
+
+type RemoveTotp204Response struct {
+}
+
+func (response RemoveTotp204Response) VisitRemoveTotpResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveTotp401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveTotp401JSONResponse) VisitRemoveTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveTotp404JSONResponse Error
+
+func (response RemoveTotp404JSONResponse) VisitRemoveTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConfirmTotpRequestObject struct {
+	EnrollmentId openapi_types.UUID `json:"enrollmentId"`
+	Body         *ConfirmTotpJSONRequestBody
+}
+
+type ConfirmTotpResponseObject interface {
+	VisitConfirmTotpResponse(w http.ResponseWriter) error
+}
+
+type ConfirmTotp200JSONResponse TotpConfirmation
+
+func (response ConfirmTotp200JSONResponse) VisitConfirmTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConfirmTotp400JSONResponse Error
+
+func (response ConfirmTotp400JSONResponse) VisitConfirmTotpResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ConfirmTotp401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ConfirmTotp401JSONResponse) VisitConfirmTotpResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1597,9 +2112,27 @@ type StrictServerInterface interface {
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
+	// CompleteLoginMfa Finish logging in with a second factor
+	// (POST /api/v1/auth/login/mfa)
+	CompleteLoginMfa(ctx context.Context, request CompleteLoginMfaRequestObject) (CompleteLoginMfaResponseObject, error)
 	// Logout Log out
 	// (POST /api/v1/auth/logout)
 	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
+	// GetSecondFactors My second factors
+	// (GET /api/v1/auth/mfa)
+	GetSecondFactors(ctx context.Context, request GetSecondFactorsRequestObject) (GetSecondFactorsResponseObject, error)
+	// RegenerateBackupCodes Replace my backup codes
+	// (POST /api/v1/auth/mfa/backup-codes)
+	RegenerateBackupCodes(ctx context.Context, request RegenerateBackupCodesRequestObject) (RegenerateBackupCodesResponseObject, error)
+	// EnrollTotp Start adding an authenticator app
+	// (POST /api/v1/auth/mfa/totp)
+	EnrollTotp(ctx context.Context, request EnrollTotpRequestObject) (EnrollTotpResponseObject, error)
+	// RemoveTotp Remove an authenticator app
+	// (DELETE /api/v1/auth/mfa/totp/{authenticatorId})
+	RemoveTotp(ctx context.Context, request RemoveTotpRequestObject) (RemoveTotpResponseObject, error)
+	// ConfirmTotp Finish adding an authenticator app
+	// (POST /api/v1/auth/mfa/totp/{enrollmentId}/confirm)
+	ConfirmTotp(ctx context.Context, request ConfirmTotpRequestObject) (ConfirmTotpResponseObject, error)
 	// RequestPasswordReset Ask for a password reset link
 	// (POST /api/v1/auth/password-reset)
 	RequestPasswordReset(ctx context.Context, request RequestPasswordResetRequestObject) (RequestPasswordResetResponseObject, error)
@@ -1789,6 +2322,37 @@ func (sh *strictHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CompleteLoginMfa operation middleware
+func (sh *strictHandler) CompleteLoginMfa(w http.ResponseWriter, r *http.Request) {
+	var request CompleteLoginMfaRequestObject
+
+	var body CompleteLoginMfaJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteLoginMfa(ctx, request.(CompleteLoginMfaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteLoginMfa")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteLoginMfaResponseObject); ok {
+		if err := validResponse.VisitCompleteLoginMfaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Logout operation middleware
 func (sh *strictHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var request LogoutRequestObject
@@ -1806,6 +2370,144 @@ func (sh *strictHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(LogoutResponseObject); ok {
 		if err := validResponse.VisitLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSecondFactors operation middleware
+func (sh *strictHandler) GetSecondFactors(w http.ResponseWriter, r *http.Request) {
+	var request GetSecondFactorsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSecondFactors(ctx, request.(GetSecondFactorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSecondFactors")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSecondFactorsResponseObject); ok {
+		if err := validResponse.VisitGetSecondFactorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RegenerateBackupCodes operation middleware
+func (sh *strictHandler) RegenerateBackupCodes(w http.ResponseWriter, r *http.Request) {
+	var request RegenerateBackupCodesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RegenerateBackupCodes(ctx, request.(RegenerateBackupCodesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegenerateBackupCodes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RegenerateBackupCodesResponseObject); ok {
+		if err := validResponse.VisitRegenerateBackupCodesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EnrollTotp operation middleware
+func (sh *strictHandler) EnrollTotp(w http.ResponseWriter, r *http.Request) {
+	var request EnrollTotpRequestObject
+
+	var body EnrollTotpJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.EnrollTotp(ctx, request.(EnrollTotpRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EnrollTotp")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(EnrollTotpResponseObject); ok {
+		if err := validResponse.VisitEnrollTotpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveTotp operation middleware
+func (sh *strictHandler) RemoveTotp(w http.ResponseWriter, r *http.Request, authenticatorId openapi_types.UUID) {
+	var request RemoveTotpRequestObject
+
+	request.AuthenticatorId = authenticatorId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveTotp(ctx, request.(RemoveTotpRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveTotp")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveTotpResponseObject); ok {
+		if err := validResponse.VisitRemoveTotpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ConfirmTotp operation middleware
+func (sh *strictHandler) ConfirmTotp(w http.ResponseWriter, r *http.Request, enrollmentId openapi_types.UUID) {
+	var request ConfirmTotpRequestObject
+
+	request.EnrollmentId = enrollmentId
+
+	var body ConfirmTotpJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ConfirmTotp(ctx, request.(ConfirmTotpRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ConfirmTotp")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ConfirmTotpResponseObject); ok {
+		if err := validResponse.VisitConfirmTotpResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

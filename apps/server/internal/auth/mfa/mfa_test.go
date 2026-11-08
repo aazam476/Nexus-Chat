@@ -274,3 +274,20 @@ func TestEnrollNeedsAnAccountName(t *testing.T) {
 
 	assert.ErrorContains(t, err, "creating TOTP secret")
 }
+
+func TestListTOTP(t *testing.T) {
+	service, fake, clock := newService(t)
+	enrollment := enrolled(t, service, clock)
+	_, err := service.EnrollTOTP(t.Context(), alice, "a", "Unconfirmed")
+	require.NoError(t, err)
+
+	listed, err := service.ListTOTP(t.Context(), alice)
+	require.NoError(t, err)
+	require.Len(t, listed, 1, "unconfirmed setups are not listed")
+	assert.Equal(t, enrollment.ID, listed[0].ID)
+	assert.Equal(t, "Phone", listed[0].Name)
+
+	fake.fail = errors.New("down")
+	_, err = service.ListTOTP(t.Context(), alice)
+	assert.Error(t, err)
+}

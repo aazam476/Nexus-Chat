@@ -200,3 +200,23 @@ func matchStep(secret string, code string, now time.Time) (int64, bool) {
 func ptr[T any](value T) *T {
 	return &value
 }
+
+// Authenticator is a confirmed TOTP app, as shown in account settings.
+type Authenticator struct {
+	ID        uuid.UUID
+	Name      string
+	CreatedAt time.Time
+}
+
+// ListTOTP returns the user's confirmed authenticators, oldest first.
+func (service *Service) ListTOTP(ctx context.Context, userID uuid.UUID) ([]Authenticator, error) {
+	credentials, err := service.store.ListConfirmedTOTP(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("listing authenticators: %w", err)
+	}
+	authenticators := make([]Authenticator, 0, len(credentials))
+	for _, credential := range credentials {
+		authenticators = append(authenticators, Authenticator{ID: credential.ID, Name: credential.Name, CreatedAt: credential.CreatedAt})
+	}
+	return authenticators, nil
+}

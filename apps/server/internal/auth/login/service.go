@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	accountsstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/session"
 	sessionstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/session/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
@@ -45,6 +46,7 @@ func (delayed *DelayedError) Error() string {
 
 type accountStore interface {
 	GetUserByLogin(ctx context.Context, login string) (accountsstore.User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (accountsstore.User, error)
 	RecordFailedLogin(ctx context.Context, arg accountsstore.RecordFailedLoginParams) error
 	ResetFailedLogins(ctx context.Context, id uuid.UUID) error
 	UpdatePasswordHash(ctx context.Context, arg accountsstore.UpdatePasswordHashParams) error
@@ -64,13 +66,28 @@ type attemptLimiter interface {
 	Allow(key string) bool
 }
 
+// secondFactors is satisfied by *mfa.Service.
+type secondFactors interface {
+	HasSecondFactor(ctx context.Context, userID uuid.UUID) (bool, error)
+	VerifyTOTP(ctx context.Context, userID uuid.UUID, code string) (bool, error)
+	UseBackupCode(ctx context.Context, userID uuid.UUID, code string) (bool, error)
+}
+
+// challengeTokens is satisfied by *tokens.Service.
+type challengeTokens interface {
+	Issue(ctx context.Context, userID uuid.UUID, purpose tokens.Purpose) (string, error)
+	Redeem(ctx context.Context, purpose tokens.Purpose, token string) (uuid.UUID, error)
+}
+
 // Dependencies are the collaborators a Service needs.
 type Dependencies struct {
-	Accounts accountStore
-	Hasher   passwordHasher
-	Sessions sessionCreator
-	Limiter  attemptLimiter
-	Clock    clock.Clock
+	Accounts      accountStore
+	Hasher        passwordHasher
+	Sessions      sessionCreator
+	Limiter       attemptLimiter
+	Clock         clock.Clock
+	SecondFactors secondFactors
+	Challenges    challengeTokens
 }
 
 // Request is one login attempt.
@@ -81,11 +98,14 @@ type Request struct {
 	ClientKey string // the client's IP address, for rate limiting
 }
 
-// Result is a successful login.
+// Result is a successful login. If MFAChallenge is set, the password was
+// right but the account has a second factor: no session exists yet, and the
+// client must call CompleteMFA with the challenge.
 type Result struct {
-	Token   string
-	Session sessionstore.Session
-	User    accountsstore.User
+	Token        string
+	Session      sessionstore.Session
+	User         accountsstore.User
+	MFAChallenge string
 }
 
 // Service performs logins.
@@ -98,27 +118,52 @@ func NewService(dependencies Dependencies) *Service {
 	return &Service{dependencies: dependencies}
 }
 
-// Login checks the credentials and starts a session.
+// Login checks the credentials and starts a session, or returns an MFA
+// challenge when the account has a second factor.
 func (service *Service) Login(ctx context.Context, request Request) (Result, error) {
+	user, err := service.authenticate(ctx, request)
+	if err != nil {
+		return Result{}, err
+	}
+	needsSecondFactor, err := service.dependencies.SecondFactors.HasSecondFactor(ctx, user.ID)
+	if err != nil {
+		return Result{}, err
+	}
+	if !needsSecondFactor {
+		return service.startSession(ctx, user, request.Device)
+	}
+	challenge, err := service.dependencies.Challenges.Issue(ctx, user.ID, tokens.MFALogin)
+	if err != nil {
+		return Result{}, err
+	}
+	return Result{MFAChallenge: challenge}, nil
+}
+
+// authenticate applies the rate limit and lockout and checks the password.
+func (service *Service) authenticate(ctx context.Context, request Request) (accountsstore.User, error) {
 	if !service.dependencies.Limiter.Allow(request.ClientKey) {
-		return Result{}, ErrRateLimited
+		return accountsstore.User{}, ErrRateLimited
 	}
 	user, err := service.dependencies.Accounts.GetUserByLogin(ctx, request.Login)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && user.PasswordHash == nil) {
 		_, _ = service.dependencies.Hasher.Verify(ctx, request.Password, dummyHash) // equalize timing only
-		return Result{}, ErrInvalidCredentials
+		return accountsstore.User{}, ErrInvalidCredentials
 	}
 	if err != nil {
-		return Result{}, fmt.Errorf("looking up account: %w", err)
+		return accountsstore.User{}, fmt.Errorf("looking up account: %w", err)
 	}
 	now := service.dependencies.Clock.Now()
 	if user.LoginBlockedUntil != nil && now.Before(*user.LoginBlockedUntil) {
-		return Result{}, &DelayedError{RetryAfter: user.LoginBlockedUntil.Sub(now)}
+		return accountsstore.User{}, &DelayedError{RetryAfter: user.LoginBlockedUntil.Sub(now)}
 	}
 	if err := service.checkPassword(ctx, user, request.Password, now); err != nil {
-		return Result{}, err
+		return accountsstore.User{}, err
 	}
-	token, created, err := service.dependencies.Sessions.Create(ctx, user.ID, request.Device)
+	return user, nil
+}
+
+func (service *Service) startSession(ctx context.Context, user accountsstore.User, device session.Device) (Result, error) {
+	token, created, err := service.dependencies.Sessions.Create(ctx, user.ID, device)
 	if err != nil {
 		return Result{}, err
 	}

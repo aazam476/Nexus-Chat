@@ -37,6 +37,7 @@ type HandlerDependencies struct {
 	Verifier emailVerifier
 	Emails   verificationSender
 	Users    accounts.UserReader
+	MFA      secondFactorManager
 }
 
 // Handler serves the auth endpoints.
@@ -67,6 +68,11 @@ func (handler *Handler) Login(ctx context.Context, request api.LoginRequestObjec
 		return tooManyAttempts("login_delayed", err, int(math.Ceil(delayed.RetryAfter.Seconds()))), nil
 	case err != nil:
 		return nil, err
+	case result.MFAChallenge != "":
+		return api.Login202JSONResponse{
+			ChallengeToken: result.MFAChallenge,
+			Methods:        []api.MfaMethod{api.MfaMethodTotp, api.MfaMethodBackupCode},
+		}, nil
 	}
 	return api.Login200JSONResponse{
 		Token:   result.Token,

@@ -142,6 +142,65 @@ export type CreatedInvite = {
     code: string;
 };
 
+export type MfaChallenge = {
+    challengeToken: string;
+    methods: Array<MfaMethod>;
+};
+
+export type MfaMethod = 'totp' | 'backup_code';
+
+export type MfaLoginRequest = {
+    challengeToken: string;
+    method: MfaMethod;
+    code: string;
+    deviceName: string;
+};
+
+export type SecondFactors = {
+    authenticators: Array<Authenticator>;
+    backupCodesRemaining: number;
+};
+
+export type Authenticator = {
+    id: string;
+    name: string;
+    createdAt: string;
+};
+
+export type EnrollTotpRequest = {
+    /**
+     * A label such as "Phone", 1–64 characters.
+     */
+    name: string;
+};
+
+export type TotpEnrollment = {
+    enrollmentId: string;
+    /**
+     * Base32 secret, for typing into an app by hand.
+     */
+    secret: string;
+    /**
+     * Show this as a QR code.
+     */
+    otpauthUrl: string;
+};
+
+export type CodeRequest = {
+    code: string;
+};
+
+export type TotpConfirmation = {
+    /**
+     * Present only when this is the first second factor.
+     */
+    backupCodes?: Array<string>;
+};
+
+export type BackupCodes = {
+    codes: Array<string>;
+};
+
 export type LoginRequest = {
     /**
      * Username or email address.
@@ -235,6 +294,13 @@ export type LoginResponses = {
      * Logged in.
      */
     200: LoginResult;
+    /**
+     * The password is right, but the account has a second factor. Send
+     * the challenge with a code to `POST /api/v1/auth/login/mfa` within
+     * five minutes. The challenge allows one attempt.
+     *
+     */
+    202: MfaChallenge;
 };
 
 export type LoginResponse = LoginResponses[keyof LoginResponses];
@@ -488,6 +554,180 @@ export type DeleteInviteResponses = {
 };
 
 export type DeleteInviteResponse = DeleteInviteResponses[keyof DeleteInviteResponses];
+
+export type CompleteLoginMfaData = {
+    body: MfaLoginRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login/mfa';
+};
+
+export type CompleteLoginMfaErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The code is wrong or the challenge expired (`invalid_second_factor`). Log in with the password again.
+     */
+    401: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type CompleteLoginMfaError = CompleteLoginMfaErrors[keyof CompleteLoginMfaErrors];
+
+export type CompleteLoginMfaResponses = {
+    /**
+     * Logged in.
+     */
+    200: LoginResult;
+};
+
+export type CompleteLoginMfaResponse = CompleteLoginMfaResponses[keyof CompleteLoginMfaResponses];
+
+export type GetSecondFactorsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/mfa';
+};
+
+export type GetSecondFactorsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type GetSecondFactorsError = GetSecondFactorsErrors[keyof GetSecondFactorsErrors];
+
+export type GetSecondFactorsResponses = {
+    /**
+     * The account's authenticator apps and remaining backup codes.
+     */
+    200: SecondFactors;
+};
+
+export type GetSecondFactorsResponse = GetSecondFactorsResponses[keyof GetSecondFactorsResponses];
+
+export type EnrollTotpData = {
+    body: EnrollTotpRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/mfa/totp';
+};
+
+export type EnrollTotpErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type EnrollTotpError = EnrollTotpErrors[keyof EnrollTotpErrors];
+
+export type EnrollTotpResponses = {
+    /**
+     * The pending authenticator.
+     */
+    201: TotpEnrollment;
+};
+
+export type EnrollTotpResponse = EnrollTotpResponses[keyof EnrollTotpResponses];
+
+export type ConfirmTotpData = {
+    body: CodeRequest;
+    path: {
+        enrollmentId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/mfa/totp/{enrollmentId}/confirm';
+};
+
+export type ConfirmTotpErrors = {
+    /**
+     * Wrong code (`invalid_code`), unknown setup (`enrollment_not_found`), or malformed body (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ConfirmTotpError = ConfirmTotpErrors[keyof ConfirmTotpErrors];
+
+export type ConfirmTotpResponses = {
+    /**
+     * The authenticator is active.
+     */
+    200: TotpConfirmation;
+};
+
+export type ConfirmTotpResponse = ConfirmTotpResponses[keyof ConfirmTotpResponses];
+
+export type RemoveTotpData = {
+    body?: never;
+    path: {
+        authenticatorId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/mfa/totp/{authenticatorId}';
+};
+
+export type RemoveTotpErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such authenticator (`authenticator_not_found`).
+     */
+    404: Error;
+};
+
+export type RemoveTotpError = RemoveTotpErrors[keyof RemoveTotpErrors];
+
+export type RemoveTotpResponses = {
+    /**
+     * Removed.
+     */
+    204: void;
+};
+
+export type RemoveTotpResponse = RemoveTotpResponses[keyof RemoveTotpResponses];
+
+export type RegenerateBackupCodesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/mfa/backup-codes';
+};
+
+export type RegenerateBackupCodesErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type RegenerateBackupCodesError = RegenerateBackupCodesErrors[keyof RegenerateBackupCodesErrors];
+
+export type RegenerateBackupCodesResponses = {
+    /**
+     * The new codes, shown only this once.
+     */
+    200: BackupCodes;
+};
+
+export type RegenerateBackupCodesResponse = RegenerateBackupCodesResponses[keyof RegenerateBackupCodesResponses];
 
 export type LogoutData = {
     body?: never;
