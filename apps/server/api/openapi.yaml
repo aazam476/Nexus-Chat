@@ -19,6 +19,8 @@ tags:
     description: Logging in and out, and managing sessions (spec §4.1).
   - name: users
     description: User accounts and profiles.
+  - name: instance
+    description: Public information about this instance.
   - name: admin
     description: Instance administration. Every operation needs an instance admin.
 paths:
@@ -271,6 +273,160 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           description: No such invite (`invite_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/tls:
+    get:
+      operationId: getTlsStatus
+      summary: HTTPS certificate status
+      description: |
+        Whether the server serves HTTPS with an uploaded or mounted
+        certificate, and which names it covers until when. An instance
+        behind a reverse proxy shows `active: false` here.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The certificate in use, if any.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TlsStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: installTlsCertificate
+      summary: Upload an HTTPS certificate
+      description: |
+        Validates the certificate chain and private key (the key matches,
+        the chain is complete and trusted, the certificate covers the
+        instance domain and is currently valid), saves them and starts
+        serving HTTPS without a restart. A rejected upload changes nothing.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstallTlsCertificateRequest"
+      responses:
+        "200":
+          description: The certificate is now served.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TlsStatus"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: |
+            The certificate cannot be used (`certificate_rejected`); the
+            message says why, for example a missing intermediate.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: removeTlsCertificate
+      summary: Remove the HTTPS certificate
+      description: Deletes the certificate files and stops serving HTTPS. Plain HTTP keeps working.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: HTTPS is off.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/smtp:
+    get:
+      operationId: getSmtpSettings
+      summary: Mail server settings
+      description: The password is never returned; `passwordSet` says whether one is stored.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The current settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmtpSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateSmtpSettings
+      summary: Change the mail server settings
+      description: |
+        Replaces the settings. Leaving out `password` keeps the stored one;
+        an empty string removes it. The next email uses the new settings.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSmtpSettingsRequest"
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmtpSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/admin/smtp/test:
+    post:
+      operationId: sendTestEmail
+      summary: Send a test email
+      description: Sends a test email to the calling admin's own address with the saved settings.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: The mail server accepted the message.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: SMTP is not configured yet (`smtp_not_configured`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          description: |
+            The mail server refused or could not be reached
+            (`mail_delivery_failed`); the message has the server's reason.
           content:
             application/json:
               schema:
@@ -700,6 +856,22 @@ paths:
                 $ref: "#/components/schemas/CurrentUser"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/v1/instance:
+    get:
+      operationId: getInstanceInfo
+      summary: Public instance information
+      description: |
+        What every client needs before logging in: the instance name, how
+        registration works, and whether this connection is secure. Clients
+        show the HTTPS warning (spec §3.3) when `secureConnection` is false.
+      tags: [instance]
+      responses:
+        "200":
+          description: The instance's public information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceInfo"
   /api/v1/setup:
     get:
       operationId: getSetupStatus
@@ -1283,3 +1455,96 @@ components:
     HealthState:
       type: string
       enum: [ok, unavailable]
+    InstanceInfo:
+      type: object
+      additionalProperties: false
+      required: [name, registrationMode, secureConnection]
+      properties:
+        name:
+          type: string
+        domain:
+          type: string
+          description: The public domain, once one is set.
+        registrationMode:
+          $ref: "#/components/schemas/RegistrationMode"
+        secureConnection:
+          type: boolean
+          description: |
+            True when this request arrived over HTTPS (directly or via a
+            trusted proxy) or is addressed to localhost.
+    TlsStatus:
+      type: object
+      additionalProperties: false
+      required: [active]
+      properties:
+        active:
+          type: boolean
+          description: True while the server serves HTTPS with its own certificate.
+        names:
+          type: array
+          description: The domain names the certificate covers.
+          items:
+            type: string
+        issuer:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    InstallTlsCertificateRequest:
+      type: object
+      additionalProperties: false
+      required: [certificate, privateKey]
+      properties:
+        certificate:
+          type: string
+          description: PEM certificate chain, leaf first, including intermediates.
+        privateKey:
+          type: string
+          description: PEM private key of the leaf certificate.
+    SmtpSecurity:
+      type: string
+      description: |
+        `starttls` (usually port 587) and `tls` (usually port 465) encrypt
+        the connection; `none` is only for a relay on the same network.
+      enum: [starttls, tls, none]
+    SmtpSettings:
+      type: object
+      additionalProperties: false
+      required: [configured, host, port, security, username, from, passwordSet]
+      properties:
+        configured:
+          type: boolean
+          description: True once a mail server is set, so the server can send email.
+        host:
+          type: string
+        port:
+          type: integer
+          format: int32
+        security:
+          $ref: "#/components/schemas/SmtpSecurity"
+        username:
+          type: string
+        from:
+          type: string
+        passwordSet:
+          type: boolean
+    UpdateSmtpSettingsRequest:
+      type: object
+      additionalProperties: false
+      required: [host, port, security, from]
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+          format: int32
+        security:
+          $ref: "#/components/schemas/SmtpSecurity"
+        username:
+          type: string
+        password:
+          type: string
+          description: Leave out to keep the stored password; empty to remove it.
+        from:
+          type: string
+          description: The sender address, for example `chat@example.com`.

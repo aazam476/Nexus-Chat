@@ -24,6 +24,14 @@ func TestRenderEveryTemplate(t *testing.T) {
 	}
 }
 
+func TestRenderTestEmail(t *testing.T) {
+	message, err := Render(TemplateTestEmail, "admin@example.com", TemplateData{InstanceName: "Example Chat", DisplayName: "Ada"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "Test email from Example Chat", message.Subject)
+	assert.Contains(t, message.Text, "Hi Ada,")
+}
+
 func TestRenderUnknownTemplate(t *testing.T) {
 	_, err := Render("missing", "a@example.com", TemplateData{})
 

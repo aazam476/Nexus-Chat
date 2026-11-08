@@ -47,10 +47,10 @@ func (Disabled) Send(context.Context, Message) error {
 // format renders the message as RFC 5322 text. The body is quoted-printable
 // so any line length and character set is safe on every mail server.
 func format(from string, message Message, now time.Time) ([]byte, error) {
-	if err := checkAddress(from); err != nil {
+	if err := CheckAddress(from); err != nil {
 		return nil, fmt.Errorf("sender address: %w", err)
 	}
-	if err := checkAddress(message.To); err != nil {
+	if err := CheckAddress(message.To); err != nil {
 		return nil, fmt.Errorf("recipient address: %w", err)
 	}
 	if strings.ContainsAny(message.Subject, "\r\n") {
@@ -74,9 +74,9 @@ func format(from string, message Message, now time.Time) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// checkAddress accepts a bare address only. Rejecting names, line breaks
+// CheckAddress accepts a bare address only. Rejecting names, line breaks
 // and commas prevents header injection and sending to extra recipients.
-func checkAddress(address string) error {
+func CheckAddress(address string) error {
 	parsed, err := mail.ParseAddress(address)
 	if err != nil || parsed.Address != address {
 		return fmt.Errorf("%q is not a single plain email address", address)

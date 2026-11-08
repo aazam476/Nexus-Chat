@@ -77,6 +77,27 @@ func (e RegistrationMode) Valid() bool {
 	}
 }
 
+// Defines values for SmtpSecurity.
+const (
+	SmtpSecurityNone     SmtpSecurity = "none"
+	SmtpSecurityStarttls SmtpSecurity = "starttls"
+	SmtpSecurityTls      SmtpSecurity = "tls"
+)
+
+// Valid indicates whether the value is a known member of the SmtpSecurity enum.
+func (e SmtpSecurity) Valid() bool {
+	switch e {
+	case SmtpSecurityNone:
+		return true
+	case SmtpSecurityStarttls:
+		return true
+	case SmtpSecurityTls:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebAuthnKind.
 const (
 	WebAuthnKindPasskey     WebAuthnKind = "passkey"
@@ -191,6 +212,29 @@ type HealthStatus struct {
 	// Checks One entry per dependency. Empty for the liveness probe.
 	Checks []HealthCheck `json:"checks"`
 	Status HealthState   `json:"status"`
+}
+
+// InstallTlsCertificateRequest defines model for InstallTlsCertificateRequest.
+type InstallTlsCertificateRequest struct {
+	// Certificate PEM certificate chain, leaf first, including intermediates.
+	Certificate string `json:"certificate"`
+
+	// PrivateKey PEM private key of the leaf certificate.
+	PrivateKey string `json:"privateKey"`
+}
+
+// InstanceInfo defines model for InstanceInfo.
+type InstanceInfo struct {
+	// Domain The public domain, once one is set.
+	Domain *string `json:"domain,omitempty"`
+	Name   string  `json:"name"`
+
+	// RegistrationMode Who may create accounts.
+	RegistrationMode RegistrationMode `json:"registrationMode"`
+
+	// SecureConnection True when this request arrived over HTTPS (directly or via a
+	// trusted proxy) or is addressed to localhost.
+	SecureConnection bool `json:"secureConnection"`
 }
 
 // Invite defines model for Invite.
@@ -331,6 +375,36 @@ type SetupStatus struct {
 	SetupRequired bool `json:"setupRequired"`
 }
 
+// SmtpSecurity `starttls` (usually port 587) and `tls` (usually port 465) encrypt
+// the connection; `none` is only for a relay on the same network.
+type SmtpSecurity string
+
+// SmtpSettings defines model for SmtpSettings.
+type SmtpSettings struct {
+	// Configured True once a mail server is set, so the server can send email.
+	Configured  bool   `json:"configured"`
+	From        string `json:"from"`
+	Host        string `json:"host"`
+	PasswordSet bool   `json:"passwordSet"`
+	Port        int32  `json:"port"`
+
+	// Security `starttls` (usually port 587) and `tls` (usually port 465) encrypt
+	// the connection; `none` is only for a relay on the same network.
+	Security SmtpSecurity `json:"security"`
+	Username string       `json:"username"`
+}
+
+// TlsStatus defines model for TlsStatus.
+type TlsStatus struct {
+	// Active True while the server serves HTTPS with its own certificate.
+	Active    bool       `json:"active"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	Issuer    *string    `json:"issuer,omitempty"`
+
+	// Names The domain names the certificate covers.
+	Names *[]string `json:"names,omitempty"`
+}
+
 // TokenRequest defines model for TokenRequest.
 type TokenRequest struct {
 	Token string `json:"token"`
@@ -351,6 +425,22 @@ type TotpEnrollment struct {
 
 	// Secret Base32 secret, for typing into an app by hand.
 	Secret string `json:"secret"`
+}
+
+// UpdateSmtpSettingsRequest defines model for UpdateSmtpSettingsRequest.
+type UpdateSmtpSettingsRequest struct {
+	// From The sender address, for example `chat@example.com`.
+	From string `json:"from"`
+	Host string `json:"host"`
+
+	// Password Leave out to keep the stored password; empty to remove it.
+	Password *string `json:"password,omitempty"`
+	Port     int32   `json:"port"`
+
+	// Security `starttls` (usually port 587) and `tls` (usually port 465) encrypt
+	// the connection; `none` is only for a relay on the same network.
+	Security SmtpSecurity `json:"security"`
+	Username *string      `json:"username,omitempty"`
 }
 
 // WebAuthnCeremony defines model for WebAuthnCeremony.
@@ -421,6 +511,12 @@ type WebAuthnUnavailable = Error
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
 
+// UpdateSmtpSettingsJSONRequestBody defines body for UpdateSmtpSettings for application/json ContentType.
+type UpdateSmtpSettingsJSONRequestBody = UpdateSmtpSettingsRequest
+
+// InstallTlsCertificateJSONRequestBody defines body for InstallTlsCertificate for application/json ContentType.
+type InstallTlsCertificateJSONRequestBody = InstallTlsCertificateRequest
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
@@ -474,6 +570,24 @@ type ServerInterface interface {
 	// DeleteInvite Revoke an instance invite
 	// (DELETE /api/v1/admin/invites/{inviteId})
 	DeleteInvite(w http.ResponseWriter, r *http.Request, inviteId openapi_types.UUID)
+	// GetSmtpSettings Mail server settings
+	// (GET /api/v1/admin/smtp)
+	GetSmtpSettings(w http.ResponseWriter, r *http.Request)
+	// UpdateSmtpSettings Change the mail server settings
+	// (PUT /api/v1/admin/smtp)
+	UpdateSmtpSettings(w http.ResponseWriter, r *http.Request)
+	// SendTestEmail Send a test email
+	// (POST /api/v1/admin/smtp/test)
+	SendTestEmail(w http.ResponseWriter, r *http.Request)
+	// RemoveTlsCertificate Remove the HTTPS certificate
+	// (DELETE /api/v1/admin/tls)
+	RemoveTlsCertificate(w http.ResponseWriter, r *http.Request)
+	// GetTlsStatus HTTPS certificate status
+	// (GET /api/v1/admin/tls)
+	GetTlsStatus(w http.ResponseWriter, r *http.Request)
+	// InstallTlsCertificate Upload an HTTPS certificate
+	// (PUT /api/v1/admin/tls)
+	InstallTlsCertificate(w http.ResponseWriter, r *http.Request)
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -543,6 +657,9 @@ type ServerInterface interface {
 	// RemoveWebAuthnCredential Remove a security key or passkey
 	// (DELETE /api/v1/auth/webauthn/{credentialId})
 	RemoveWebAuthnCredential(w http.ResponseWriter, r *http.Request, credentialId openapi_types.UUID)
+	// GetInstanceInfo Public instance information
+	// (GET /api/v1/instance)
+	GetInstanceInfo(w http.ResponseWriter, r *http.Request)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(w http.ResponseWriter, r *http.Request)
@@ -614,6 +731,90 @@ func (siw *ServerInterfaceWrapper) DeleteInvite(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteInvite(w, r, inviteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSmtpSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetSmtpSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSmtpSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSmtpSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSmtpSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSmtpSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendTestEmail operation middleware
+func (siw *ServerInterfaceWrapper) SendTestEmail(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendTestEmail(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveTlsCertificate operation middleware
+func (siw *ServerInterfaceWrapper) RemoveTlsCertificate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveTlsCertificate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTlsStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetTlsStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTlsStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// InstallTlsCertificate operation middleware
+func (siw *ServerInterfaceWrapper) InstallTlsCertificate(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.InstallTlsCertificate(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -993,6 +1194,20 @@ func (siw *ServerInterfaceWrapper) RemoveWebAuthnCredential(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// GetInstanceInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetInstanceInfo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInstanceInfo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSetupStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetSetupStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -1192,6 +1407,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/invites", wrapper.ListInvites)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/invites", wrapper.CreateInvite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/invites/{inviteId}", wrapper.DeleteInvite)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.RemoveTlsCertificate)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.GetTlsStatus)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.InstallTlsCertificate)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.GetSmtpSettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.UpdateSmtpSettings)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/smtp/test", wrapper.SendTestEmail)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/login/mfa", wrapper.CompleteLoginMfa)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/mfa", wrapper.GetSecondFactors)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/mfa/totp", wrapper.EnrollTotp)
@@ -1210,6 +1431,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/sessions", wrapper.ListSessions)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/sessions/{sessionId}", wrapper.RevokeSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/users/me", wrapper.GetCurrentUser)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/setup", wrapper.CompleteSetup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/healthz", wrapper.GetLiveness)
@@ -1411,6 +1633,388 @@ func (response DeleteInvite404JSONResponse) VisitDeleteInviteResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSmtpSettingsRequestObject struct {
+}
+
+type GetSmtpSettingsResponseObject interface {
+	VisitGetSmtpSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetSmtpSettings200JSONResponse SmtpSettings
+
+func (response GetSmtpSettings200JSONResponse) VisitGetSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSmtpSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetSmtpSettings401JSONResponse) VisitGetSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSmtpSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSmtpSettings403JSONResponse) VisitGetSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSmtpSettingsRequestObject struct {
+	Body *UpdateSmtpSettingsJSONRequestBody
+}
+
+type UpdateSmtpSettingsResponseObject interface {
+	VisitUpdateSmtpSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateSmtpSettings200JSONResponse SmtpSettings
+
+func (response UpdateSmtpSettings200JSONResponse) VisitUpdateSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSmtpSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateSmtpSettings400JSONResponse) VisitUpdateSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSmtpSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateSmtpSettings401JSONResponse) VisitUpdateSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSmtpSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateSmtpSettings403JSONResponse) VisitUpdateSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSmtpSettings422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response UpdateSmtpSettings422JSONResponse) VisitUpdateSmtpSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendTestEmailRequestObject struct {
+}
+
+type SendTestEmailResponseObject interface {
+	VisitSendTestEmailResponse(w http.ResponseWriter) error
+}
+
+type SendTestEmail204Response struct {
+}
+
+func (response SendTestEmail204Response) VisitSendTestEmailResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SendTestEmail401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SendTestEmail401JSONResponse) VisitSendTestEmailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendTestEmail403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SendTestEmail403JSONResponse) VisitSendTestEmailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendTestEmail422JSONResponse Error
+
+func (response SendTestEmail422JSONResponse) VisitSendTestEmailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendTestEmail429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SendTestEmail429JSONResponse) VisitSendTestEmailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendTestEmail502JSONResponse Error
+
+func (response SendTestEmail502JSONResponse) VisitSendTestEmailResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveTlsCertificateRequestObject struct {
+}
+
+type RemoveTlsCertificateResponseObject interface {
+	VisitRemoveTlsCertificateResponse(w http.ResponseWriter) error
+}
+
+type RemoveTlsCertificate204Response struct {
+}
+
+func (response RemoveTlsCertificate204Response) VisitRemoveTlsCertificateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveTlsCertificate401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveTlsCertificate401JSONResponse) VisitRemoveTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveTlsCertificate403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RemoveTlsCertificate403JSONResponse) VisitRemoveTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTlsStatusRequestObject struct {
+}
+
+type GetTlsStatusResponseObject interface {
+	VisitGetTlsStatusResponse(w http.ResponseWriter) error
+}
+
+type GetTlsStatus200JSONResponse TlsStatus
+
+func (response GetTlsStatus200JSONResponse) VisitGetTlsStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTlsStatus401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetTlsStatus401JSONResponse) VisitGetTlsStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTlsStatus403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetTlsStatus403JSONResponse) VisitGetTlsStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InstallTlsCertificateRequestObject struct {
+	Body *InstallTlsCertificateJSONRequestBody
+}
+
+type InstallTlsCertificateResponseObject interface {
+	VisitInstallTlsCertificateResponse(w http.ResponseWriter) error
+}
+
+type InstallTlsCertificate200JSONResponse TlsStatus
+
+func (response InstallTlsCertificate200JSONResponse) VisitInstallTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InstallTlsCertificate400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response InstallTlsCertificate400JSONResponse) VisitInstallTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InstallTlsCertificate401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response InstallTlsCertificate401JSONResponse) VisitInstallTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InstallTlsCertificate403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response InstallTlsCertificate403JSONResponse) VisitInstallTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type InstallTlsCertificate422JSONResponse Error
+
+func (response InstallTlsCertificate422JSONResponse) VisitInstallTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -2569,6 +3173,27 @@ func (response RemoveWebAuthnCredential404JSONResponse) VisitRemoveWebAuthnCrede
 	return err
 }
 
+type GetInstanceInfoRequestObject struct {
+}
+
+type GetInstanceInfoResponseObject interface {
+	VisitGetInstanceInfoResponse(w http.ResponseWriter) error
+}
+
+type GetInstanceInfo200JSONResponse InstanceInfo
+
+func (response GetInstanceInfo200JSONResponse) VisitGetInstanceInfoResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSetupStatusRequestObject struct {
 }
 
@@ -2784,6 +3409,24 @@ type StrictServerInterface interface {
 	// DeleteInvite Revoke an instance invite
 	// (DELETE /api/v1/admin/invites/{inviteId})
 	DeleteInvite(ctx context.Context, request DeleteInviteRequestObject) (DeleteInviteResponseObject, error)
+	// GetSmtpSettings Mail server settings
+	// (GET /api/v1/admin/smtp)
+	GetSmtpSettings(ctx context.Context, request GetSmtpSettingsRequestObject) (GetSmtpSettingsResponseObject, error)
+	// UpdateSmtpSettings Change the mail server settings
+	// (PUT /api/v1/admin/smtp)
+	UpdateSmtpSettings(ctx context.Context, request UpdateSmtpSettingsRequestObject) (UpdateSmtpSettingsResponseObject, error)
+	// SendTestEmail Send a test email
+	// (POST /api/v1/admin/smtp/test)
+	SendTestEmail(ctx context.Context, request SendTestEmailRequestObject) (SendTestEmailResponseObject, error)
+	// RemoveTlsCertificate Remove the HTTPS certificate
+	// (DELETE /api/v1/admin/tls)
+	RemoveTlsCertificate(ctx context.Context, request RemoveTlsCertificateRequestObject) (RemoveTlsCertificateResponseObject, error)
+	// GetTlsStatus HTTPS certificate status
+	// (GET /api/v1/admin/tls)
+	GetTlsStatus(ctx context.Context, request GetTlsStatusRequestObject) (GetTlsStatusResponseObject, error)
+	// InstallTlsCertificate Upload an HTTPS certificate
+	// (PUT /api/v1/admin/tls)
+	InstallTlsCertificate(ctx context.Context, request InstallTlsCertificateRequestObject) (InstallTlsCertificateResponseObject, error)
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -2853,6 +3496,9 @@ type StrictServerInterface interface {
 	// RemoveWebAuthnCredential Remove a security key or passkey
 	// (DELETE /api/v1/auth/webauthn/{credentialId})
 	RemoveWebAuthnCredential(ctx context.Context, request RemoveWebAuthnCredentialRequestObject) (RemoveWebAuthnCredentialResponseObject, error)
+	// GetInstanceInfo Public instance information
+	// (GET /api/v1/instance)
+	GetInstanceInfo(ctx context.Context, request GetInstanceInfoRequestObject) (GetInstanceInfoResponseObject, error)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
@@ -2983,6 +3629,164 @@ func (sh *strictHandler) DeleteInvite(w http.ResponseWriter, r *http.Request, in
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteInviteResponseObject); ok {
 		if err := validResponse.VisitDeleteInviteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSmtpSettings operation middleware
+func (sh *strictHandler) GetSmtpSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetSmtpSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSmtpSettings(ctx, request.(GetSmtpSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSmtpSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSmtpSettingsResponseObject); ok {
+		if err := validResponse.VisitGetSmtpSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSmtpSettings operation middleware
+func (sh *strictHandler) UpdateSmtpSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateSmtpSettingsRequestObject
+
+	var body UpdateSmtpSettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSmtpSettings(ctx, request.(UpdateSmtpSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSmtpSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSmtpSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateSmtpSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SendTestEmail operation middleware
+func (sh *strictHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
+	var request SendTestEmailRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendTestEmail(ctx, request.(SendTestEmailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendTestEmail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendTestEmailResponseObject); ok {
+		if err := validResponse.VisitSendTestEmailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveTlsCertificate operation middleware
+func (sh *strictHandler) RemoveTlsCertificate(w http.ResponseWriter, r *http.Request) {
+	var request RemoveTlsCertificateRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveTlsCertificate(ctx, request.(RemoveTlsCertificateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveTlsCertificate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveTlsCertificateResponseObject); ok {
+		if err := validResponse.VisitRemoveTlsCertificateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTlsStatus operation middleware
+func (sh *strictHandler) GetTlsStatus(w http.ResponseWriter, r *http.Request) {
+	var request GetTlsStatusRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTlsStatus(ctx, request.(GetTlsStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTlsStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetTlsStatusResponseObject); ok {
+		if err := validResponse.VisitGetTlsStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// InstallTlsCertificate operation middleware
+func (sh *strictHandler) InstallTlsCertificate(w http.ResponseWriter, r *http.Request) {
+	var request InstallTlsCertificateRequestObject
+
+	var body InstallTlsCertificateJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.InstallTlsCertificate(ctx, request.(InstallTlsCertificateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "InstallTlsCertificate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(InstallTlsCertificateResponseObject); ok {
+		if err := validResponse.VisitInstallTlsCertificateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3634,6 +4438,30 @@ func (sh *strictHandler) RemoveWebAuthnCredential(w http.ResponseWriter, r *http
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RemoveWebAuthnCredentialResponseObject); ok {
 		if err := validResponse.VisitRemoveWebAuthnCredentialResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInstanceInfo operation middleware
+func (sh *strictHandler) GetInstanceInfo(w http.ResponseWriter, r *http.Request) {
+	var request GetInstanceInfoRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInstanceInfo(ctx, request.(GetInstanceInfoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInstanceInfo")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInstanceInfoResponseObject); ok {
+		if err := validResponse.VisitGetInstanceInfoResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts"
+	"github.com/aazam476/nexus-chat/apps/server/internal/admin"
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
+	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
@@ -19,8 +21,10 @@ import (
 // Features holds the handler of every API feature.
 type Features struct {
 	Accounts     *accounts.Handler
+	Admin        *admin.Handler
 	Auth         *auth.Handler
 	Health       *health.Handler
+	Instance     *instanceconfig.Handler
 	Registration *registration.Handler
 	Setup        *setup.Handler
 }
@@ -37,8 +41,10 @@ type Options struct {
 // cannot share a name. These aliases give each one its own field name.
 type (
 	accountsHandler     = accounts.Handler
+	adminHandler        = admin.Handler
 	authHandler         = auth.Handler
 	healthHandler       = health.Handler
+	instanceHandler     = instanceconfig.Handler
 	registrationHandler = registration.Handler
 	setupHandler        = setup.Handler
 )
@@ -48,8 +54,10 @@ type (
 // its own operations; the compiler reports any operation nobody implements.
 type handlers struct {
 	*accountsHandler
+	*adminHandler
 	*authHandler
 	*healthHandler
+	*instanceHandler
 	*registrationHandler
 	*setupHandler
 }
@@ -62,7 +70,8 @@ func NewHandler(features Features, options Options) http.Handler {
 	errorHandlers := errorResponder{logger: options.Logger}
 	strict := api.NewStrictHandlerWithOptions(
 		handlers{
-			accountsHandler: features.Accounts, authHandler: features.Auth, healthHandler: features.Health,
+			accountsHandler: features.Accounts, adminHandler: features.Admin, authHandler: features.Auth,
+			healthHandler: features.Health, instanceHandler: features.Instance,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},

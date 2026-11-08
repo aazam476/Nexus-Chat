@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -140,6 +140,89 @@ export const createInvite = <ThrowOnError extends boolean = false>(options: Opti
 export const deleteInvite = <ThrowOnError extends boolean = false>(options: Options<DeleteInviteData, ThrowOnError>): RequestResult<DeleteInviteResponses, DeleteInviteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteInviteResponses, DeleteInviteErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/admin/invites/{inviteId}',
+    ...options
+});
+
+/**
+ * Remove the HTTPS certificate
+ *
+ * Deletes the certificate files and stops serving HTTPS. Plain HTTP keeps working.
+ */
+export const removeTlsCertificate = <ThrowOnError extends boolean = false>(options?: Options<RemoveTlsCertificateData, ThrowOnError>): RequestResult<RemoveTlsCertificateResponses, RemoveTlsCertificateErrors, ThrowOnError> => (options?.client ?? client).delete<RemoveTlsCertificateResponses, RemoveTlsCertificateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/tls',
+    ...options
+});
+
+/**
+ * HTTPS certificate status
+ *
+ * Whether the server serves HTTPS with an uploaded or mounted
+ * certificate, and which names it covers until when. An instance
+ * behind a reverse proxy shows `active: false` here.
+ *
+ */
+export const getTlsStatus = <ThrowOnError extends boolean = false>(options?: Options<GetTlsStatusData, ThrowOnError>): RequestResult<GetTlsStatusResponses, GetTlsStatusErrors, ThrowOnError> => (options?.client ?? client).get<GetTlsStatusResponses, GetTlsStatusErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/tls',
+    ...options
+});
+
+/**
+ * Upload an HTTPS certificate
+ *
+ * Validates the certificate chain and private key (the key matches,
+ * the chain is complete and trusted, the certificate covers the
+ * instance domain and is currently valid), saves them and starts
+ * serving HTTPS without a restart. A rejected upload changes nothing.
+ *
+ */
+export const installTlsCertificate = <ThrowOnError extends boolean = false>(options: Options<InstallTlsCertificateData, ThrowOnError>): RequestResult<InstallTlsCertificateResponses, InstallTlsCertificateErrors, ThrowOnError> => (options.client ?? client).put<InstallTlsCertificateResponses, InstallTlsCertificateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/tls',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Mail server settings
+ *
+ * The password is never returned; `passwordSet` says whether one is stored.
+ */
+export const getSmtpSettings = <ThrowOnError extends boolean = false>(options?: Options<GetSmtpSettingsData, ThrowOnError>): RequestResult<GetSmtpSettingsResponses, GetSmtpSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetSmtpSettingsResponses, GetSmtpSettingsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/smtp',
+    ...options
+});
+
+/**
+ * Change the mail server settings
+ *
+ * Replaces the settings. Leaving out `password` keeps the stored one;
+ * an empty string removes it. The next email uses the new settings.
+ *
+ */
+export const updateSmtpSettings = <ThrowOnError extends boolean = false>(options: Options<UpdateSmtpSettingsData, ThrowOnError>): RequestResult<UpdateSmtpSettingsResponses, UpdateSmtpSettingsErrors, ThrowOnError> => (options.client ?? client).put<UpdateSmtpSettingsResponses, UpdateSmtpSettingsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/smtp',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Send a test email
+ *
+ * Sends a test email to the calling admin's own address with the saved settings.
+ */
+export const sendTestEmail = <ThrowOnError extends boolean = false>(options?: Options<SendTestEmailData, ThrowOnError>): RequestResult<SendTestEmailResponses, SendTestEmailErrors, ThrowOnError> => (options?.client ?? client).post<SendTestEmailResponses, SendTestEmailErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/smtp/test',
     ...options
 });
 
@@ -352,6 +435,16 @@ export const getCurrentUser = <ThrowOnError extends boolean = false>(options?: O
     url: '/api/v1/users/me',
     ...options
 });
+
+/**
+ * Public instance information
+ *
+ * What every client needs before logging in: the instance name, how
+ * registration works, and whether this connection is secure. Clients
+ * show the HTTPS warning (spec §3.3) when `secureConnection` is false.
+ *
+ */
+export const getInstanceInfo = <ThrowOnError extends boolean = false>(options?: Options<GetInstanceInfoData, ThrowOnError>): RequestResult<GetInstanceInfoResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetInstanceInfoResponses, unknown, ThrowOnError>({ url: '/api/v1/instance', ...options });
 
 /**
  * Setup status

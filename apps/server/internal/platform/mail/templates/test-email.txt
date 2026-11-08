@@ -1,0 +1,5 @@
+Test email from {{.InstanceName}}
+Hi {{.DisplayName}},
+
+This is a test email from {{.InstanceName}}. If you can read it, the mail
+server settings in the Admin panel work.

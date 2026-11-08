@@ -220,3 +220,15 @@ func TestConfiguredUsesCurrentSettings(t *testing.T) {
 	failing := NewConfigured(func(context.Context) (SMTPConfig, bool, error) { return SMTPConfig{}, false, errors.New("down") }, clock.Fixed{})
 	assert.ErrorContains(t, failing.Send(t.Context(), message), "reading SMTP settings")
 }
+
+func TestConfiguredReportsDeliveryFailures(t *testing.T) {
+	config := SMTPConfig{Host: "127.0.0.1", Port: freePort(t), Security: SecurityNone, From: "chat@example.com"}
+	configured := NewConfigured(func(context.Context) (SMTPConfig, bool, error) { return config, true, nil }, clock.Fixed{})
+
+	err := configured.Send(t.Context(), Message{To: "a@example.com", Subject: "Hi", Text: "Hello"})
+
+	var delivery *DeliveryError
+	require.ErrorAs(t, err, &delivery)
+	assert.Contains(t, err.Error(), "connecting to mail server")
+	assert.Equal(t, delivery.Err, errors.Unwrap(err))
+}

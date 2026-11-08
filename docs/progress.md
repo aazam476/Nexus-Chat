@@ -83,10 +83,14 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   ten single-use backup codes, FIDO2 security keys, and passwordless
   passkey login (go-webauthn, tested end to end with a software
   authenticator). An MFA challenge allows exactly one attempt.
+- Admin APIs: upload, inspect and remove the HTTPS certificate (validated
+  before anything is saved, served at once); SMTP settings (the password is
+  never returned) and a rate-limited test email to the admin's own address.
+- Public `GET /api/v1/instance`: name, registration mode and whether the
+  connection is secure, which drives the client's HTTPS warning.
 
 Still to do in M2: OIDC providers; profile, avatar and status; the
-WebSocket gateway and presence; Admin panel APIs (certificate upload,
-SMTP); and the client: Expo app shell, setup wizard, login screens, HTTPS
+WebSocket gateway and presence; and the client: Expo app shell, setup wizard, login screens, HTTPS
 banner, Electron shell, Playwright release gate and ZAP scan.
 
 ## Known issues
@@ -94,6 +98,9 @@ banner, Electron shell, Playwright release gate and ZAP scan.
 - Removing a second factor or regenerating backup codes needs only a valid
   session; it should also ask for recent re-authentication (password or
   passkey). Planned together with account deletion's re-authentication.
+- The SMTP password is stored unencrypted in `instance_settings`. It gets
+  the same AES-256-GCM sealing as TOTP secrets, with its own key, together
+  with OIDC client secrets, the next setting that needs it.
 
 - Mutation testing tool for Go is chosen in M2 (see ADR 0001).
 - Moderate and low `pnpm audit` findings remain in development-only tools

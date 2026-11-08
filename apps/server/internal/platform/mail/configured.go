@@ -23,7 +23,8 @@ func NewConfigured(source ConfigSource, clock clock.Clock) *Configured {
 	return &Configured{source: source, clock: clock}
 }
 
-// Send sends message, or returns ErrNotConfigured.
+// Send sends message, or returns ErrNotConfigured. A problem talking to
+// the mail server is returned as a *DeliveryError.
 func (configured *Configured) Send(ctx context.Context, message Message) error {
 	config, found, err := configured.source(ctx)
 	if err != nil {
@@ -32,5 +33,19 @@ func (configured *Configured) Send(ctx context.Context, message Message) error {
 	if !found || config.Host == "" {
 		return ErrNotConfigured
 	}
-	return NewSMTPSender(config, configured.clock).Send(ctx, message)
+	if err := NewSMTPSender(config, configured.clock).Send(ctx, message); err != nil {
+		return &DeliveryError{Err: err}
+	}
+	return nil
 }
+
+// DeliveryError means the mail server could not be reached or refused the
+// message. Its message is meant for the admin who configured the server.
+type DeliveryError struct {
+	Err error
+}
+
+func (delivery *DeliveryError) Error() string { return delivery.Err.Error() }
+
+// Unwrap returns the underlying error.
+func (delivery *DeliveryError) Unwrap() error { return delivery.Err }

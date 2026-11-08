@@ -316,6 +316,80 @@ export type HealthCheck = {
 
 export type HealthState = 'ok' | 'unavailable';
 
+export type InstanceInfo = {
+    name: string;
+    /**
+     * The public domain, once one is set.
+     */
+    domain?: string;
+    registrationMode: RegistrationMode;
+    /**
+     * True when this request arrived over HTTPS (directly or via a
+     * trusted proxy) or is addressed to localhost.
+     *
+     */
+    secureConnection: boolean;
+};
+
+export type TlsStatus = {
+    /**
+     * True while the server serves HTTPS with its own certificate.
+     */
+    active: boolean;
+    /**
+     * The domain names the certificate covers.
+     */
+    names?: Array<string>;
+    issuer?: string;
+    expiresAt?: string;
+};
+
+export type InstallTlsCertificateRequest = {
+    /**
+     * PEM certificate chain, leaf first, including intermediates.
+     */
+    certificate: string;
+    /**
+     * PEM private key of the leaf certificate.
+     */
+    privateKey: string;
+};
+
+/**
+ * `starttls` (usually port 587) and `tls` (usually port 465) encrypt
+ * the connection; `none` is only for a relay on the same network.
+ *
+ */
+export type SmtpSecurity = 'starttls' | 'tls' | 'none';
+
+export type SmtpSettings = {
+    /**
+     * True once a mail server is set, so the server can send email.
+     */
+    configured: boolean;
+    host: string;
+    port: number;
+    security: SmtpSecurity;
+    username: string;
+    from: string;
+    passwordSet: boolean;
+};
+
+export type UpdateSmtpSettingsRequest = {
+    host: string;
+    port: number;
+    security: SmtpSecurity;
+    username?: string;
+    /**
+     * Leave out to keep the stored password; empty to remove it.
+     */
+    password?: string;
+    /**
+     * The sender address, for example `chat@example.com`.
+     */
+    from: string;
+};
+
 export type LoginData = {
     body: LoginRequest;
     path?: never;
@@ -605,6 +679,212 @@ export type DeleteInviteResponses = {
 };
 
 export type DeleteInviteResponse = DeleteInviteResponses[keyof DeleteInviteResponses];
+
+export type RemoveTlsCertificateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/tls';
+};
+
+export type RemoveTlsCertificateErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type RemoveTlsCertificateError = RemoveTlsCertificateErrors[keyof RemoveTlsCertificateErrors];
+
+export type RemoveTlsCertificateResponses = {
+    /**
+     * HTTPS is off.
+     */
+    204: void;
+};
+
+export type RemoveTlsCertificateResponse = RemoveTlsCertificateResponses[keyof RemoveTlsCertificateResponses];
+
+export type GetTlsStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/tls';
+};
+
+export type GetTlsStatusErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetTlsStatusError = GetTlsStatusErrors[keyof GetTlsStatusErrors];
+
+export type GetTlsStatusResponses = {
+    /**
+     * The certificate in use, if any.
+     */
+    200: TlsStatus;
+};
+
+export type GetTlsStatusResponse = GetTlsStatusResponses[keyof GetTlsStatusResponses];
+
+export type InstallTlsCertificateData = {
+    body: InstallTlsCertificateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/tls';
+};
+
+export type InstallTlsCertificateErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * The certificate cannot be used (`certificate_rejected`); the
+     * message says why, for example a missing intermediate.
+     *
+     */
+    422: Error;
+};
+
+export type InstallTlsCertificateError = InstallTlsCertificateErrors[keyof InstallTlsCertificateErrors];
+
+export type InstallTlsCertificateResponses = {
+    /**
+     * The certificate is now served.
+     */
+    200: TlsStatus;
+};
+
+export type InstallTlsCertificateResponse = InstallTlsCertificateResponses[keyof InstallTlsCertificateResponses];
+
+export type GetSmtpSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/smtp';
+};
+
+export type GetSmtpSettingsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetSmtpSettingsError = GetSmtpSettingsErrors[keyof GetSmtpSettingsErrors];
+
+export type GetSmtpSettingsResponses = {
+    /**
+     * The current settings.
+     */
+    200: SmtpSettings;
+};
+
+export type GetSmtpSettingsResponse = GetSmtpSettingsResponses[keyof GetSmtpSettingsResponses];
+
+export type UpdateSmtpSettingsData = {
+    body: UpdateSmtpSettingsRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/smtp';
+};
+
+export type UpdateSmtpSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type UpdateSmtpSettingsError = UpdateSmtpSettingsErrors[keyof UpdateSmtpSettingsErrors];
+
+export type UpdateSmtpSettingsResponses = {
+    /**
+     * The saved settings.
+     */
+    200: SmtpSettings;
+};
+
+export type UpdateSmtpSettingsResponse = UpdateSmtpSettingsResponses[keyof UpdateSmtpSettingsResponses];
+
+export type SendTestEmailData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/smtp/test';
+};
+
+export type SendTestEmailErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * SMTP is not configured yet (`smtp_not_configured`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+    /**
+     * The mail server refused or could not be reached
+     * (`mail_delivery_failed`); the message has the server's reason.
+     *
+     */
+    502: Error;
+};
+
+export type SendTestEmailError = SendTestEmailErrors[keyof SendTestEmailErrors];
+
+export type SendTestEmailResponses = {
+    /**
+     * The mail server accepted the message.
+     */
+    204: void;
+};
+
+export type SendTestEmailResponse = SendTestEmailResponses[keyof SendTestEmailResponses];
 
 export type CompleteLoginMfaData = {
     body: MfaLoginRequest;
@@ -1127,6 +1407,22 @@ export type GetCurrentUserResponses = {
 };
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
+
+export type GetInstanceInfoData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/instance';
+};
+
+export type GetInstanceInfoResponses = {
+    /**
+     * The instance's public information.
+     */
+    200: InstanceInfo;
+};
+
+export type GetInstanceInfoResponse = GetInstanceInfoResponses[keyof GetInstanceInfoResponses];
 
 export type GetSetupStatusData = {
     body?: never;

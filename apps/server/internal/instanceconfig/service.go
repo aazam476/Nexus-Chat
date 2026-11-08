@@ -22,6 +22,7 @@ const firstBootKey = "instance.first_boot_at"
 type settingsStore interface {
 	InsertSettingIfMissing(ctx context.Context, arg store.InsertSettingIfMissingParams) (store.InstanceSetting, error)
 	GetSetting(ctx context.Context, key string) (store.InstanceSetting, error)
+	UpsertSetting(ctx context.Context, arg store.UpsertSettingParams) error
 }
 
 // ErrNoDomain means the instance has no public domain yet, so it cannot
@@ -56,6 +57,18 @@ func (service *Service) Load(ctx context.Context, key string, target any) (bool,
 		return false, fmt.Errorf("decoding setting %s: %w", key, err)
 	}
 	return true, nil
+}
+
+// Save stores value as the JSON setting key, replacing any earlier value.
+func (service *Service) Save(ctx context.Context, key string, value any) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("encoding setting %s: %w", key, err)
+	}
+	if err := service.settings.UpsertSetting(ctx, store.UpsertSettingParams{Key: key, Value: encoded}); err != nil {
+		return fmt.Errorf("saving setting %s: %w", key, err)
+	}
+	return nil
 }
 
 // Domain returns the public domain: DOMAIN from .env if set, otherwise the

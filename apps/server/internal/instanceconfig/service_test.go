@@ -42,6 +42,14 @@ func (fake *fakeSettingsStore) InsertSettingIfMissing(_ context.Context, arg sto
 	return store.InstanceSetting{Key: arg.Key, Value: fake.values[arg.Key]}, nil
 }
 
+func (fake *fakeSettingsStore) UpsertSetting(_ context.Context, arg store.UpsertSettingParams) error {
+	if fake.err != nil {
+		return fake.err
+	}
+	fake.values[arg.Key] = arg.Value
+	return nil
+}
+
 var firstInstant = time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
 
 func TestRecordFirstBootStoresTheCurrentTimeOnce(t *testing.T) {
@@ -123,4 +131,23 @@ func TestInstanceName(t *testing.T) {
 	name, err = NewService(named, clock.Fixed{}, "").InstanceName(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Example", name)
+}
+
+func TestSaveReplacesTheStoredValue(t *testing.T) {
+	settings := &fakeSettingsStore{values: map[string][]byte{KeyInstanceName: []byte(`"Old"`)}}
+	service := NewService(settings, clock.Fixed{}, "")
+
+	require.NoError(t, service.Save(t.Context(), KeyInstanceName, "New"))
+
+	name, err := service.InstanceName(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "New", name)
+}
+
+func TestSaveReportsFailures(t *testing.T) {
+	service := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "")
+	require.ErrorContains(t, service.Save(t.Context(), "bad", func() {}), "encoding setting bad")
+
+	failing := NewService(&fakeSettingsStore{err: errors.New("down")}, clock.Fixed{}, "")
+	assert.ErrorContains(t, failing.Save(t.Context(), "key", "value"), "saving setting key: down")
 }

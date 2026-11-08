@@ -18,6 +18,7 @@ import (
 	accountsstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens"
 	tokensstore "github.com/aazam476/nexus-chat/apps/server/internal/accounts/tokens/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/admin"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa"
@@ -90,6 +91,9 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 		return nil, err
 	}
 
+	// The Admin panel installs certificates, so the manager exists before
+	// the features are built.
+	app.certificates = app.newCertificateManager(configuration)
 	features, err := app.buildFeatures(ctx, configuration)
 	if err != nil {
 		app.close()
@@ -100,7 +104,6 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 	})
 	app.server = httpserver.NewServer("", handler, logger)
 	app.secureServer = httpserver.NewServer("", handler, logger)
-	app.certificates = app.newCertificateManager(configuration)
 	app.secureServer.TLSConfig = app.certificates.TLSConfig()
 	if err := app.certificates.Reload(ctx); err != nil {
 		// A bad certificate must not keep the instance offline: plain HTTP
@@ -180,11 +183,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	accountQueries := accountsstore.New(app.pool)
 	settings := instanceconfig.NewService(instanceconfigstore.New(app.pool), system, inputs.domain)
 	accountTokens := tokens.NewService(tokensstore.New(app.pool), system)
-	mailer := mail.NewConfigured(func(ctx context.Context) (mail.SMTPConfig, bool, error) {
-		var smtp mail.SMTPConfig
-		found, err := settings.Load(ctx, instanceconfig.KeySMTP, &smtp)
-		return smtp, found, err
-	}, system)
+	mailer := newMailer(settings)
 	accountEmails := emails.NewService(accountTokens, mailer, settings)
 	logins := login.NewService(login.Dependencies{
 		Accounts: accountQueries, Hasher: inputs.hasher, Sessions: app.sessions,
@@ -201,8 +200,12 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		Sessions: app.sessions, Emails: accountEmails, Settings: settings,
 		Limiter: ratelimit.New(ratelimit.PerMinute(5, 5), system), Clock: system, Logger: app.logger,
 	})
+	// The limit on test emails stops a script from flooding the mail server.
+	mailSettings := admin.NewMailSettings(settings, mailer, ratelimit.New(ratelimit.PerMinute(3, 3), system))
 	return httpserver.Features{
 		Accounts: accounts.NewHandler(accountQueries),
+		Admin:    admin.NewHandler(accountQueries, app.certificates, mailSettings),
+		Instance: instanceconfig.NewHandler(settings),
 		Auth: auth.NewHandler(auth.HandlerDependencies{
 			Logins: logins, Sessions: app.sessions, Resets: resets,
 			Verifier: emails.NewVerifier(accountTokens, accountQueries, system), Emails: accountEmails, Users: accountQueries,
@@ -214,6 +217,16 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		}),
 		Registration: registration.NewHandler(registrations, registration.NewInvites(registrationstore.New(app.pool), system), accountQueries),
 	}
+}
+
+// newMailer sends email with the SMTP settings current at the time, so an
+// admin's change applies to the next message.
+func newMailer(settings *instanceconfig.Service) *mail.Configured {
+	return mail.NewConfigured(func(ctx context.Context) (mail.SMTPConfig, bool, error) {
+		var smtp mail.SMTPConfig
+		found, err := settings.Load(ctx, instanceconfig.KeySMTP, &smtp)
+		return smtp, found, err
+	}, clock.System{})
 }
 
 func (app *application) prepareDatabase(ctx context.Context) error {

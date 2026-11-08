@@ -19,6 +19,7 @@ var templateFiles embed.FS
 const (
 	TemplateVerifyEmail   = "verify-email"
 	TemplateResetPassword = "reset-password"
+	TemplateTestEmail     = "test-email"
 )
 
 // TemplateData fills in a template.

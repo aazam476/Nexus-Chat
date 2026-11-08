@@ -19,6 +19,7 @@ var publicOperations = map[string]bool{ //nolint:gochecknoglobals // constant lo
 	"GetLiveness":            true,
 	"GetReadiness":           true,
 	"GetSetupStatus":         true,
+	"GetInstanceInfo":        true,
 	"CompleteSetup":          true,
 	"Login":                  true,
 	"Register":               true,
