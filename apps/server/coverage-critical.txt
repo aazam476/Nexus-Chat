@@ -5,3 +5,4 @@
 ./internal/auth/passwordreset
 ./internal/auth/mfa
 ./internal/auth/passkeys
+./internal/auth/oidc

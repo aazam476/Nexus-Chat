@@ -90,7 +90,12 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
 - Public `GET /api/v1/instance`: name, registration mode and whether the
   connection is secure, which drives the client's HTTPS warning.
 
-Still to do in M2: OIDC providers; profile, avatar and status; the
+- Sign-in with OpenID Connect providers configured by the admin (ADR 0016):
+  authorization code with PKCE and nonce, completion bound to the client
+  that started the flow (no login or link CSRF), sign-up following the
+  registration mode, linking and unlinking, client secrets encrypted.
+
+Still to do in M2: profile, avatar and status; the
 WebSocket gateway and presence; and the client: Expo app shell, setup wizard, login screens, HTTPS
 banner, Electron shell, Playwright release gate and ZAP scan.
 

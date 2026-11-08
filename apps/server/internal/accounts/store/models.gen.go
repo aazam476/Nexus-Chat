@@ -40,6 +40,40 @@ type InstanceSetting struct {
 	UpdatedAt time.Time
 }
 
+type OidcFlow struct {
+	ID             uuid.UUID
+	ProviderID     string
+	UserID         *uuid.UUID
+	StateHash      []byte
+	Nonce          string
+	CodeVerifier   string
+	ReturnTo       string
+	InviteHash     []byte
+	CompletionHash []byte
+	Claims         []byte
+	ExpiresAt      time.Time
+}
+
+type OidcIdentity struct {
+	ProviderID string
+	Subject    string
+	UserID     uuid.UUID
+	Email      string
+	CreatedAt  time.Time
+}
+
+type OidcProvider struct {
+	ID                 string
+	DisplayName        string
+	Issuer             string
+	ClientID           string
+	ClientSecretSealed []byte
+	Scopes             []string
+	AllowSignup        bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
 type Session struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID

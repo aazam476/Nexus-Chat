@@ -30,6 +30,9 @@ type NewAccount struct {
 	// InviteHash is the hash of the invite code used, or nil if none.
 	InviteHash []byte
 	Now        time.Time
+	// AlsoInsert, if set, saves more rows in the same transaction after
+	// the user, such as an OIDC identity. Its errors are returned as is.
+	AlsoInsert func(ctx context.Context, transaction pgx.Tx) error
 }
 
 // Registrar saves new accounts. It holds no SQL of its own: it combines the
@@ -56,7 +59,13 @@ func (registrar *Registrar) CreateAccount(ctx context.Context, account NewAccoun
 				return fmt.Errorf("using invite: %w", err)
 			}
 		}
-		return mapDuplicate(accountsstore.New(transaction).InsertUser(ctx, account.User))
+		if err := mapDuplicate(accountsstore.New(transaction).InsertUser(ctx, account.User)); err != nil {
+			return err
+		}
+		if account.AlsoInsert != nil {
+			return account.AlsoInsert(ctx, transaction)
+		}
+		return nil
 	})
 	for _, known := range []error{ErrInvalidInvite, ErrUsernameTaken, ErrEmailTaken} {
 		if errors.Is(err, known) {

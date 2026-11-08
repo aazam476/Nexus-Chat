@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -392,6 +392,160 @@ export const removeWebAuthnCredential = <ThrowOnError extends boolean = false>(o
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/webauthn/{credentialId}',
     ...options
+});
+
+/**
+ * Sign-in providers
+ *
+ * The providers the login page offers, sorted by name.
+ */
+export const listSignInProviders = <ThrowOnError extends boolean = false>(options?: Options<ListSignInProvidersData, ThrowOnError>): RequestResult<ListSignInProvidersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListSignInProvidersResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/oidc/providers', ...options });
+
+/**
+ * Start signing in with a provider
+ *
+ * Returns the provider's sign-in address to open in a browser and a
+ * `flowId` the client keeps. The provider sends the browser back to
+ * `returnTo` with `#flow=...&code=...` (or `#error=...`); finish with
+ * `POST /api/v1/auth/oidc/complete` within ten minutes.
+ *
+ */
+export const beginProviderSignIn = <ThrowOnError extends boolean = false>(options: Options<BeginProviderSignInData, ThrowOnError>): RequestResult<BeginProviderSignInResponses, BeginProviderSignInErrors, ThrowOnError> => (options.client ?? client).post<BeginProviderSignInResponses, BeginProviderSignInErrors, ThrowOnError>({
+    url: '/api/v1/auth/oidc/providers/{providerId}/begin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Provider callback
+ *
+ * Where providers send the browser after sign-in. Register the
+ * instance's base URL followed by this path at the provider. Always
+ * redirects to the address the client gave when it began, except
+ * for an unknown or used `state`.
+ *
+ */
+export const providerCallback = <ThrowOnError extends boolean = false>(options?: Options<ProviderCallbackData, ThrowOnError>): RequestResult<unknown, ProviderCallbackErrors, ThrowOnError> => (options?.client ?? client).get<unknown, ProviderCallbackErrors, ThrowOnError>({ url: '/api/v1/auth/oidc/callback', ...options });
+
+/**
+ * Finish signing in with a provider
+ *
+ * Logs in the account linked to the provider login. If there is none
+ * and the provider allows sign-up, creates one first, following the
+ * registration mode. Accounts with a second factor get an MFA
+ * challenge, exactly as with `POST /api/v1/auth/login`.
+ *
+ */
+export const completeProviderSignIn = <ThrowOnError extends boolean = false>(options: Options<CompleteProviderSignInData, ThrowOnError>): RequestResult<CompleteProviderSignInResponses, CompleteProviderSignInErrors, ThrowOnError> => (options.client ?? client).post<CompleteProviderSignInResponses, CompleteProviderSignInErrors, ThrowOnError>({
+    url: '/api/v1/auth/oidc/complete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Start linking a provider to my account
+ *
+ * Like `begin`, for the logged-in account. Finish with `POST /api/v1/auth/oidc/link/complete`.
+ */
+export const beginProviderLink = <ThrowOnError extends boolean = false>(options: Options<BeginProviderLinkData, ThrowOnError>): RequestResult<BeginProviderLinkResponses, BeginProviderLinkErrors, ThrowOnError> => (options.client ?? client).post<BeginProviderLinkResponses, BeginProviderLinkErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/oidc/providers/{providerId}/link',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Finish linking a provider to my account
+ */
+export const completeProviderLink = <ThrowOnError extends boolean = false>(options: Options<CompleteProviderLinkData, ThrowOnError>): RequestResult<CompleteProviderLinkResponses, CompleteProviderLinkErrors, ThrowOnError> => (options.client ?? client).post<CompleteProviderLinkResponses, CompleteProviderLinkErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/oidc/link/complete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Providers linked to my account
+ */
+export const listLinkedProviders = <ThrowOnError extends boolean = false>(options?: Options<ListLinkedProvidersData, ThrowOnError>): RequestResult<ListLinkedProvidersResponses, ListLinkedProvidersErrors, ThrowOnError> => (options?.client ?? client).get<ListLinkedProvidersResponses, ListLinkedProvidersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/oidc/identities',
+    ...options
+});
+
+/**
+ * Unlink a provider from my account
+ */
+export const unlinkProvider = <ThrowOnError extends boolean = false>(options: Options<UnlinkProviderData, ThrowOnError>): RequestResult<UnlinkProviderResponses, UnlinkProviderErrors, ThrowOnError> => (options.client ?? client).delete<UnlinkProviderResponses, UnlinkProviderErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/oidc/identities/{providerId}',
+    ...options
+});
+
+/**
+ * List sign-in providers
+ */
+export const listOidcProviders = <ThrowOnError extends boolean = false>(options?: Options<ListOidcProvidersData, ThrowOnError>): RequestResult<ListOidcProvidersResponses, ListOidcProvidersErrors, ThrowOnError> => (options?.client ?? client).get<ListOidcProvidersResponses, ListOidcProvidersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/oidc-providers',
+    ...options
+});
+
+/**
+ * Add a sign-in provider
+ *
+ * The issuer's OpenID configuration is fetched before saving, so a
+ * mistyped issuer is reported as a validation error on `issuer`.
+ *
+ */
+export const createOidcProvider = <ThrowOnError extends boolean = false>(options: Options<CreateOidcProviderData, ThrowOnError>): RequestResult<CreateOidcProviderResponses, CreateOidcProviderErrors, ThrowOnError> => (options.client ?? client).post<CreateOidcProviderResponses, CreateOidcProviderErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/oidc-providers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a sign-in provider
+ *
+ * Also removes every account's link to it. Accounts that had no other
+ * way to log in can set a password with password reset.
+ *
+ */
+export const deleteOidcProvider = <ThrowOnError extends boolean = false>(options: Options<DeleteOidcProviderData, ThrowOnError>): RequestResult<DeleteOidcProviderResponses, DeleteOidcProviderErrors, ThrowOnError> => (options.client ?? client).delete<DeleteOidcProviderResponses, DeleteOidcProviderErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/oidc-providers/{providerId}',
+    ...options
+});
+
+/**
+ * Change a sign-in provider
+ *
+ * Leaving out `clientSecret` keeps the stored one; an empty string removes it.
+ */
+export const updateOidcProvider = <ThrowOnError extends boolean = false>(options: Options<UpdateOidcProviderData, ThrowOnError>): RequestResult<UpdateOidcProviderResponses, UpdateOidcProviderErrors, ThrowOnError> => (options.client ?? client).put<UpdateOidcProviderResponses, UpdateOidcProviderErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/admin/oidc-providers/{providerId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

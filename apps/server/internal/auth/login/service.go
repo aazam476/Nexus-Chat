@@ -127,12 +127,28 @@ func (service *Service) Login(ctx context.Context, request Request) (Result, err
 	if err != nil {
 		return Result{}, err
 	}
+	return service.afterFirstFactor(ctx, user, request.Device)
+}
+
+// ContinueLogin logs userID in after a first factor checked elsewhere (a
+// sign-in provider), asking for a second factor exactly as Login does.
+func (service *Service) ContinueLogin(ctx context.Context, userID uuid.UUID, device session.Device) (Result, error) {
+	user, err := service.dependencies.Accounts.GetUserByID(ctx, userID)
+	if err != nil {
+		return Result{}, fmt.Errorf("loading account: %w", err)
+	}
+	return service.afterFirstFactor(ctx, user, device)
+}
+
+// afterFirstFactor starts the session, or returns an MFA challenge when
+// the account has a second factor.
+func (service *Service) afterFirstFactor(ctx context.Context, user accountsstore.User, device session.Device) (Result, error) {
 	needsSecondFactor, err := service.dependencies.SecondFactors.HasSecondFactor(ctx, user.ID)
 	if err != nil {
 		return Result{}, err
 	}
 	if !needsSecondFactor {
-		return service.startSession(ctx, user, request.Device)
+		return service.startSession(ctx, user, device)
 	}
 	methods, err := service.dependencies.SecondFactors.Methods(ctx, user.ID)
 	if err != nil {

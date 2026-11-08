@@ -10,6 +10,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/admin"
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/oidc"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
@@ -25,6 +26,7 @@ type Features struct {
 	Auth         *auth.Handler
 	Health       *health.Handler
 	Instance     *instanceconfig.Handler
+	OIDC         *oidc.Handler
 	Registration *registration.Handler
 	Setup        *setup.Handler
 }
@@ -45,6 +47,7 @@ type (
 	authHandler         = auth.Handler
 	healthHandler       = health.Handler
 	instanceHandler     = instanceconfig.Handler
+	oidcHandler         = oidc.Handler
 	registrationHandler = registration.Handler
 	setupHandler        = setup.Handler
 )
@@ -58,6 +61,7 @@ type handlers struct {
 	*authHandler
 	*healthHandler
 	*instanceHandler
+	*oidcHandler
 	*registrationHandler
 	*setupHandler
 }
@@ -71,7 +75,7 @@ func NewHandler(features Features, options Options) http.Handler {
 	strict := api.NewStrictHandlerWithOptions(
 		handlers{
 			accountsHandler: features.Accounts, adminHandler: features.Admin, authHandler: features.Auth,
-			healthHandler: features.Health, instanceHandler: features.Instance,
+			healthHandler: features.Health, instanceHandler: features.Instance, oidcHandler: features.OIDC,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},

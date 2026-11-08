@@ -31,6 +31,10 @@ var publicOperations = map[string]bool{ //nolint:gochecknoglobals // constant lo
 	"FinishSecurityKeyLogin": true,
 	"BeginPasskeyLogin":      true,
 	"FinishPasskeyLogin":     true,
+	"ListSignInProviders":    true,
+	"BeginProviderSignIn":    true,
+	"ProviderCallback":       true,
+	"CompleteProviderSignIn": true,
 }
 
 // Authenticator checks session tokens; *session.Service satisfies it.

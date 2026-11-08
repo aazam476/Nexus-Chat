@@ -3,11 +3,13 @@ package store
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -105,4 +107,26 @@ func TestInviteQueryFailure(t *testing.T) {
 	err := registrar.CreateAccount(context.Background(), NewAccount{User: user("a"), InviteHash: []byte("x"), Now: now})
 
 	assert.Error(t, err)
+}
+
+func TestAlsoInsertRunsInTheSameTransaction(t *testing.T) {
+	registrar := newRegistrar(t)
+	invite := addInvite(t, registrar, inviteSpec{code: "ONCE", maxUses: 1})
+	ctx := context.Background()
+	failure := errors.New("identity already linked")
+
+	err := registrar.CreateAccount(ctx, NewAccount{User: user("rolled"), InviteHash: invite, Now: now,
+		AlsoInsert: func(context.Context, pgx.Tx) error { return failure }})
+	require.ErrorIs(t, err, failure)
+	_, err = accountsstore.New(registrar.pool).GetUserByUsername(ctx, "rolled")
+	require.Error(t, err, "the user is rolled back")
+
+	ran := false
+	err = registrar.CreateAccount(ctx, NewAccount{User: user("kept"), InviteHash: invite, Now: now,
+		AlsoInsert: func(context.Context, pgx.Tx) error {
+			ran = true
+			return nil
+		}})
+	require.NoError(t, err, "the failed attempt did not use up the invite")
+	assert.True(t, ran)
 }

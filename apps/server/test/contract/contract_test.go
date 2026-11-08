@@ -118,7 +118,10 @@ func (server runningServer) callWithHeaders(t *testing.T, spec requestSpec, want
 	for name, value := range spec.headers {
 		request.Header.Set(name, value)
 	}
-	response, err := http.DefaultClient.Do(request)
+	// Redirects are part of the contract (the provider callback), so they
+	// are checked, not followed.
+	client := http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Do(request)
 	require.NoError(t, err)
 	defer func() { _ = response.Body.Close() }()
 	responseBody, err := io.ReadAll(response.Body)

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -128,6 +129,23 @@ type BackupCodes struct {
 	Codes []string `json:"codes"`
 }
 
+// BeginProviderLinkRequest defines model for BeginProviderLinkRequest.
+type BeginProviderLinkRequest struct {
+	// ReturnTo As for `begin`.
+	ReturnTo string `json:"returnTo"`
+}
+
+// BeginProviderSignInRequest defines model for BeginProviderSignInRequest.
+type BeginProviderSignInRequest struct {
+	// InviteCode Used if the sign-in creates an account on an invite-only instance.
+	InviteCode *string `json:"inviteCode,omitempty"`
+
+	// ReturnTo Where the browser goes afterwards: a path on this instance (web
+	// and desktop, for example `/login/oidc`) or a `nexuschat://`
+	// address (mobile apps).
+	ReturnTo string `json:"returnTo"`
+}
+
 // ChallengeRequest defines model for ChallengeRequest.
 type ChallengeRequest struct {
 	ChallengeToken string `json:"challengeToken"`
@@ -144,6 +162,22 @@ type CompletePasswordResetRequest struct {
 	Token    string `json:"token"`
 }
 
+// CompleteProviderLinkRequest defines model for CompleteProviderLinkRequest.
+type CompleteProviderLinkRequest struct {
+	Code   string             `json:"code"`
+	FlowId openapi_types.UUID `json:"flowId"`
+}
+
+// CompleteProviderSignInRequest defines model for CompleteProviderSignInRequest.
+type CompleteProviderSignInRequest struct {
+	// Code The `code` from the return address's fragment.
+	Code string `json:"code"`
+
+	// DeviceName Shown in the session list. 1–64 characters.
+	DeviceName string             `json:"deviceName"`
+	FlowId     openapi_types.UUID `json:"flowId"`
+}
+
 // CreateInviteRequest defines model for CreateInviteRequest.
 type CreateInviteRequest struct {
 	// ExpiresAt When the invite stops working. Omit for never.
@@ -151,6 +185,27 @@ type CreateInviteRequest struct {
 
 	// MaxUses How many accounts may use the invite. Omit for no limit.
 	MaxUses *int32 `json:"maxUses,omitempty"`
+}
+
+// CreateOidcProviderRequest defines model for CreateOidcProviderRequest.
+type CreateOidcProviderRequest struct {
+	AllowSignup bool   `json:"allowSignup"`
+	ClientId    string `json:"clientId"`
+
+	// ClientSecret Leave out for a public client.
+	ClientSecret *string `json:"clientSecret,omitempty"`
+
+	// DisplayName Shown on the login button, for example "Company login". 1–64 characters.
+	DisplayName string `json:"displayName"`
+
+	// Id 2–32 lower-case letters, digits or dashes; used in URLs and cannot change.
+	Id string `json:"id"`
+
+	// Issuer The issuer URL, for example `https://login.example.com/realms/staff`.
+	Issuer string `json:"issuer"`
+
+	// Scopes Defaults to `openid email profile`; `openid` is always added.
+	Scopes *[]string `json:"scopes,omitempty"`
 }
 
 // CreatedInvite defines model for CreatedInvite.
@@ -246,6 +301,16 @@ type Invite struct {
 	Uses      int32              `json:"uses"`
 }
 
+// LinkedProvider defines model for LinkedProvider.
+type LinkedProvider struct {
+	DisplayName string `json:"displayName"`
+
+	// Email The email the provider shared when it was linked (may be empty).
+	Email      string    `json:"email"`
+	LinkedAt   time.Time `json:"linkedAt"`
+	ProviderId string    `json:"providerId"`
+}
+
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	// DeviceName Shown in the session list, for example "Firefox on Linux". 1–64 characters.
@@ -282,9 +347,36 @@ type MfaLoginRequest struct {
 // MfaMethod defines model for MfaMethod.
 type MfaMethod string
 
+// OidcProvider defines model for OidcProvider.
+type OidcProvider struct {
+	// AllowSignup Whether a first sign-in creates an account (following the registration mode).
+	AllowSignup     bool     `json:"allowSignup"`
+	ClientId        string   `json:"clientId"`
+	ClientSecretSet bool     `json:"clientSecretSet"`
+	DisplayName     string   `json:"displayName"`
+	Id              string   `json:"id"`
+	Issuer          string   `json:"issuer"`
+	Scopes          []string `json:"scopes"`
+}
+
+// OidcProviderList defines model for OidcProviderList.
+type OidcProviderList struct {
+	// CallbackUrl The redirect URI to register at each provider; missing until a domain is set.
+	CallbackUrl *string        `json:"callbackUrl,omitempty"`
+	Providers   []OidcProvider `json:"providers"`
+}
+
 // PasswordResetRequest defines model for PasswordResetRequest.
 type PasswordResetRequest struct {
 	Email string `json:"email"`
+}
+
+// ProviderFlow defines model for ProviderFlow.
+type ProviderFlow struct {
+	AuthorizationUrl string `json:"authorizationUrl"`
+
+	// FlowId Keep this in memory; completing needs it.
+	FlowId openapi_types.UUID `json:"flowId"`
 }
 
 // RegisterRequest defines model for RegisterRequest.
@@ -375,6 +467,12 @@ type SetupStatus struct {
 	SetupRequired bool `json:"setupRequired"`
 }
 
+// SignInProvider defines model for SignInProvider.
+type SignInProvider struct {
+	DisplayName string `json:"displayName"`
+	Id          string `json:"id"`
+}
+
 // SmtpSecurity `starttls` (usually port 587) and `tls` (usually port 465) encrypt
 // the connection; `none` is only for a relay on the same network.
 type SmtpSecurity string
@@ -425,6 +523,18 @@ type TotpEnrollment struct {
 
 	// Secret Base32 secret, for typing into an app by hand.
 	Secret string `json:"secret"`
+}
+
+// UpdateOidcProviderRequest defines model for UpdateOidcProviderRequest.
+type UpdateOidcProviderRequest struct {
+	AllowSignup bool   `json:"allowSignup"`
+	ClientId    string `json:"clientId"`
+
+	// ClientSecret Leave out to keep the stored secret; empty to remove it.
+	ClientSecret *string   `json:"clientSecret,omitempty"`
+	DisplayName  string    `json:"displayName"`
+	Issuer       string    `json:"issuer"`
+	Scopes       *[]string `json:"scopes,omitempty"`
 }
 
 // UpdateSmtpSettingsRequest defines model for UpdateSmtpSettingsRequest.
@@ -490,11 +600,23 @@ type WebAuthnRegistrationRequest struct {
 	Name string       `json:"name"`
 }
 
+// ProviderId defines model for ProviderId.
+type ProviderId = string
+
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
 
+// DomainRequired defines model for DomainRequired.
+type DomainRequired = Error
+
 // Forbidden defines model for Forbidden.
 type Forbidden = Error
+
+// ProviderNotFound defines model for ProviderNotFound.
+type ProviderNotFound = Error
+
+// ProviderUnavailable defines model for ProviderUnavailable.
+type ProviderUnavailable = Error
 
 // RateLimited defines model for RateLimited.
 type RateLimited = Error
@@ -508,8 +630,21 @@ type ValidationFailed = Error
 // WebAuthnUnavailable defines model for WebAuthnUnavailable.
 type WebAuthnUnavailable = Error
 
+// ProviderCallbackParams defines parameters for ProviderCallback.
+type ProviderCallbackParams struct {
+	State *string `form:"state,omitempty" json:"state,omitempty"`
+	Code  *string `form:"code,omitempty" json:"code,omitempty"`
+	Error *string `form:"error,omitempty" json:"error,omitempty"`
+}
+
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
+
+// CreateOidcProviderJSONRequestBody defines body for CreateOidcProvider for application/json ContentType.
+type CreateOidcProviderJSONRequestBody = CreateOidcProviderRequest
+
+// UpdateOidcProviderJSONRequestBody defines body for UpdateOidcProvider for application/json ContentType.
+type UpdateOidcProviderJSONRequestBody = UpdateOidcProviderRequest
 
 // UpdateSmtpSettingsJSONRequestBody defines body for UpdateSmtpSettings for application/json ContentType.
 type UpdateSmtpSettingsJSONRequestBody = UpdateSmtpSettingsRequest
@@ -534,6 +669,18 @@ type EnrollTotpJSONRequestBody = EnrollTotpRequest
 
 // ConfirmTotpJSONRequestBody defines body for ConfirmTotp for application/json ContentType.
 type ConfirmTotpJSONRequestBody = CodeRequest
+
+// CompleteProviderSignInJSONRequestBody defines body for CompleteProviderSignIn for application/json ContentType.
+type CompleteProviderSignInJSONRequestBody = CompleteProviderSignInRequest
+
+// CompleteProviderLinkJSONRequestBody defines body for CompleteProviderLink for application/json ContentType.
+type CompleteProviderLinkJSONRequestBody = CompleteProviderLinkRequest
+
+// BeginProviderSignInJSONRequestBody defines body for BeginProviderSignIn for application/json ContentType.
+type BeginProviderSignInJSONRequestBody = BeginProviderSignInRequest
+
+// BeginProviderLinkJSONRequestBody defines body for BeginProviderLink for application/json ContentType.
+type BeginProviderLinkJSONRequestBody = BeginProviderLinkRequest
 
 // FinishPasskeyLoginJSONRequestBody defines body for FinishPasskeyLogin for application/json ContentType.
 type FinishPasskeyLoginJSONRequestBody = WebAuthnLoginAnswer
@@ -570,6 +717,18 @@ type ServerInterface interface {
 	// DeleteInvite Revoke an instance invite
 	// (DELETE /api/v1/admin/invites/{inviteId})
 	DeleteInvite(w http.ResponseWriter, r *http.Request, inviteId openapi_types.UUID)
+	// ListOidcProviders List sign-in providers
+	// (GET /api/v1/admin/oidc-providers)
+	ListOidcProviders(w http.ResponseWriter, r *http.Request)
+	// CreateOidcProvider Add a sign-in provider
+	// (POST /api/v1/admin/oidc-providers)
+	CreateOidcProvider(w http.ResponseWriter, r *http.Request)
+	// DeleteOidcProvider Remove a sign-in provider
+	// (DELETE /api/v1/admin/oidc-providers/{providerId})
+	DeleteOidcProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId)
+	// UpdateOidcProvider Change a sign-in provider
+	// (PUT /api/v1/admin/oidc-providers/{providerId})
+	UpdateOidcProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(w http.ResponseWriter, r *http.Request)
@@ -618,6 +777,30 @@ type ServerInterface interface {
 	// ConfirmTotp Finish adding an authenticator app
 	// (POST /api/v1/auth/mfa/totp/{enrollmentId}/confirm)
 	ConfirmTotp(w http.ResponseWriter, r *http.Request, enrollmentId openapi_types.UUID)
+	// ProviderCallback Provider callback
+	// (GET /api/v1/auth/oidc/callback)
+	ProviderCallback(w http.ResponseWriter, r *http.Request, params ProviderCallbackParams)
+	// CompleteProviderSignIn Finish signing in with a provider
+	// (POST /api/v1/auth/oidc/complete)
+	CompleteProviderSignIn(w http.ResponseWriter, r *http.Request)
+	// ListLinkedProviders Providers linked to my account
+	// (GET /api/v1/auth/oidc/identities)
+	ListLinkedProviders(w http.ResponseWriter, r *http.Request)
+	// UnlinkProvider Unlink a provider from my account
+	// (DELETE /api/v1/auth/oidc/identities/{providerId})
+	UnlinkProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId)
+	// CompleteProviderLink Finish linking a provider to my account
+	// (POST /api/v1/auth/oidc/link/complete)
+	CompleteProviderLink(w http.ResponseWriter, r *http.Request)
+	// ListSignInProviders Sign-in providers
+	// (GET /api/v1/auth/oidc/providers)
+	ListSignInProviders(w http.ResponseWriter, r *http.Request)
+	// BeginProviderSignIn Start signing in with a provider
+	// (POST /api/v1/auth/oidc/providers/{providerId}/begin)
+	BeginProviderSignIn(w http.ResponseWriter, r *http.Request, providerId ProviderId)
+	// BeginProviderLink Start linking a provider to my account
+	// (POST /api/v1/auth/oidc/providers/{providerId}/link)
+	BeginProviderLink(w http.ResponseWriter, r *http.Request, providerId ProviderId)
 	// BeginPasskeyLogin Start logging in with a passkey
 	// (POST /api/v1/auth/passkey/begin)
 	BeginPasskeyLogin(w http.ResponseWriter, r *http.Request)
@@ -731,6 +914,86 @@ func (siw *ServerInterfaceWrapper) DeleteInvite(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteInvite(w, r, inviteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOidcProviders operation middleware
+func (siw *ServerInterfaceWrapper) ListOidcProviders(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOidcProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateOidcProvider operation middleware
+func (siw *ServerInterfaceWrapper) CreateOidcProvider(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateOidcProvider(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteOidcProvider operation middleware
+func (siw *ServerInterfaceWrapper) DeleteOidcProvider(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "providerId" -------------
+	var providerId ProviderId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "providerId", r.PathValue("providerId"), &providerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "providerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteOidcProvider(w, r, providerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateOidcProvider operation middleware
+func (siw *ServerInterfaceWrapper) UpdateOidcProvider(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "providerId" -------------
+	var providerId ProviderId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "providerId", r.PathValue("providerId"), &providerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "providerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateOidcProvider(w, r, providerId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -979,6 +1242,199 @@ func (siw *ServerInterfaceWrapper) ConfirmTotp(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmTotp(w, r, enrollmentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProviderCallback operation middleware
+func (siw *ServerInterfaceWrapper) ProviderCallback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ProviderCallbackParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "error" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "error", r.URL.Query(), &params.Error, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "error"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "error", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProviderCallback(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteProviderSignIn operation middleware
+func (siw *ServerInterfaceWrapper) CompleteProviderSignIn(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteProviderSignIn(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLinkedProviders operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkedProviders(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkedProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnlinkProvider operation middleware
+func (siw *ServerInterfaceWrapper) UnlinkProvider(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "providerId" -------------
+	var providerId ProviderId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "providerId", r.PathValue("providerId"), &providerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "providerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnlinkProvider(w, r, providerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteProviderLink operation middleware
+func (siw *ServerInterfaceWrapper) CompleteProviderLink(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteProviderLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSignInProviders operation middleware
+func (siw *ServerInterfaceWrapper) ListSignInProviders(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSignInProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BeginProviderSignIn operation middleware
+func (siw *ServerInterfaceWrapper) BeginProviderSignIn(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "providerId" -------------
+	var providerId ProviderId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "providerId", r.PathValue("providerId"), &providerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "providerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginProviderSignIn(w, r, providerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BeginProviderLink operation middleware
+func (siw *ServerInterfaceWrapper) BeginProviderLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "providerId" -------------
+	var providerId ProviderId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "providerId", r.PathValue("providerId"), &providerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "providerId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginProviderLink(w, r, providerId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1427,6 +1883,18 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/webauthn/register/begin", wrapper.BeginWebAuthnRegistration)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/webauthn/register/finish", wrapper.FinishWebAuthnRegistration)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/webauthn/{credentialId}", wrapper.RemoveWebAuthnCredential)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/oidc/providers", wrapper.ListSignInProviders)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/oidc/providers/{providerId}/begin", wrapper.BeginProviderSignIn)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/oidc/callback", wrapper.ProviderCallback)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/oidc/complete", wrapper.CompleteProviderSignIn)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/oidc/providers/{providerId}/link", wrapper.BeginProviderLink)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/oidc/link/complete", wrapper.CompleteProviderLink)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/oidc/identities", wrapper.ListLinkedProviders)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/oidc/identities/{providerId}", wrapper.UnlinkProvider)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/oidc-providers", wrapper.ListOidcProviders)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/oidc-providers", wrapper.CreateOidcProvider)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/oidc-providers/{providerId}", wrapper.DeleteOidcProvider)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/oidc-providers/{providerId}", wrapper.UpdateOidcProvider)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/auth/sessions", wrapper.ListSessions)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/auth/sessions/{sessionId}", wrapper.RevokeSession)
@@ -1442,7 +1910,13 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 type BadRequestJSONResponse Error
 
+type DomainRequiredJSONResponse Error
+
 type ForbiddenJSONResponse Error
+
+type ProviderNotFoundJSONResponse Error
+
+type ProviderUnavailableJSONResponse Error
 
 type RateLimitedJSONResponse Error
 
@@ -1633,6 +2107,298 @@ func (response DeleteInvite404JSONResponse) VisitDeleteInviteResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOidcProvidersRequestObject struct {
+}
+
+type ListOidcProvidersResponseObject interface {
+	VisitListOidcProvidersResponse(w http.ResponseWriter) error
+}
+
+type ListOidcProviders200JSONResponse OidcProviderList
+
+func (response ListOidcProviders200JSONResponse) VisitListOidcProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOidcProviders401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListOidcProviders401JSONResponse) VisitListOidcProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOidcProviders403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListOidcProviders403JSONResponse) VisitListOidcProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOidcProviderRequestObject struct {
+	Body *CreateOidcProviderJSONRequestBody
+}
+
+type CreateOidcProviderResponseObject interface {
+	VisitCreateOidcProviderResponse(w http.ResponseWriter) error
+}
+
+type CreateOidcProvider201JSONResponse OidcProvider
+
+func (response CreateOidcProvider201JSONResponse) VisitCreateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOidcProvider400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateOidcProvider400JSONResponse) VisitCreateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOidcProvider401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateOidcProvider401JSONResponse) VisitCreateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOidcProvider403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateOidcProvider403JSONResponse) VisitCreateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOidcProvider409JSONResponse Error
+
+func (response CreateOidcProvider409JSONResponse) VisitCreateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateOidcProvider422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response CreateOidcProvider422JSONResponse) VisitCreateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOidcProviderRequestObject struct {
+	ProviderId ProviderId `json:"providerId"`
+}
+
+type DeleteOidcProviderResponseObject interface {
+	VisitDeleteOidcProviderResponse(w http.ResponseWriter) error
+}
+
+type DeleteOidcProvider204Response struct {
+}
+
+func (response DeleteOidcProvider204Response) VisitDeleteOidcProviderResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteOidcProvider401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteOidcProvider401JSONResponse) VisitDeleteOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOidcProvider403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteOidcProvider403JSONResponse) VisitDeleteOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOidcProvider404JSONResponse struct{ ProviderNotFoundJSONResponse }
+
+func (response DeleteOidcProvider404JSONResponse) VisitDeleteOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateOidcProviderRequestObject struct {
+	ProviderId ProviderId `json:"providerId"`
+	Body       *UpdateOidcProviderJSONRequestBody
+}
+
+type UpdateOidcProviderResponseObject interface {
+	VisitUpdateOidcProviderResponse(w http.ResponseWriter) error
+}
+
+type UpdateOidcProvider200JSONResponse OidcProvider
+
+func (response UpdateOidcProvider200JSONResponse) VisitUpdateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateOidcProvider400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateOidcProvider400JSONResponse) VisitUpdateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateOidcProvider401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateOidcProvider401JSONResponse) VisitUpdateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateOidcProvider403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateOidcProvider403JSONResponse) VisitUpdateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateOidcProvider404JSONResponse struct{ ProviderNotFoundJSONResponse }
+
+func (response UpdateOidcProvider404JSONResponse) VisitUpdateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateOidcProvider422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response UpdateOidcProvider422JSONResponse) VisitUpdateOidcProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -2545,6 +3311,552 @@ func (response ConfirmTotp401JSONResponse) VisitConfirmTotpResponse(w http.Respo
 	return err
 }
 
+type ProviderCallbackRequestObject struct {
+	Params ProviderCallbackParams
+}
+
+type ProviderCallbackResponseObject interface {
+	VisitProviderCallbackResponse(w http.ResponseWriter) error
+}
+
+type ProviderCallback302ResponseHeaders struct {
+	Location string
+}
+
+type ProviderCallback302Response struct {
+	Headers ProviderCallback302ResponseHeaders
+}
+
+func (response ProviderCallback302Response) VisitProviderCallbackResponse(w http.ResponseWriter) error {
+	w.Header().Set("Location", fmt.Sprint(response.Headers.Location))
+	w.WriteHeader(302)
+	return nil
+}
+
+type ProviderCallback400JSONResponse Error
+
+func (response ProviderCallback400JSONResponse) VisitProviderCallbackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignInRequestObject struct {
+	Body *CompleteProviderSignInJSONRequestBody
+}
+
+type CompleteProviderSignInResponseObject interface {
+	VisitCompleteProviderSignInResponse(w http.ResponseWriter) error
+}
+
+type CompleteProviderSignIn200JSONResponse LoginResult
+
+func (response CompleteProviderSignIn200JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignIn202JSONResponse MfaChallenge
+
+func (response CompleteProviderSignIn202JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignIn400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompleteProviderSignIn400JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignIn401JSONResponse Error
+
+func (response CompleteProviderSignIn401JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignIn403JSONResponse Error
+
+func (response CompleteProviderSignIn403JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignIn409JSONResponse Error
+
+func (response CompleteProviderSignIn409JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderSignIn429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response CompleteProviderSignIn429JSONResponse) VisitCompleteProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLinkedProvidersRequestObject struct {
+}
+
+type ListLinkedProvidersResponseObject interface {
+	VisitListLinkedProvidersResponse(w http.ResponseWriter) error
+}
+
+type ListLinkedProviders200JSONResponse []LinkedProvider
+
+func (response ListLinkedProviders200JSONResponse) VisitListLinkedProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLinkedProviders401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListLinkedProviders401JSONResponse) VisitListLinkedProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnlinkProviderRequestObject struct {
+	ProviderId ProviderId `json:"providerId"`
+}
+
+type UnlinkProviderResponseObject interface {
+	VisitUnlinkProviderResponse(w http.ResponseWriter) error
+}
+
+type UnlinkProvider204Response struct {
+}
+
+func (response UnlinkProvider204Response) VisitUnlinkProviderResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnlinkProvider401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnlinkProvider401JSONResponse) VisitUnlinkProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnlinkProvider404JSONResponse Error
+
+func (response UnlinkProvider404JSONResponse) VisitUnlinkProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnlinkProvider409JSONResponse Error
+
+func (response UnlinkProvider409JSONResponse) VisitUnlinkProviderResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderLinkRequestObject struct {
+	Body *CompleteProviderLinkJSONRequestBody
+}
+
+type CompleteProviderLinkResponseObject interface {
+	VisitCompleteProviderLinkResponse(w http.ResponseWriter) error
+}
+
+type CompleteProviderLink204Response struct {
+}
+
+func (response CompleteProviderLink204Response) VisitCompleteProviderLinkResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CompleteProviderLink400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompleteProviderLink400JSONResponse) VisitCompleteProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderLink401JSONResponse Error
+
+func (response CompleteProviderLink401JSONResponse) VisitCompleteProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteProviderLink409JSONResponse Error
+
+func (response CompleteProviderLink409JSONResponse) VisitCompleteProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSignInProvidersRequestObject struct {
+}
+
+type ListSignInProvidersResponseObject interface {
+	VisitListSignInProvidersResponse(w http.ResponseWriter) error
+}
+
+type ListSignInProviders200JSONResponse []SignInProvider
+
+func (response ListSignInProviders200JSONResponse) VisitListSignInProvidersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignInRequestObject struct {
+	ProviderId ProviderId `json:"providerId"`
+	Body       *BeginProviderSignInJSONRequestBody
+}
+
+type BeginProviderSignInResponseObject interface {
+	VisitBeginProviderSignInResponse(w http.ResponseWriter) error
+}
+
+type BeginProviderSignIn200JSONResponse ProviderFlow
+
+func (response BeginProviderSignIn200JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignIn400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BeginProviderSignIn400JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignIn404JSONResponse struct{ ProviderNotFoundJSONResponse }
+
+func (response BeginProviderSignIn404JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignIn409JSONResponse struct{ DomainRequiredJSONResponse }
+
+func (response BeginProviderSignIn409JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignIn422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response BeginProviderSignIn422JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignIn429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response BeginProviderSignIn429JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderSignIn502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response BeginProviderSignIn502JSONResponse) VisitBeginProviderSignInResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLinkRequestObject struct {
+	ProviderId ProviderId `json:"providerId"`
+	Body       *BeginProviderLinkJSONRequestBody
+}
+
+type BeginProviderLinkResponseObject interface {
+	VisitBeginProviderLinkResponse(w http.ResponseWriter) error
+}
+
+type BeginProviderLink200JSONResponse ProviderFlow
+
+func (response BeginProviderLink200JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BeginProviderLink400JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BeginProviderLink401JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink404JSONResponse struct{ ProviderNotFoundJSONResponse }
+
+func (response BeginProviderLink404JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink409JSONResponse struct{ DomainRequiredJSONResponse }
+
+func (response BeginProviderLink409JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response BeginProviderLink422JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response BeginProviderLink429JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginProviderLink502JSONResponse struct {
+	ProviderUnavailableJSONResponse
+}
+
+func (response BeginProviderLink502JSONResponse) VisitBeginProviderLinkResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type BeginPasskeyLoginRequestObject struct {
 }
 
@@ -3409,6 +4721,18 @@ type StrictServerInterface interface {
 	// DeleteInvite Revoke an instance invite
 	// (DELETE /api/v1/admin/invites/{inviteId})
 	DeleteInvite(ctx context.Context, request DeleteInviteRequestObject) (DeleteInviteResponseObject, error)
+	// ListOidcProviders List sign-in providers
+	// (GET /api/v1/admin/oidc-providers)
+	ListOidcProviders(ctx context.Context, request ListOidcProvidersRequestObject) (ListOidcProvidersResponseObject, error)
+	// CreateOidcProvider Add a sign-in provider
+	// (POST /api/v1/admin/oidc-providers)
+	CreateOidcProvider(ctx context.Context, request CreateOidcProviderRequestObject) (CreateOidcProviderResponseObject, error)
+	// DeleteOidcProvider Remove a sign-in provider
+	// (DELETE /api/v1/admin/oidc-providers/{providerId})
+	DeleteOidcProvider(ctx context.Context, request DeleteOidcProviderRequestObject) (DeleteOidcProviderResponseObject, error)
+	// UpdateOidcProvider Change a sign-in provider
+	// (PUT /api/v1/admin/oidc-providers/{providerId})
+	UpdateOidcProvider(ctx context.Context, request UpdateOidcProviderRequestObject) (UpdateOidcProviderResponseObject, error)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(ctx context.Context, request GetSmtpSettingsRequestObject) (GetSmtpSettingsResponseObject, error)
@@ -3457,6 +4781,30 @@ type StrictServerInterface interface {
 	// ConfirmTotp Finish adding an authenticator app
 	// (POST /api/v1/auth/mfa/totp/{enrollmentId}/confirm)
 	ConfirmTotp(ctx context.Context, request ConfirmTotpRequestObject) (ConfirmTotpResponseObject, error)
+	// ProviderCallback Provider callback
+	// (GET /api/v1/auth/oidc/callback)
+	ProviderCallback(ctx context.Context, request ProviderCallbackRequestObject) (ProviderCallbackResponseObject, error)
+	// CompleteProviderSignIn Finish signing in with a provider
+	// (POST /api/v1/auth/oidc/complete)
+	CompleteProviderSignIn(ctx context.Context, request CompleteProviderSignInRequestObject) (CompleteProviderSignInResponseObject, error)
+	// ListLinkedProviders Providers linked to my account
+	// (GET /api/v1/auth/oidc/identities)
+	ListLinkedProviders(ctx context.Context, request ListLinkedProvidersRequestObject) (ListLinkedProvidersResponseObject, error)
+	// UnlinkProvider Unlink a provider from my account
+	// (DELETE /api/v1/auth/oidc/identities/{providerId})
+	UnlinkProvider(ctx context.Context, request UnlinkProviderRequestObject) (UnlinkProviderResponseObject, error)
+	// CompleteProviderLink Finish linking a provider to my account
+	// (POST /api/v1/auth/oidc/link/complete)
+	CompleteProviderLink(ctx context.Context, request CompleteProviderLinkRequestObject) (CompleteProviderLinkResponseObject, error)
+	// ListSignInProviders Sign-in providers
+	// (GET /api/v1/auth/oidc/providers)
+	ListSignInProviders(ctx context.Context, request ListSignInProvidersRequestObject) (ListSignInProvidersResponseObject, error)
+	// BeginProviderSignIn Start signing in with a provider
+	// (POST /api/v1/auth/oidc/providers/{providerId}/begin)
+	BeginProviderSignIn(ctx context.Context, request BeginProviderSignInRequestObject) (BeginProviderSignInResponseObject, error)
+	// BeginProviderLink Start linking a provider to my account
+	// (POST /api/v1/auth/oidc/providers/{providerId}/link)
+	BeginProviderLink(ctx context.Context, request BeginProviderLinkRequestObject) (BeginProviderLinkResponseObject, error)
 	// BeginPasskeyLogin Start logging in with a passkey
 	// (POST /api/v1/auth/passkey/begin)
 	BeginPasskeyLogin(ctx context.Context, request BeginPasskeyLoginRequestObject) (BeginPasskeyLoginResponseObject, error)
@@ -3629,6 +4977,120 @@ func (sh *strictHandler) DeleteInvite(w http.ResponseWriter, r *http.Request, in
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteInviteResponseObject); ok {
 		if err := validResponse.VisitDeleteInviteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListOidcProviders operation middleware
+func (sh *strictHandler) ListOidcProviders(w http.ResponseWriter, r *http.Request) {
+	var request ListOidcProvidersRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOidcProviders(ctx, request.(ListOidcProvidersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOidcProviders")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListOidcProvidersResponseObject); ok {
+		if err := validResponse.VisitListOidcProvidersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateOidcProvider operation middleware
+func (sh *strictHandler) CreateOidcProvider(w http.ResponseWriter, r *http.Request) {
+	var request CreateOidcProviderRequestObject
+
+	var body CreateOidcProviderJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateOidcProvider(ctx, request.(CreateOidcProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateOidcProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateOidcProviderResponseObject); ok {
+		if err := validResponse.VisitCreateOidcProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteOidcProvider operation middleware
+func (sh *strictHandler) DeleteOidcProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId) {
+	var request DeleteOidcProviderRequestObject
+
+	request.ProviderId = providerId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteOidcProvider(ctx, request.(DeleteOidcProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteOidcProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteOidcProviderResponseObject); ok {
+		if err := validResponse.VisitDeleteOidcProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateOidcProvider operation middleware
+func (sh *strictHandler) UpdateOidcProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId) {
+	var request UpdateOidcProviderRequestObject
+
+	request.ProviderId = providerId
+
+	var body UpdateOidcProviderJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateOidcProvider(ctx, request.(UpdateOidcProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateOidcProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateOidcProviderResponseObject); ok {
+		if err := validResponse.VisitUpdateOidcProviderResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -4073,6 +5535,234 @@ func (sh *strictHandler) ConfirmTotp(w http.ResponseWriter, r *http.Request, enr
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ConfirmTotpResponseObject); ok {
 		if err := validResponse.VisitConfirmTotpResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ProviderCallback operation middleware
+func (sh *strictHandler) ProviderCallback(w http.ResponseWriter, r *http.Request, params ProviderCallbackParams) {
+	var request ProviderCallbackRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ProviderCallback(ctx, request.(ProviderCallbackRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ProviderCallback")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ProviderCallbackResponseObject); ok {
+		if err := validResponse.VisitProviderCallbackResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteProviderSignIn operation middleware
+func (sh *strictHandler) CompleteProviderSignIn(w http.ResponseWriter, r *http.Request) {
+	var request CompleteProviderSignInRequestObject
+
+	var body CompleteProviderSignInJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteProviderSignIn(ctx, request.(CompleteProviderSignInRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteProviderSignIn")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteProviderSignInResponseObject); ok {
+		if err := validResponse.VisitCompleteProviderSignInResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListLinkedProviders operation middleware
+func (sh *strictHandler) ListLinkedProviders(w http.ResponseWriter, r *http.Request) {
+	var request ListLinkedProvidersRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListLinkedProviders(ctx, request.(ListLinkedProvidersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListLinkedProviders")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListLinkedProvidersResponseObject); ok {
+		if err := validResponse.VisitListLinkedProvidersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnlinkProvider operation middleware
+func (sh *strictHandler) UnlinkProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId) {
+	var request UnlinkProviderRequestObject
+
+	request.ProviderId = providerId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnlinkProvider(ctx, request.(UnlinkProviderRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnlinkProvider")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnlinkProviderResponseObject); ok {
+		if err := validResponse.VisitUnlinkProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteProviderLink operation middleware
+func (sh *strictHandler) CompleteProviderLink(w http.ResponseWriter, r *http.Request) {
+	var request CompleteProviderLinkRequestObject
+
+	var body CompleteProviderLinkJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteProviderLink(ctx, request.(CompleteProviderLinkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteProviderLink")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteProviderLinkResponseObject); ok {
+		if err := validResponse.VisitCompleteProviderLinkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSignInProviders operation middleware
+func (sh *strictHandler) ListSignInProviders(w http.ResponseWriter, r *http.Request) {
+	var request ListSignInProvidersRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSignInProviders(ctx, request.(ListSignInProvidersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSignInProviders")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSignInProvidersResponseObject); ok {
+		if err := validResponse.VisitListSignInProvidersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BeginProviderSignIn operation middleware
+func (sh *strictHandler) BeginProviderSignIn(w http.ResponseWriter, r *http.Request, providerId ProviderId) {
+	var request BeginProviderSignInRequestObject
+
+	request.ProviderId = providerId
+
+	var body BeginProviderSignInJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginProviderSignIn(ctx, request.(BeginProviderSignInRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginProviderSignIn")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginProviderSignInResponseObject); ok {
+		if err := validResponse.VisitBeginProviderSignInResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BeginProviderLink operation middleware
+func (sh *strictHandler) BeginProviderLink(w http.ResponseWriter, r *http.Request, providerId ProviderId) {
+	var request BeginProviderLinkRequestObject
+
+	request.ProviderId = providerId
+
+	var body BeginProviderLinkJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginProviderLink(ctx, request.(BeginProviderLinkRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginProviderLink")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginProviderLinkResponseObject); ok {
+		if err := validResponse.VisitBeginProviderLinkResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

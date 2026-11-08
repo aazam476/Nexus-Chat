@@ -132,7 +132,7 @@ func (service *Service) checkMode(ctx context.Context, inviteCode string) ([]byt
 	case inviteCode != "":
 		// An invite is honoured in every open mode, so invited people can
 		// join even after an admin switches from open to invite-only.
-		hash := hashInviteCode(inviteCode)
+		hash := HashInviteCode(inviteCode)
 		return hash[:], nil
 	case mode == "invite_only":
 		return nil, ErrInviteRequired

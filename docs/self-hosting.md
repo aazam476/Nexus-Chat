@@ -168,7 +168,26 @@ the chat server itself (from milestone M9), so the same certificate and
 proxy rule cover it and no extra proxy configuration is needed. LiveKit's
 media ports (section 3) never go through the proxy.
 
-## 3. Ports and firewall
+## 3. Sign-in providers (OpenID Connect)
+
+Users can log in with your organization's identity provider (Keycloak,
+Authentik, Google Workspace, GitLab and any other OpenID Connect provider).
+Provider sign-in needs `DOMAIN`, because the provider sends users back to a
+fixed address. At the provider, create a client with:
+
+- **Redirect URI:** `https://<your domain>/api/v1/auth/oidc/callback` (the
+  Admin panel shows the exact address)
+- **Grant type:** authorization code; PKCE (S256) is always used
+- **Scopes:** `openid email profile`
+
+Then add it in the Admin panel with its issuer URL, client ID and secret.
+The server checks the issuer's `/.well-known/openid-configuration` when you
+save. Turn on **Allow sign-up** to create accounts on first sign-in (the
+registration mode still applies). Users with an existing account link the
+provider in their settings; accounts are never matched by email address.
+See [ADR 0016](adr/0016-oidc-sign-in.md) for the design.
+
+## 4. Ports and firewall
 
 | Port                | Protocol    | Used by                                          | Open to the internet?                       |
 | ------------------- | ----------- | ------------------------------------------------ | ------------------------------------------- |
@@ -182,7 +201,7 @@ media ports (section 3) never go through the proxy.
 
 PostgreSQL is never exposed outside Docker.
 
-## 4. Backups
+## 5. Backups
 
 Everything is in two places: the database and the data folder
 (`DATA_DIR`, by default `./data`). The data folder contains the instance's
@@ -203,7 +222,7 @@ tar -czf nexus-chat-data.tar.gz --exclude=./data/postgres ./data
 
 Encrypting the disk the data folder lives on is recommended.
 
-## 5. Restore
+## 6. Restore
 
 On a fresh machine with the same `docker-compose.yml` and `.env`:
 
@@ -223,7 +242,7 @@ docker compose exec -T postgres pg_restore -U nexuschat -d nexuschat --clean --i
 docker compose up -d
 ```
 
-## 6. Upgrades
+## 7. Upgrades
 
 ```bash
 docker compose pull && docker compose up -d
@@ -232,7 +251,7 @@ docker compose pull && docker compose up -d
 Database migrations run automatically when the new server starts. No manual
 SQL is ever needed. Take a backup before upgrading.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom                                               | Likely cause and fix                                                                                                                                       |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |

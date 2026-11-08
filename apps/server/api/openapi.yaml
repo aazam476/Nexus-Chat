@@ -782,6 +782,377 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/auth/oidc/providers:
+    get:
+      operationId: listSignInProviders
+      summary: Sign-in providers
+      description: The providers the login page offers, sorted by name.
+      tags: [auth]
+      responses:
+        "200":
+          description: Every configured provider.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SignInProvider"
+  /api/v1/auth/oidc/providers/{providerId}/begin:
+    post:
+      operationId: beginProviderSignIn
+      summary: Start signing in with a provider
+      description: |
+        Returns the provider's sign-in address to open in a browser and a
+        `flowId` the client keeps. The provider sends the browser back to
+        `returnTo` with `#flow=...&code=...` (or `#error=...`); finish with
+        `POST /api/v1/auth/oidc/complete` within ten minutes.
+      tags: [auth]
+      parameters:
+        - $ref: "#/components/parameters/ProviderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BeginProviderSignInRequest"
+      responses:
+        "200":
+          description: Open `authorizationUrl`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderFlow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/ProviderNotFound"
+        "409":
+          $ref: "#/components/responses/DomainRequired"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
+  /api/v1/auth/oidc/callback:
+    get:
+      operationId: providerCallback
+      summary: Provider callback
+      description: |
+        Where providers send the browser after sign-in. Register the
+        instance's base URL followed by this path at the provider. Always
+        redirects to the address the client gave when it began, except
+        for an unknown or used `state`.
+      tags: [auth]
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Back to the client, with the result in the URL fragment.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        "400":
+          description: The sign-in link is unknown, used or expired (`invalid_state`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/oidc/complete:
+    post:
+      operationId: completeProviderSignIn
+      summary: Finish signing in with a provider
+      description: |
+        Logs in the account linked to the provider login. If there is none
+        and the provider allows sign-up, creates one first, following the
+        registration mode. Accounts with a second factor get an MFA
+        challenge, exactly as with `POST /api/v1/auth/login`.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteProviderSignInRequest"
+      responses:
+        "200":
+          description: Logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "202":
+          description: The account has a second factor; continue with `POST /api/v1/auth/login/mfa`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaChallenge"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The flow and code do not match a finished provider sign-in (`invalid_flow`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: |
+            No account can be used or created: `no_account` (sign-up is off
+            for this provider), `registration_closed`, `invite_required`,
+            `invalid_invite`, or `email_required` (the provider shared no
+            email address).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            An account already uses this email (`email_in_use`): log in to
+            it another way and link the provider in settings. Or the same
+            provider login signed up twice at once (`identity_in_use`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/oidc/providers/{providerId}/link:
+    post:
+      operationId: beginProviderLink
+      summary: Start linking a provider to my account
+      description: Like `begin`, for the logged-in account. Finish with `POST /api/v1/auth/oidc/link/complete`.
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProviderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BeginProviderLinkRequest"
+      responses:
+        "200":
+          description: Open `authorizationUrl`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderFlow"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/ProviderNotFound"
+        "409":
+          $ref: "#/components/responses/DomainRequired"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderUnavailable"
+  /api/v1/auth/oidc/link/complete:
+    post:
+      operationId: completeProviderLink
+      summary: Finish linking a provider to my account
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteProviderLinkRequest"
+      responses:
+        "204":
+          description: The provider login now signs in to this account.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: No valid session (`unauthorized`), or the flow and code do not match a link this account started (`invalid_flow`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            The provider login belongs to another account
+            (`identity_in_use`), or this account is linked to a different
+            login at the provider (`already_linked`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/auth/oidc/identities:
+    get:
+      operationId: listLinkedProviders
+      summary: Providers linked to my account
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The linked providers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LinkedProvider"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/oidc/identities/{providerId}:
+    delete:
+      operationId: unlinkProvider
+      summary: Unlink a provider from my account
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProviderId"
+      responses:
+        "204":
+          description: The provider no longer signs in to this account.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: This account is not linked to that provider (`not_linked`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: It is the account's only way to log in (`last_login_method`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/oidc-providers:
+    get:
+      operationId: listOidcProviders
+      summary: List sign-in providers
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Every provider, with the callback URL to register at each.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcProviderList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createOidcProvider
+      summary: Add a sign-in provider
+      description: |
+        The issuer's OpenID configuration is fetched before saving, so a
+        mistyped issuer is reported as a validation error on `issuer`.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOidcProviderRequest"
+      responses:
+        "201":
+          description: The saved provider.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcProvider"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A provider with this ID exists (`provider_exists`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/admin/oidc-providers/{providerId}:
+    put:
+      operationId: updateOidcProvider
+      summary: Change a sign-in provider
+      description: Leaving out `clientSecret` keeps the stored one; an empty string removes it.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProviderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOidcProviderRequest"
+      responses:
+        "200":
+          description: The saved provider.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcProvider"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/ProviderNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+    delete:
+      operationId: deleteOidcProvider
+      summary: Remove a sign-in provider
+      description: |
+        Also removes every account's link to it. Accounts that had no other
+        way to log in can set a password with password reset.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProviderId"
+      responses:
+        "204":
+          description: The provider is gone.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/ProviderNotFound"
   /api/v1/auth/logout:
     post:
       operationId: logout
@@ -967,7 +1338,32 @@ components:
       type: http
       scheme: bearer
       description: "A session token from `POST /api/v1/auth/login`, sent as `Authorization: Bearer nxs_…`."
+  parameters:
+    ProviderId:
+      name: providerId
+      in: path
+      required: true
+      schema:
+        type: string
   responses:
+    ProviderNotFound:
+      description: There is no sign-in provider with this ID (`provider_not_found`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    DomainRequired:
+      description: Provider sign-in needs the instance's public domain to be set (`domain_required`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ProviderUnavailable:
+      description: The provider's OpenID configuration could not be loaded (`provider_unavailable`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     WebAuthnUnavailable:
       description: Passkeys and security keys need the instance's domain to be set and HTTPS (`webauthn_unavailable`).
       content:
@@ -1548,3 +1944,164 @@ components:
         from:
           type: string
           description: The sender address, for example `chat@example.com`.
+    SignInProvider:
+      type: object
+      additionalProperties: false
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+    BeginProviderSignInRequest:
+      type: object
+      additionalProperties: false
+      required: [returnTo]
+      properties:
+        returnTo:
+          type: string
+          description: |
+            Where the browser goes afterwards: a path on this instance (web
+            and desktop, for example `/login/oidc`) or a `nexuschat://`
+            address (mobile apps).
+        inviteCode:
+          type: string
+          description: Used if the sign-in creates an account on an invite-only instance.
+    BeginProviderLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [returnTo]
+      properties:
+        returnTo:
+          type: string
+          description: As for `begin`.
+    ProviderFlow:
+      type: object
+      additionalProperties: false
+      required: [flowId, authorizationUrl]
+      properties:
+        flowId:
+          type: string
+          format: uuid
+          description: Keep this in memory; completing needs it.
+        authorizationUrl:
+          type: string
+    CompleteProviderSignInRequest:
+      type: object
+      additionalProperties: false
+      required: [flowId, code, deviceName]
+      properties:
+        flowId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: The `code` from the return address's fragment.
+        deviceName:
+          type: string
+          description: Shown in the session list. 1–64 characters.
+    CompleteProviderLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [flowId, code]
+      properties:
+        flowId:
+          type: string
+          format: uuid
+        code:
+          type: string
+    LinkedProvider:
+      type: object
+      additionalProperties: false
+      required: [providerId, displayName, email, linkedAt]
+      properties:
+        providerId:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+          description: The email the provider shared when it was linked (may be empty).
+        linkedAt:
+          type: string
+          format: date-time
+    OidcProviderList:
+      type: object
+      additionalProperties: false
+      required: [providers]
+      properties:
+        callbackUrl:
+          type: string
+          description: The redirect URI to register at each provider; missing until a domain is set.
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/OidcProvider"
+    OidcProvider:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, issuer, clientId, clientSecretSet, scopes, allowSignup]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        issuer:
+          type: string
+        clientId:
+          type: string
+        clientSecretSet:
+          type: boolean
+        scopes:
+          type: array
+          items:
+            type: string
+        allowSignup:
+          type: boolean
+          description: Whether a first sign-in creates an account (following the registration mode).
+    CreateOidcProviderRequest:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, issuer, clientId, allowSignup]
+      properties:
+        id:
+          type: string
+          description: 2–32 lower-case letters, digits or dashes; used in URLs and cannot change.
+        displayName:
+          type: string
+          description: Shown on the login button, for example "Company login". 1–64 characters.
+        issuer:
+          type: string
+          description: The issuer URL, for example `https://login.example.com/realms/staff`.
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+          description: Leave out for a public client.
+        scopes:
+          type: array
+          description: Defaults to `openid email profile`; `openid` is always added.
+          items:
+            type: string
+        allowSignup:
+          type: boolean
+    UpdateOidcProviderRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName, issuer, clientId, allowSignup]
+      properties:
+        displayName:
+          type: string
+        issuer:
+          type: string
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+          description: Leave out to keep the stored secret; empty to remove it.
+        scopes:
+          type: array
+          items:
+            type: string
+        allowSignup:
+          type: boolean

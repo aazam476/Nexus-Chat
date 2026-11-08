@@ -129,7 +129,7 @@ func TestModes(t *testing.T) {
 
 			require.ErrorIs(t, err, test.want)
 			if test.invited {
-				expected := hashInviteCode("ABCDEFGH")
+				expected := HashInviteCode("ABCDEFGH")
 				assert.Equal(t, expected[:], setup.creator.saved[0].InviteHash, "codes are normalized before hashing")
 			}
 		})

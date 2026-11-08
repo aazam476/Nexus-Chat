@@ -41,7 +41,7 @@ func NewInvites(invites inviteStore, clock clock.Clock) *Invites {
 // only its hash is stored.
 func (invites *Invites) Create(ctx context.Context, createdBy uuid.UUID, options InviteOptions) (string, uuid.UUID, error) {
 	code := formatInviteCode(rand.Text())
-	hash := hashInviteCode(code)
+	hash := HashInviteCode(code)
 	params := store.InsertInviteParams{
 		ID: uuid.Must(uuid.NewV7()), CodeHash: hash[:], CreatedBy: &createdBy,
 		ExpiresAt: options.ExpiresAt, CreatedAt: invites.clock.Now(),
@@ -82,9 +82,9 @@ func formatInviteCode(raw string) string {
 	return strings.Join(groups, "-")
 }
 
-// hashInviteCode normalizes (upper case, no dashes or spaces) and hashes a
+// HashInviteCode normalizes (upper case, no dashes or spaces) and hashes a
 // code, so people can type it however they like.
-func hashInviteCode(code string) [sha256.Size]byte {
+func HashInviteCode(code string) [sha256.Size]byte {
 	normalized := strings.ToUpper(strings.NewReplacer("-", "", " ", "").Replace(strings.TrimSpace(code)))
 	return sha256.Sum256([]byte(normalized))
 }

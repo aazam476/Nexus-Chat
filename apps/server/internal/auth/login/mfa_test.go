@@ -190,3 +190,20 @@ func TestStartSessionAfterSecurityKey(t *testing.T) {
 	_, err = setup.service.RedeemChallenge(t.Context(), challenge, "c")
 	assert.ErrorIs(t, err, ErrInvalidSecondFactor, "redeemed once")
 }
+
+func TestContinueLoginAsksForTheSecondFactor(t *testing.T) {
+	withFactor, _ := mfaFixture()
+	result, err := withFactor.service.ContinueLogin(t.Context(), uuid.New(), attempt("", "").Device)
+	require.NoError(t, err)
+	assert.NotEmpty(t, result.MFAChallenge)
+	assert.Empty(t, result.Token)
+
+	without := newFixture(nil)
+	result, err = without.service.ContinueLogin(t.Context(), uuid.New(), attempt("", "").Device)
+	require.NoError(t, err)
+	assert.Equal(t, "nxs_token", result.Token)
+
+	without.accounts.lookupErr = errors.New("down")
+	_, err = without.service.ContinueLogin(t.Context(), uuid.New(), attempt("", "").Device)
+	assert.ErrorContains(t, err, "loading account")
+}

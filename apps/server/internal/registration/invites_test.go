@@ -45,7 +45,7 @@ func TestCreateInvite(t *testing.T) {
 	require.Len(t, invites.inserted, 1)
 	saved := invites.inserted[0]
 	assert.Equal(t, id, saved.ID)
-	expected := hashInviteCode(code)
+	expected := HashInviteCode(code)
 	assert.Equal(t, expected[:], saved.CodeHash)
 	assert.Equal(t, int32(3), *saved.MaxUses)
 	assert.Equal(t, admin, *saved.CreatedBy)

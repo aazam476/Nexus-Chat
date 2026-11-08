@@ -390,6 +390,127 @@ export type UpdateSmtpSettingsRequest = {
     from: string;
 };
 
+export type SignInProvider = {
+    id: string;
+    displayName: string;
+};
+
+export type BeginProviderSignInRequest = {
+    /**
+     * Where the browser goes afterwards: a path on this instance (web
+     * and desktop, for example `/login/oidc`) or a `nexuschat://`
+     * address (mobile apps).
+     *
+     */
+    returnTo: string;
+    /**
+     * Used if the sign-in creates an account on an invite-only instance.
+     */
+    inviteCode?: string;
+};
+
+export type BeginProviderLinkRequest = {
+    /**
+     * As for `begin`.
+     */
+    returnTo: string;
+};
+
+export type ProviderFlow = {
+    /**
+     * Keep this in memory; completing needs it.
+     */
+    flowId: string;
+    authorizationUrl: string;
+};
+
+export type CompleteProviderSignInRequest = {
+    flowId: string;
+    /**
+     * The `code` from the return address's fragment.
+     */
+    code: string;
+    /**
+     * Shown in the session list. 1–64 characters.
+     */
+    deviceName: string;
+};
+
+export type CompleteProviderLinkRequest = {
+    flowId: string;
+    code: string;
+};
+
+export type LinkedProvider = {
+    providerId: string;
+    displayName: string;
+    /**
+     * The email the provider shared when it was linked (may be empty).
+     */
+    email: string;
+    linkedAt: string;
+};
+
+export type OidcProviderList = {
+    /**
+     * The redirect URI to register at each provider; missing until a domain is set.
+     */
+    callbackUrl?: string;
+    providers: Array<OidcProvider>;
+};
+
+export type OidcProvider = {
+    id: string;
+    displayName: string;
+    issuer: string;
+    clientId: string;
+    clientSecretSet: boolean;
+    scopes: Array<string>;
+    /**
+     * Whether a first sign-in creates an account (following the registration mode).
+     */
+    allowSignup: boolean;
+};
+
+export type CreateOidcProviderRequest = {
+    /**
+     * 2–32 lower-case letters, digits or dashes; used in URLs and cannot change.
+     */
+    id: string;
+    /**
+     * Shown on the login button, for example "Company login". 1–64 characters.
+     */
+    displayName: string;
+    /**
+     * The issuer URL, for example `https://login.example.com/realms/staff`.
+     */
+    issuer: string;
+    clientId: string;
+    /**
+     * Leave out for a public client.
+     */
+    clientSecret?: string;
+    /**
+     * Defaults to `openid email profile`; `openid` is always added.
+     */
+    scopes?: Array<string>;
+    allowSignup: boolean;
+};
+
+export type UpdateOidcProviderRequest = {
+    displayName: string;
+    issuer: string;
+    clientId: string;
+    /**
+     * Leave out to keep the stored secret; empty to remove it.
+     */
+    clientSecret?: string;
+    scopes?: Array<string>;
+    allowSignup: boolean;
+};
+
+export type ProviderId = string;
+
 export type LoginData = {
     body: LoginRequest;
     path?: never;
@@ -1301,6 +1422,436 @@ export type RemoveWebAuthnCredentialResponses = {
 };
 
 export type RemoveWebAuthnCredentialResponse = RemoveWebAuthnCredentialResponses[keyof RemoveWebAuthnCredentialResponses];
+
+export type ListSignInProvidersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/oidc/providers';
+};
+
+export type ListSignInProvidersResponses = {
+    /**
+     * Every configured provider.
+     */
+    200: Array<SignInProvider>;
+};
+
+export type ListSignInProvidersResponse = ListSignInProvidersResponses[keyof ListSignInProvidersResponses];
+
+export type BeginProviderSignInData = {
+    body: BeginProviderSignInRequest;
+    path: {
+        providerId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/oidc/providers/{providerId}/begin';
+};
+
+export type BeginProviderSignInErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * There is no sign-in provider with this ID (`provider_not_found`).
+     */
+    404: Error;
+    /**
+     * Provider sign-in needs the instance's public domain to be set (`domain_required`).
+     */
+    409: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+    /**
+     * The provider's OpenID configuration could not be loaded (`provider_unavailable`).
+     */
+    502: Error;
+};
+
+export type BeginProviderSignInError = BeginProviderSignInErrors[keyof BeginProviderSignInErrors];
+
+export type BeginProviderSignInResponses = {
+    /**
+     * Open `authorizationUrl`.
+     */
+    200: ProviderFlow;
+};
+
+export type BeginProviderSignInResponse = BeginProviderSignInResponses[keyof BeginProviderSignInResponses];
+
+export type ProviderCallbackData = {
+    body?: never;
+    path?: never;
+    query?: {
+        state?: string;
+        code?: string;
+        error?: string;
+    };
+    url: '/api/v1/auth/oidc/callback';
+};
+
+export type ProviderCallbackErrors = {
+    /**
+     * The sign-in link is unknown, used or expired (`invalid_state`).
+     */
+    400: Error;
+};
+
+export type ProviderCallbackError = ProviderCallbackErrors[keyof ProviderCallbackErrors];
+
+export type CompleteProviderSignInData = {
+    body: CompleteProviderSignInRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/oidc/complete';
+};
+
+export type CompleteProviderSignInErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The flow and code do not match a finished provider sign-in (`invalid_flow`).
+     */
+    401: Error;
+    /**
+     * No account can be used or created: `no_account` (sign-up is off
+     * for this provider), `registration_closed`, `invite_required`,
+     * `invalid_invite`, or `email_required` (the provider shared no
+     * email address).
+     *
+     */
+    403: Error;
+    /**
+     * An account already uses this email (`email_in_use`): log in to
+     * it another way and link the provider in settings. Or the same
+     * provider login signed up twice at once (`identity_in_use`).
+     *
+     */
+    409: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type CompleteProviderSignInError = CompleteProviderSignInErrors[keyof CompleteProviderSignInErrors];
+
+export type CompleteProviderSignInResponses = {
+    /**
+     * Logged in.
+     */
+    200: LoginResult;
+    /**
+     * The account has a second factor; continue with `POST /api/v1/auth/login/mfa`.
+     */
+    202: MfaChallenge;
+};
+
+export type CompleteProviderSignInResponse = CompleteProviderSignInResponses[keyof CompleteProviderSignInResponses];
+
+export type BeginProviderLinkData = {
+    body: BeginProviderLinkRequest;
+    path: {
+        providerId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/oidc/providers/{providerId}/link';
+};
+
+export type BeginProviderLinkErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * There is no sign-in provider with this ID (`provider_not_found`).
+     */
+    404: Error;
+    /**
+     * Provider sign-in needs the instance's public domain to be set (`domain_required`).
+     */
+    409: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+    /**
+     * The provider's OpenID configuration could not be loaded (`provider_unavailable`).
+     */
+    502: Error;
+};
+
+export type BeginProviderLinkError = BeginProviderLinkErrors[keyof BeginProviderLinkErrors];
+
+export type BeginProviderLinkResponses = {
+    /**
+     * Open `authorizationUrl`.
+     */
+    200: ProviderFlow;
+};
+
+export type BeginProviderLinkResponse = BeginProviderLinkResponses[keyof BeginProviderLinkResponses];
+
+export type CompleteProviderLinkData = {
+    body: CompleteProviderLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/oidc/link/complete';
+};
+
+export type CompleteProviderLinkErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * No valid session (`unauthorized`), or the flow and code do not match a link this account started (`invalid_flow`).
+     */
+    401: Error;
+    /**
+     * The provider login belongs to another account
+     * (`identity_in_use`), or this account is linked to a different
+     * login at the provider (`already_linked`).
+     *
+     */
+    409: Error;
+};
+
+export type CompleteProviderLinkError = CompleteProviderLinkErrors[keyof CompleteProviderLinkErrors];
+
+export type CompleteProviderLinkResponses = {
+    /**
+     * The provider login now signs in to this account.
+     */
+    204: void;
+};
+
+export type CompleteProviderLinkResponse = CompleteProviderLinkResponses[keyof CompleteProviderLinkResponses];
+
+export type ListLinkedProvidersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/oidc/identities';
+};
+
+export type ListLinkedProvidersErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListLinkedProvidersError = ListLinkedProvidersErrors[keyof ListLinkedProvidersErrors];
+
+export type ListLinkedProvidersResponses = {
+    /**
+     * The linked providers.
+     */
+    200: Array<LinkedProvider>;
+};
+
+export type ListLinkedProvidersResponse = ListLinkedProvidersResponses[keyof ListLinkedProvidersResponses];
+
+export type UnlinkProviderData = {
+    body?: never;
+    path: {
+        providerId: string;
+    };
+    query?: never;
+    url: '/api/v1/auth/oidc/identities/{providerId}';
+};
+
+export type UnlinkProviderErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This account is not linked to that provider (`not_linked`).
+     */
+    404: Error;
+    /**
+     * It is the account's only way to log in (`last_login_method`).
+     */
+    409: Error;
+};
+
+export type UnlinkProviderError = UnlinkProviderErrors[keyof UnlinkProviderErrors];
+
+export type UnlinkProviderResponses = {
+    /**
+     * The provider no longer signs in to this account.
+     */
+    204: void;
+};
+
+export type UnlinkProviderResponse = UnlinkProviderResponses[keyof UnlinkProviderResponses];
+
+export type ListOidcProvidersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/oidc-providers';
+};
+
+export type ListOidcProvidersErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type ListOidcProvidersError = ListOidcProvidersErrors[keyof ListOidcProvidersErrors];
+
+export type ListOidcProvidersResponses = {
+    /**
+     * Every provider, with the callback URL to register at each.
+     */
+    200: OidcProviderList;
+};
+
+export type ListOidcProvidersResponse = ListOidcProvidersResponses[keyof ListOidcProvidersResponses];
+
+export type CreateOidcProviderData = {
+    body: CreateOidcProviderRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/oidc-providers';
+};
+
+export type CreateOidcProviderErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * A provider with this ID exists (`provider_exists`).
+     */
+    409: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type CreateOidcProviderError = CreateOidcProviderErrors[keyof CreateOidcProviderErrors];
+
+export type CreateOidcProviderResponses = {
+    /**
+     * The saved provider.
+     */
+    201: OidcProvider;
+};
+
+export type CreateOidcProviderResponse = CreateOidcProviderResponses[keyof CreateOidcProviderResponses];
+
+export type DeleteOidcProviderData = {
+    body?: never;
+    path: {
+        providerId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/oidc-providers/{providerId}';
+};
+
+export type DeleteOidcProviderErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * There is no sign-in provider with this ID (`provider_not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteOidcProviderError = DeleteOidcProviderErrors[keyof DeleteOidcProviderErrors];
+
+export type DeleteOidcProviderResponses = {
+    /**
+     * The provider is gone.
+     */
+    204: void;
+};
+
+export type DeleteOidcProviderResponse = DeleteOidcProviderResponses[keyof DeleteOidcProviderResponses];
+
+export type UpdateOidcProviderData = {
+    body: UpdateOidcProviderRequest;
+    path: {
+        providerId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/oidc-providers/{providerId}';
+};
+
+export type UpdateOidcProviderErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * There is no sign-in provider with this ID (`provider_not_found`).
+     */
+    404: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type UpdateOidcProviderError = UpdateOidcProviderErrors[keyof UpdateOidcProviderErrors];
+
+export type UpdateOidcProviderResponses = {
+    /**
+     * The saved provider.
+     */
+    200: OidcProvider;
+};
+
+export type UpdateOidcProviderResponse = UpdateOidcProviderResponses[keyof UpdateOidcProviderResponses];
 
 export type LogoutData = {
     body?: never;

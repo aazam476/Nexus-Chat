@@ -15,6 +15,10 @@ Dependabot proposes updates weekly.
 | `golang.org/x/time` | v0.16.0 | BSD-3-Clause | Token-bucket rate limiting (`rate`), from the Go project |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause | UUIDv7 identifiers; also the UUID type used by the generated API code |
 | `github.com/oapi-codegen/runtime` | v1.8.0 | Apache-2.0 | Small runtime support library required by the code `oapi-codegen` generates |
+| `github.com/coreos/go-oidc/v3` | v3.21.0 | Apache-2.0 | OIDC discovery and ID token verification for provider sign-in ([ADR 0016](adr/0016-oidc-sign-in.md)); brings `go-jose/v4` (Apache-2.0) |
+| `golang.org/x/oauth2` | v0.37.0 | BSD-3-Clause | Authorization code exchange with PKCE for provider sign-in, from the Go project |
+| `github.com/pquerna/otp` | v1.5.0 | Apache-2.0 | TOTP (RFC 6238) enrollment URIs and code checks for two-factor login |
+| `github.com/go-webauthn/webauthn` | v0.18.2 | BSD-3-Clause | WebAuthn ceremonies for passkeys and security keys; the maintained Go implementation, verifies attestation and assertions |
 
 Their own dependencies (`pgpassfile`, `pgservicefile`, `puddle`,
 `interpolate`, `go-retry`, `multierr`, `golang.org/x/sync`,
@@ -48,6 +52,7 @@ None beyond the standard library.
 | `github.com/stretchr/testify`                            | v1.12.1  | MIT        | Assertions, as the code standards specify                                                 |
 | `github.com/testcontainers/testcontainers-go`            | v0.45.0  | MIT        | Starts PostgreSQL for database and contract tests                                         |
 | `github.com/getkin/kin-openapi`                          | v0.153.0 | MIT        | Contract tests validate responses against `openapi.yaml`                                  |
+| `github.com/fxamacker/cbor/v2`                           | v2.9.4   | MIT        | Builds WebAuthn authenticator responses in the passkey tests                              |
 | `github.com/oapi-codegen/oapi-codegen/v2`                | v2.8.2   | Apache-2.0 | Generates server interfaces from the OpenAPI file (Go `tool`)                             |
 | `github.com/sqlc-dev/sqlc`                               | v1.31.1  | MIT        | Compiles SQL queries to typed Go (Go `tool`)                                              |
 | golangci-lint, gobco, go-licenses, govulncheck, gitleaks | see CI   | GPL-free   | Lint, branch coverage, license and vulnerability checks; installed in CI, not in `go.mod` |

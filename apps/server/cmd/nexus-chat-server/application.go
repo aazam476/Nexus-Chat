@@ -23,6 +23,8 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/login"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa"
 	mfastore "github.com/aazam476/nexus-chat/apps/server/internal/auth/mfa/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/auth/oidc"
+	oidcstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/oidc/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys"
 	passkeysstore "github.com/aazam476/nexus-chat/apps/server/internal/auth/passkeys/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/password"
@@ -191,11 +193,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	accountQueries := accountsstore.New(app.pool)
 	settings := instanceconfig.NewService(instanceconfigstore.New(app.pool), system, inputs.domain)
 	accountTokens := tokens.NewService(tokensstore.New(app.pool), system)
-	// The limit on test emails stops a script from flooding the mail server.
-	mailSettings := admin.NewMailSettings(admin.MailDependencies{
-		Settings: settings, Box: inputs.settingsBox, NewSender: newMailer,
-		TestLimiter: ratelimit.New(ratelimit.PerMinute(3, 3), system),
-	})
+	mailSettings := newMailSettings(settings, inputs.settingsBox)
 	accountEmails := emails.NewService(accountTokens, mailSettings.Sender(), settings)
 	logins := login.NewService(login.Dependencies{
 		Accounts: accountQueries, Hasher: inputs.hasher, Sessions: app.sessions,
@@ -216,6 +214,7 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		Accounts: accounts.NewHandler(accountQueries),
 		Admin:    admin.NewHandler(accountQueries, app.certificates, mailSettings),
 		Instance: instanceconfig.NewHandler(settings),
+		OIDC:     app.newOIDCHandler(settings, logins, accountQueries, inputs.settingsBox),
 		Auth: auth.NewHandler(auth.HandlerDependencies{
 			Logins: logins, Sessions: app.sessions, Resets: resets,
 			Verifier: emails.NewVerifier(accountTokens, accountQueries, system), Emails: accountEmails, Users: accountQueries,
@@ -227,6 +226,28 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		}),
 		Registration: registration.NewHandler(registrations, registration.NewInvites(registrationstore.New(app.pool), system), accountQueries),
 	}
+}
+
+// newMailSettings manages SMTP settings; the limit on test emails stops a
+// script from flooding the mail server.
+func newMailSettings(settings *instanceconfig.Service, box *secretbox.Box) *admin.MailSettings {
+	return admin.NewMailSettings(admin.MailDependencies{
+		Settings: settings, Box: box, NewSender: newMailer,
+		TestLimiter: ratelimit.New(ratelimit.PerMinute(3, 3), clock.System{}),
+	})
+}
+
+// newOIDCHandler wires provider sign-in (ADR 0016).
+func (app *application) newOIDCHandler(settings *instanceconfig.Service, logins *login.Service, users *accountsstore.Queries, box *secretbox.Box) *oidc.Handler {
+	system := clock.System{}
+	connector := oidc.NewConnector(nil, system)
+	providers := oidc.NewProviders(oidcstore.New(app.pool), box, connector, system)
+	signIn := oidc.NewSignIn(oidc.Dependencies{
+		Store: oidcstore.New(app.pool), Providers: providers, Connector: connector, Settings: settings,
+		Accounts: oidcstore.NewSignups(registrationstore.NewRegistrar(app.pool)), Logins: logins,
+		Limiter: ratelimit.New(ratelimit.PerMinute(20, 10), system), Clock: system, Logger: app.logger,
+	})
+	return oidc.NewHandler(signIn, providers, users, settings)
 }
 
 // newMailer sends email with the SMTP settings current at the time, so an
