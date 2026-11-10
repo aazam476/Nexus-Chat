@@ -62,6 +62,12 @@ flowchart TB
   libsodium `crypto_kx` exchange relayed by the server, the user confirms the
   comparison code on both screens, and the existing device sends the USK and
   the backup key over that channel, then signs the new device certificate.
+- **Signed statements.** Each signature covers a label naming what is
+  signed (`nexus-chat self-signing key v1`, `nexus-chat device key v1`)
+  followed by each field with a 4-byte length, so a signature over one
+  kind of statement can never be read as another. The safety number is
+  12 groups of 5 digits from SHA-512 over the labelled master public key
+  (`packages/crypto/src/identity/identity.ts`).
 - **User-to-user verification.** Optional, by QR or comparing the UMK safety
   number in person; marks the contact verified.
 

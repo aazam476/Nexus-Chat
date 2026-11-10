@@ -201,6 +201,10 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   reordered, extended or changed files are refused, and the ciphertext
   SHA-256 is checked. Tink's streaming format was dropped: there is no
   maintained JavaScript implementation (ADR 0014).
+- Identity keys (`identity/identity.ts`): master and self-signing keys,
+  device certificates over `@user@instance/deviceId` and the device's MLS
+  signature key, chain checks, self-signing key rotation, and the safety
+  number. Not yet wired into MLS credential validation or the server.
 - Performance at 10–2,000 devices is in ADR 0002. The M3 review kept
   ts-mls (ADR 0002 accepted): the patch now caches subtree hashes, which
   makes applying a commit about 27% cheaper at 1,000–2,000 devices, and

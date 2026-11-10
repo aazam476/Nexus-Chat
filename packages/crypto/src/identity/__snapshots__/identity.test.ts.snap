@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`the safety number stays the same across versions 1`] = `"25143 16376 22400 59621 65658 79723 07898 39564 20858 58724 98975 29103"`;

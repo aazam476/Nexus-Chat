@@ -6,3 +6,4 @@
 export * from "./mls/engine.js";
 export { ciphersuiteName } from "./mls/ciphersuite.js";
 export * from "./attachments/attachments.js";
+export * from "./identity/identity.js";
