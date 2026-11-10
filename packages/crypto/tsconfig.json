@@ -5,5 +5,5 @@
     "types": ["jest", "node"],
     "noEmit": true
   },
-  "include": ["src", "bench", "jest.config.ts"]
+  "include": ["src", "bench", "jest.config.ts", "jest.mutation.config.ts"]
 }
