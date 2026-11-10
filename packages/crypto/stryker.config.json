@@ -5,28 +5,17 @@
   "jest": {
     "configFile": "jest.mutation.config.ts"
   },
-  "testRunnerNodeArgs": [
-    "--experimental-vm-modules",
-    "--no-warnings=ExperimentalWarning"
-  ],
-  "mutate": [
-    "src/**/*.ts",
-    "!src/**/*.test.ts"
-  ],
+  "testRunnerNodeArgs": ["--experimental-vm-modules", "--no-warnings=ExperimentalWarning"],
+  "mutate": ["src/**/*.ts", "!src/**/*.test.ts"],
   "coverageAnalysis": "perTest",
   "thresholds": {
     "high": 90,
     "low": 80,
     "break": 70
   },
-  "reporters": [
-    "clear-text",
-    "progress"
-  ],
+  "reporters": ["clear-text", "progress"],
   "concurrency": 2,
   "timeoutFactor": 3,
   "tempDirName": ".stryker-tmp",
-  "plugins": [
-    "@stryker-mutator/jest-runner"
-  ]
+  "plugins": ["@stryker-mutator/jest-runner"]
 }
