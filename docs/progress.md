@@ -212,6 +212,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   then HKDF with the backup context), or a passkey's PRF output. The
   additional data names each blob and method, so copies can't be swapped.
   Server storage and the signup screens come next.
+- Device linking (`linking/linking.ts`): `crypto_kx` between the two
+  devices, started from a QR code or through the server with a commitment
+  to the new device's key; a 6×4-digit comparison code over both keys; and
+  sealed transfers each way. Tests cover a relay in the middle. The server
+  relay and the screens come with the device list.
 - Performance at 10–2,000 devices is in ADR 0002. The M3 review kept
   ts-mls (ADR 0002 accepted): the patch now caches subtree hashes, which
   makes applying a commit about 27% cheaper at 1,000–2,000 devices, and

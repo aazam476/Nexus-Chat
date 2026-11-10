@@ -62,6 +62,13 @@ flowchart TB
   libsodium `crypto_kx` exchange relayed by the server, the user confirms the
   comparison code on both screens, and the existing device sends the USK and
   the backup key over that channel, then signs the new device certificate.
+- **Linking without a camera.** When the code can't be scanned, the offer
+  goes through the server, so the new device first sends only a SHA-256
+  commitment to its key and nonce, and reveals them after the existing
+  device has answered. A relay must choose its keys before it sees the real
+  ones and cannot search for a pair that shows matching codes. The
+  comparison code is 6 groups of 4 digits from SHA-512 over both keys and
+  the nonce (`packages/crypto/src/linking/linking.ts`).
 - **Signed statements.** Each signature covers a label naming what is
   signed (`nexus-chat self-signing key v1`, `nexus-chat device key v1`)
   followed by each field with a 4-byte length, so a signature over one

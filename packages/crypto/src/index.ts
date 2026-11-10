@@ -8,3 +8,4 @@ export { ciphersuiteName } from "./mls/ciphersuite.js";
 export * from "./attachments/attachments.js";
 export * from "./identity/identity.js";
 export * from "./backup/backup.js";
+export * from "./linking/linking.js";
