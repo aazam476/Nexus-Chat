@@ -120,6 +120,8 @@ replayed. Frames with `seq` are events.
 | `presence_update`     | yes   | `Presence` of a user this device follows                                                                                                                                                                |
 | `user_update`         | yes   | `{ "user": CurrentUser }`, after the account changes                                                                                                                                                    |
 | `relationship_update` | yes   | `{ "userId", "relationship" }`: a friend request, friendship or block with that user changed; `relationship` is `none`, `friend`, `incoming`, `outgoing` or `blocked` (only the blocker sees `blocked`) |
+| `conversation_update` | yes   | `{ "conversationId" }`: a DM or group DM was created, renamed, or gained or lost a member; fetch it again (a 404 means you left)                                                                        |
+| `mls_messages`        | yes   | `{ "conversationId", "lastId" }`: new MLS messages up to `lastId`; fetch those after the last one this device has                                                                                       |
 
 `CurrentUser` is the object from `GET /api/v1/users/me`. `Presence` is:
 

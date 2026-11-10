@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptFriendRequestData, AcceptFriendRequestErrors, AcceptFriendRequestResponses, BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, BlockUserData, BlockUserErrors, BlockUserResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteFriendRequestData, DeleteFriendRequestErrors, DeleteFriendRequestResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetPrivacySettingsData, GetPrivacySettingsErrors, GetPrivacySettingsResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListBlockedData, ListBlockedErrors, ListBlockedResponses, ListFriendsData, ListFriendsErrors, ListFriendsResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveFriendData, RemoveFriendErrors, RemoveFriendResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendFriendRequestData, SendFriendRequestErrors, SendFriendRequestResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnblockUserData, UnblockUserErrors, UnblockUserResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdatePrivacySettingsData, UpdatePrivacySettingsErrors, UpdatePrivacySettingsResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { AcceptFriendRequestData, AcceptFriendRequestErrors, AcceptFriendRequestResponses, AddConversationMemberData, AddConversationMemberErrors, AddConversationMemberResponses, BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, BlockUserData, BlockUserErrors, BlockUserResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateGroupConversationData, CreateGroupConversationErrors, CreateGroupConversationResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteFriendRequestData, DeleteFriendRequestErrors, DeleteFriendRequestResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetMlsGroupStateData, GetMlsGroupStateErrors, GetMlsGroupStateResponses, GetPrivacySettingsData, GetPrivacySettingsErrors, GetPrivacySettingsResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, LeaveConversationData, LeaveConversationErrors, LeaveConversationResponses, ListArchivedMessagesData, ListArchivedMessagesErrors, ListArchivedMessagesResponses, ListBlockedData, ListBlockedErrors, ListBlockedResponses, ListConversationsData, ListConversationsErrors, ListConversationsResponses, ListFriendsData, ListFriendsErrors, ListFriendsResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListMlsMessagesData, ListMlsMessagesErrors, ListMlsMessagesResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, OpenDirectMessageData, OpenDirectMessageErrors, OpenDirectMessageResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveFriendData, RemoveFriendErrors, RemoveFriendResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RenameConversationData, RenameConversationErrors, RenameConversationResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendFriendRequestData, SendFriendRequestErrors, SendFriendRequestResponses, SendMlsMessageData, SendMlsMessageErrors, SendMlsMessageResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, SubmitMlsCommitData, SubmitMlsCommitErrors, SubmitMlsCommitResponses, UnblockUserData, UnblockUserErrors, UnblockUserResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdatePrivacySettingsData, UpdatePrivacySettingsErrors, UpdatePrivacySettingsResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -948,6 +948,158 @@ export const updatePrivacySettings = <ThrowOnError extends boolean = false>(opti
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Your DMs and group DMs, newest first
+ */
+export const listConversations = <ThrowOnError extends boolean = false>(options?: Options<ListConversationsData, ThrowOnError>): RequestResult<ListConversationsResponses, ListConversationsErrors, ThrowOnError> => (options?.client ?? client).get<ListConversationsResponses, ListConversationsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations',
+    ...options
+});
+
+/**
+ * Open your DM with a user, creating it if needed
+ *
+ * A pair of users has one DM. Creating one needs the other user's
+ * privacy setting to allow you and no block between you; an existing
+ * DM is returned either way.
+ *
+ */
+export const openDirectMessage = <ThrowOnError extends boolean = false>(options: Options<OpenDirectMessageData, ThrowOnError>): RequestResult<OpenDirectMessageResponses, OpenDirectMessageErrors, ThrowOnError> => (options.client ?? client).post<OpenDirectMessageResponses, OpenDirectMessageErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/dms',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Start a group DM
+ *
+ * 3 to 25 members, counting you; each must accept DMs from you.
+ */
+export const createGroupConversation = <ThrowOnError extends boolean = false>(options: Options<CreateGroupConversationData, ThrowOnError>): RequestResult<CreateGroupConversationResponses, CreateGroupConversationErrors, ThrowOnError> => (options.client ?? client).post<CreateGroupConversationResponses, CreateGroupConversationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/groups',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * One of your conversations
+ */
+export const getConversation = <ThrowOnError extends boolean = false>(options: Options<GetConversationData, ThrowOnError>): RequestResult<GetConversationResponses, GetConversationErrors, ThrowOnError> => (options.client ?? client).get<GetConversationResponses, GetConversationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}',
+    ...options
+});
+
+/**
+ * Rename a group DM
+ */
+export const renameConversation = <ThrowOnError extends boolean = false>(options: Options<RenameConversationData, ThrowOnError>): RequestResult<RenameConversationResponses, RenameConversationErrors, ThrowOnError> => (options.client ?? client).patch<RenameConversationResponses, RenameConversationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Add someone to a group DM
+ */
+export const addConversationMember = <ThrowOnError extends boolean = false>(options: Options<AddConversationMemberData, ThrowOnError>): RequestResult<AddConversationMemberResponses, AddConversationMemberErrors, ThrowOnError> => (options.client ?? client).post<AddConversationMemberResponses, AddConversationMemberErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/members',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Leave a group DM
+ *
+ * Your devices are removed from the MLS group by a membership
+ * directive the server publishes and the remaining members commit.
+ *
+ */
+export const leaveConversation = <ThrowOnError extends boolean = false>(options: Options<LeaveConversationData, ThrowOnError>): RequestResult<LeaveConversationResponses, LeaveConversationErrors, ThrowOnError> => (options.client ?? client).delete<LeaveConversationResponses, LeaveConversationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/members/me',
+    ...options
+});
+
+/**
+ * The conversation's MLS group as the delivery service knows it
+ *
+ * The current epoch and the latest GroupInfo, which a new device uses to join by external commit.
+ */
+export const getMlsGroupState = <ThrowOnError extends boolean = false>(options: Options<GetMlsGroupStateData, ThrowOnError>): RequestResult<GetMlsGroupStateResponses, GetMlsGroupStateErrors, ThrowOnError> => (options.client ?? client).get<GetMlsGroupStateResponses, GetMlsGroupStateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/mls',
+    ...options
+});
+
+/**
+ * Submit a commit for the current epoch
+ *
+ * The first valid commit for an epoch wins; later ones get
+ * `epoch_conflict`, and their devices fetch the winning commit and
+ * retry. A fresh signed GroupInfo must come with every commit.
+ *
+ */
+export const submitMlsCommit = <ThrowOnError extends boolean = false>(options: Options<SubmitMlsCommitData, ThrowOnError>): RequestResult<SubmitMlsCommitResponses, SubmitMlsCommitErrors, ThrowOnError> => (options.client ?? client).post<SubmitMlsCommitResponses, SubmitMlsCommitErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/mls/commits',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Live MLS messages after the last one this device saw
+ */
+export const listMlsMessages = <ThrowOnError extends boolean = false>(options: Options<ListMlsMessagesData, ThrowOnError>): RequestResult<ListMlsMessagesResponses, ListMlsMessagesErrors, ThrowOnError> => (options.client ?? client).get<ListMlsMessagesResponses, ListMlsMessagesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/mls/messages',
+    ...options
+});
+
+/**
+ * Send an application message for the current epoch
+ *
+ * The live copy (an MLS PrivateMessage) and, normally, its archive copy (docs/e2ee-design.md §4).
+ */
+export const sendMlsMessage = <ThrowOnError extends boolean = false>(options: Options<SendMlsMessageData, ThrowOnError>): RequestResult<SendMlsMessageResponses, SendMlsMessageErrors, ThrowOnError> => (options.client ?? client).post<SendMlsMessageResponses, SendMlsMessageErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/mls/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Archive copies, newest first, for scrolling back and search
+ */
+export const listArchivedMessages = <ThrowOnError extends boolean = false>(options: Options<ListArchivedMessagesData, ThrowOnError>): RequestResult<ListArchivedMessagesResponses, ListArchivedMessagesErrors, ThrowOnError> => (options.client ?? client).get<ListArchivedMessagesResponses, ListArchivedMessagesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/conversations/{conversationId}/archive',
+    ...options
 });
 
 /**

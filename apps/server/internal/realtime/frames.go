@@ -37,6 +37,10 @@ const (
 	TypeUserUpdate     = "user_update"
 	// TypeRelationshipUpdate: a friend request, friendship or block changed.
 	TypeRelationshipUpdate = "relationship_update"
+	// TypeConversationUpdate: a DM or group DM's name or members changed.
+	TypeConversationUpdate = "conversation_update"
+	// TypeMlsMessages: a conversation has new MLS messages to fetch.
+	TypeMlsMessages = "mls_messages"
 )
 
 var errMalformed = errors.New("malformed frame")

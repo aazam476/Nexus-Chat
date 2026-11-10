@@ -27,6 +27,8 @@ tags:
     description: End-to-end encryption support. The server stores and relays opaque MLS data; it never sees keys or plaintext.
   - name: social
     description: Friends, blocks and privacy settings (spec §4.2).
+  - name: conversations
+    description: DMs and group DMs (spec §4.3). Messages travel encrypted through the encryption endpoints.
 paths:
   /api/v1/auth/login:
     post:
@@ -2038,6 +2040,500 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/v1/conversations:
+    get:
+      operationId: listConversations
+      summary: Your DMs and group DMs, newest first
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The conversations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/conversations/dms:
+    post:
+      operationId: openDirectMessage
+      summary: Open your DM with a user, creating it if needed
+      description: |
+        A pair of users has one DM. Creating one needs the other user's
+        privacy setting to allow you and no block between you; an existing
+        DM is returned either way.
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DirectMessageTarget"
+      responses:
+        "200":
+          description: The existing DM.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "201":
+          description: A new DM.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: This user does not accept DMs from you (`dm_not_allowed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: There is no such user (`user_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: You cannot DM yourself (`cannot_dm_self`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/groups:
+    post:
+      operationId: createGroupConversation
+      summary: Start a group DM
+      description: 3 to 25 members, counting you; each must accept DMs from you.
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewGroupConversation"
+      responses:
+        "201":
+          description: The group DM.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: One of the users does not accept DMs from you (`dm_not_allowed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: One of the users does not exist (`user_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Too few or too many members (`invalid_group_size`), or the name is not 1 to 100 characters (`invalid_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getConversation
+      summary: One of your conversations
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The conversation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: renameConversation
+      summary: Rename a group DM
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConversationRename"
+      responses:
+        "204":
+          description: Renamed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a group DM (`not_a_group`), or the name is not 1 to 100 characters (`invalid_name`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/members:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: addConversationMember
+      summary: Add someone to a group DM
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DirectMessageTarget"
+      responses:
+        "204":
+          description: Added. Their devices join the MLS group with an external commit.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: This user does not accept DMs from you (`dm_not_allowed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such conversation (`conversation_not_found`) or user (`user_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already a member (`already_member`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a group DM (`not_a_group`), or it has 25 members (`invalid_group_size`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/members/me:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: leaveConversation
+      summary: Leave a group DM
+      description: |
+        Your devices are removed from the MLS group by a membership
+        directive the server publishes and the remaining members commit.
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Left.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A DM cannot be left (`not_a_group`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/mls:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getMlsGroupState
+      summary: The conversation's MLS group as the delivery service knows it
+      description: The current epoch and the latest GroupInfo, which a new device uses to join by external commit.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The group state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MlsGroupState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/mls/commits:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitMlsCommit
+      summary: Submit a commit for the current epoch
+      description: |
+        The first valid commit for an epoch wins; later ones get
+        `epoch_conflict`, and their devices fetch the winning commit and
+        retry. A fresh signed GroupInfo must come with every commit.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MlsCommit"
+      responses:
+        "200":
+          description: Accepted; the group's new epoch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MlsEpoch"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You cannot send in this conversation (`cannot_send`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Another commit for this epoch came first (`epoch_conflict`), or this one is for another epoch (`wrong_epoch`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a commit for this conversation's group, or too large (`invalid_mls_message`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/mls/messages:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listMlsMessages
+      summary: Live MLS messages after the last one this device saw
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: after
+          in: query
+          description: The ID of the last message this device has; 0 for the oldest kept.
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: Commits, application messages, welcomes and membership directives, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MlsMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: sendMlsMessage
+      summary: Send an application message for the current epoch
+      description: The live copy (an MLS PrivateMessage) and, normally, its archive copy (docs/e2ee-design.md §4).
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MlsSend"
+      responses:
+        "201":
+          description: Stored and delivered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MlsMessageId"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You cannot send in this conversation, for example after a block (`cannot_send`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Not for the current epoch (`wrong_epoch`), or the message ID was already used (`duplicate_message`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not an application message for this group, or too large (`invalid_mls_message`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/archive:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listArchivedMessages
+      summary: Archive copies, newest first, for scrolling back and search
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          description: Only copies made before this time; now if missing.
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: The archive copies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchivedMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/avatars/{avatarId}:
     get:
       operationId: getAvatar
@@ -2775,6 +3271,168 @@ components:
           type: string
           enum: [everyone, server_members, nobody]
           description: Default `everyone`.
+    Conversation:
+      type: object
+      required: [id, kind, mlsGroupId, createdAt, members]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [dm, group]
+        name:
+          type: string
+          description: Group DMs only, when named.
+        mlsGroupId:
+          type: string
+          format: byte
+          description: The MLS group that encrypts this conversation (16 bytes).
+        createdAt:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserSummary"
+    DirectMessageTarget:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+    NewGroupConversation:
+      type: object
+      required: [memberIds]
+      properties:
+        name:
+          type: string
+        memberIds:
+          type: array
+          description: The other members; you are added too.
+          items:
+            type: string
+            format: uuid
+    ConversationRename:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: The new name; null or missing removes it.
+    MlsGroupState:
+      type: object
+      required: [groupId, epoch]
+      properties:
+        groupId:
+          type: string
+          format: byte
+        epoch:
+          type: integer
+          format: int64
+        groupInfo:
+          type: string
+          format: byte
+          description: The latest signed GroupInfo (an MLSMessage); missing before the first commit.
+    MlsCommit:
+      type: object
+      required: [commit, groupInfo]
+      properties:
+        commit:
+          type: string
+          format: byte
+          description: An MLSMessage holding the commit.
+        groupInfo:
+          type: string
+          format: byte
+          description: The GroupInfo for the new epoch (an MLSMessage).
+        welcome:
+          type: string
+          format: byte
+          description: The Welcome for added devices, if any (an MLSMessage).
+    MlsEpoch:
+      type: object
+      required: [epoch]
+      properties:
+        epoch:
+          type: integer
+          format: int64
+    MlsSend:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          format: byte
+          description: An MLSMessage holding a PrivateMessage with application content.
+        archive:
+          $ref: "#/components/schemas/ArchiveCopy"
+    ArchiveCopy:
+      type: object
+      required: [messageId, sealed]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: Chosen by the sender; edits, reactions and replies refer to it.
+        sealed:
+          type: string
+          format: byte
+    MlsMessageId:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+          format: int64
+    MlsMessage:
+      type: object
+      required: [id, kind, epoch, data, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+          enum: [commit, application, welcome, directive]
+        epoch:
+          type: integer
+          format: int64
+        senderId:
+          type: string
+          format: uuid
+          description: Missing for directives, which the instance issues.
+        data:
+          type: string
+          format: byte
+          description: |
+            An MLSMessage, or for a directive the JSON
+            `{"directive": base64, "signature": base64}`, signed with the
+            instance key over "nexus-chat membership directive v1\n" and the
+            directive bytes.
+        createdAt:
+          type: string
+          format: date-time
+    ArchivedMessage:
+      type: object
+      required: [messageId, epoch, sealed, createdAt]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        epoch:
+          type: integer
+          format: int64
+        senderId:
+          type: string
+          format: uuid
+        sealed:
+          type: string
+          format: byte
+        createdAt:
+          type: string
+          format: date-time
     KeyPackageStock:
       type: object
       additionalProperties: false

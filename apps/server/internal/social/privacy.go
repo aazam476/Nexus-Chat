@@ -85,3 +85,12 @@ func (service *Service) CanDirectMessage(ctx context.Context, sender uuid.UUID, 
 		return current.Friends, nil
 	}
 }
+
+// Blocked reports whether either user blocked the other.
+func (service *Service) Blocked(ctx context.Context, first uuid.UUID, second uuid.UUID) (bool, error) {
+	current, err := service.relationship(ctx, first, second)
+	if err != nil {
+		return false, err
+	}
+	return current.IBlocked || current.BlockedMe, nil
+}

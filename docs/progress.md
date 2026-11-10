@@ -270,6 +270,22 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   and server members, the default) or friend-request you (everyone, the
   default / server members / nobody). Friend requests are rate-limited per
   sender. Both users' devices get a `relationship_update` event.
+- DMs and group DMs (`internal/conversations`, migration 00014): one DM
+  per pair of users, created only if the other's privacy setting allows
+  and neither blocked the other (an existing DM stays readable after a
+  block, but nobody can send); group DMs of 3 to 25 members with a name,
+  adding members, leaving and renaming. Each conversation is one MLS group
+  whose ID the server picks. Group DM icons and an instance setting for
+  the 25-member cap are still to come.
+- The MLS delivery service (`internal/delivery`, migration 00015): one
+  commit per epoch (first wins, others get `wrong_epoch` or
+  `epoch_conflict`), with the GroupInfo kept for external joins; welcomes;
+  application messages with their archive copies (duplicate message IDs
+  refused); fetching live copies by ID and archive copies by time; and a
+  membership directive, signed with the instance key, when someone leaves
+  a group DM. The server reads only the cleartext MLS header
+  (`mlsheader`, fuzz-tested, checked against messages from ts-mls). Devices
+  hear about changes through `conversation_update` and `mls_messages`.
 - Two M3 items move here, since they need the key-setup screens and the
   native crypto stack: the E2E "signup → recovery phrase → second device
   verifies", and running the RFC 9420 vectors on Hermes.

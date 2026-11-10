@@ -380,6 +380,115 @@ export type PrivacySettings = {
     whoCanFriendRequest: 'everyone' | 'server_members' | 'nobody';
 };
 
+export type Conversation = {
+    id: string;
+    kind: 'dm' | 'group';
+    /**
+     * Group DMs only, when named.
+     */
+    name?: string;
+    /**
+     * The MLS group that encrypts this conversation (16 bytes).
+     */
+    mlsGroupId: string;
+    createdAt: string;
+    members: Array<UserSummary>;
+};
+
+export type DirectMessageTarget = {
+    userId: string;
+};
+
+export type NewGroupConversation = {
+    name?: string;
+    /**
+     * The other members; you are added too.
+     */
+    memberIds: Array<string>;
+};
+
+export type ConversationRename = {
+    /**
+     * The new name; null or missing removes it.
+     */
+    name?: string | null;
+};
+
+export type MlsGroupState = {
+    groupId: string;
+    epoch: number;
+    /**
+     * The latest signed GroupInfo (an MLSMessage); missing before the first commit.
+     */
+    groupInfo?: string;
+};
+
+export type MlsCommit = {
+    /**
+     * An MLSMessage holding the commit.
+     */
+    commit: string;
+    /**
+     * The GroupInfo for the new epoch (an MLSMessage).
+     */
+    groupInfo: string;
+    /**
+     * The Welcome for added devices, if any (an MLSMessage).
+     */
+    welcome?: string;
+};
+
+export type MlsEpoch = {
+    epoch: number;
+};
+
+export type MlsSend = {
+    /**
+     * An MLSMessage holding a PrivateMessage with application content.
+     */
+    message: string;
+    archive?: ArchiveCopy;
+};
+
+export type ArchiveCopy = {
+    /**
+     * Chosen by the sender; edits, reactions and replies refer to it.
+     */
+    messageId: string;
+    sealed: string;
+};
+
+export type MlsMessageId = {
+    id: number;
+};
+
+export type MlsMessage = {
+    id: number;
+    kind: 'commit' | 'application' | 'welcome' | 'directive';
+    epoch: number;
+    /**
+     * Missing for directives, which the instance issues.
+     */
+    senderId?: string;
+    /**
+     * An MLSMessage, or for a directive the JSON
+     * `{"directive": base64, "signature": base64}`, signed with the
+     * instance key over "nexus-chat membership directive v1\n" and the
+     * directive bytes.
+     *
+     */
+    data: string;
+    createdAt: string;
+};
+
+export type ArchivedMessage = {
+    messageId: string;
+    epoch: number;
+    senderId?: string;
+    sealed: string;
+    createdAt: string;
+};
+
 export type KeyPackageStock = {
     /**
      * One-time key packages stored for this device.
@@ -3151,6 +3260,488 @@ export type UpdatePrivacySettingsResponses = {
 };
 
 export type UpdatePrivacySettingsResponse = UpdatePrivacySettingsResponses[keyof UpdatePrivacySettingsResponses];
+
+export type ListConversationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/conversations';
+};
+
+export type ListConversationsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListConversationsError = ListConversationsErrors[keyof ListConversationsErrors];
+
+export type ListConversationsResponses = {
+    /**
+     * The conversations.
+     */
+    200: Array<Conversation>;
+};
+
+export type ListConversationsResponse = ListConversationsResponses[keyof ListConversationsResponses];
+
+export type OpenDirectMessageData = {
+    body: DirectMessageTarget;
+    path?: never;
+    query?: never;
+    url: '/api/v1/conversations/dms';
+};
+
+export type OpenDirectMessageErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This user does not accept DMs from you (`dm_not_allowed`).
+     */
+    403: Error;
+    /**
+     * There is no such user (`user_not_found`).
+     */
+    404: Error;
+    /**
+     * You cannot DM yourself (`cannot_dm_self`).
+     */
+    422: Error;
+};
+
+export type OpenDirectMessageError = OpenDirectMessageErrors[keyof OpenDirectMessageErrors];
+
+export type OpenDirectMessageResponses = {
+    /**
+     * The existing DM.
+     */
+    200: Conversation;
+    /**
+     * A new DM.
+     */
+    201: Conversation;
+};
+
+export type OpenDirectMessageResponse = OpenDirectMessageResponses[keyof OpenDirectMessageResponses];
+
+export type CreateGroupConversationData = {
+    body: NewGroupConversation;
+    path?: never;
+    query?: never;
+    url: '/api/v1/conversations/groups';
+};
+
+export type CreateGroupConversationErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * One of the users does not accept DMs from you (`dm_not_allowed`).
+     */
+    403: Error;
+    /**
+     * One of the users does not exist (`user_not_found`).
+     */
+    404: Error;
+    /**
+     * Too few or too many members (`invalid_group_size`), or the name is not 1 to 100 characters (`invalid_name`).
+     */
+    422: Error;
+};
+
+export type CreateGroupConversationError = CreateGroupConversationErrors[keyof CreateGroupConversationErrors];
+
+export type CreateGroupConversationResponses = {
+    /**
+     * The group DM.
+     */
+    201: Conversation;
+};
+
+export type CreateGroupConversationResponse = CreateGroupConversationResponses[keyof CreateGroupConversationResponses];
+
+export type GetConversationData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}';
+};
+
+export type GetConversationErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+};
+
+export type GetConversationError = GetConversationErrors[keyof GetConversationErrors];
+
+export type GetConversationResponses = {
+    /**
+     * The conversation.
+     */
+    200: Conversation;
+};
+
+export type GetConversationResponse = GetConversationResponses[keyof GetConversationResponses];
+
+export type RenameConversationData = {
+    body: ConversationRename;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}';
+};
+
+export type RenameConversationErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * Not a group DM (`not_a_group`), or the name is not 1 to 100 characters (`invalid_name`).
+     */
+    422: Error;
+};
+
+export type RenameConversationError = RenameConversationErrors[keyof RenameConversationErrors];
+
+export type RenameConversationResponses = {
+    /**
+     * Renamed.
+     */
+    204: void;
+};
+
+export type RenameConversationResponse = RenameConversationResponses[keyof RenameConversationResponses];
+
+export type AddConversationMemberData = {
+    body: DirectMessageTarget;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/members';
+};
+
+export type AddConversationMemberErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This user does not accept DMs from you (`dm_not_allowed`).
+     */
+    403: Error;
+    /**
+     * No such conversation (`conversation_not_found`) or user (`user_not_found`).
+     */
+    404: Error;
+    /**
+     * Already a member (`already_member`).
+     */
+    409: Error;
+    /**
+     * Not a group DM (`not_a_group`), or it has 25 members (`invalid_group_size`).
+     */
+    422: Error;
+};
+
+export type AddConversationMemberError = AddConversationMemberErrors[keyof AddConversationMemberErrors];
+
+export type AddConversationMemberResponses = {
+    /**
+     * Added. Their devices join the MLS group with an external commit.
+     */
+    204: void;
+};
+
+export type AddConversationMemberResponse = AddConversationMemberResponses[keyof AddConversationMemberResponses];
+
+export type LeaveConversationData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/members/me';
+};
+
+export type LeaveConversationErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * A DM cannot be left (`not_a_group`).
+     */
+    422: Error;
+};
+
+export type LeaveConversationError = LeaveConversationErrors[keyof LeaveConversationErrors];
+
+export type LeaveConversationResponses = {
+    /**
+     * Left.
+     */
+    204: void;
+};
+
+export type LeaveConversationResponse = LeaveConversationResponses[keyof LeaveConversationResponses];
+
+export type GetMlsGroupStateData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/mls';
+};
+
+export type GetMlsGroupStateErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+};
+
+export type GetMlsGroupStateError = GetMlsGroupStateErrors[keyof GetMlsGroupStateErrors];
+
+export type GetMlsGroupStateResponses = {
+    /**
+     * The group state.
+     */
+    200: MlsGroupState;
+};
+
+export type GetMlsGroupStateResponse = GetMlsGroupStateResponses[keyof GetMlsGroupStateResponses];
+
+export type SubmitMlsCommitData = {
+    body: MlsCommit;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/mls/commits';
+};
+
+export type SubmitMlsCommitErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You cannot send in this conversation (`cannot_send`).
+     */
+    403: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * Another commit for this epoch came first (`epoch_conflict`), or this one is for another epoch (`wrong_epoch`).
+     */
+    409: Error;
+    /**
+     * Not a commit for this conversation's group, or too large (`invalid_mls_message`).
+     */
+    422: Error;
+};
+
+export type SubmitMlsCommitError = SubmitMlsCommitErrors[keyof SubmitMlsCommitErrors];
+
+export type SubmitMlsCommitResponses = {
+    /**
+     * Accepted; the group's new epoch.
+     */
+    200: MlsEpoch;
+};
+
+export type SubmitMlsCommitResponse = SubmitMlsCommitResponses[keyof SubmitMlsCommitResponses];
+
+export type ListMlsMessagesData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: {
+        /**
+         * The ID of the last message this device has; 0 for the oldest kept.
+         */
+        after?: number;
+        limit?: number;
+    };
+    url: '/api/v1/conversations/{conversationId}/mls/messages';
+};
+
+export type ListMlsMessagesErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+};
+
+export type ListMlsMessagesError = ListMlsMessagesErrors[keyof ListMlsMessagesErrors];
+
+export type ListMlsMessagesResponses = {
+    /**
+     * Commits, application messages, welcomes and membership directives, oldest first.
+     */
+    200: Array<MlsMessage>;
+};
+
+export type ListMlsMessagesResponse = ListMlsMessagesResponses[keyof ListMlsMessagesResponses];
+
+export type SendMlsMessageData = {
+    body: MlsSend;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/mls/messages';
+};
+
+export type SendMlsMessageErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You cannot send in this conversation, for example after a block (`cannot_send`).
+     */
+    403: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * Not for the current epoch (`wrong_epoch`), or the message ID was already used (`duplicate_message`).
+     */
+    409: Error;
+    /**
+     * Not an application message for this group, or too large (`invalid_mls_message`).
+     */
+    422: Error;
+};
+
+export type SendMlsMessageError = SendMlsMessageErrors[keyof SendMlsMessageErrors];
+
+export type SendMlsMessageResponses = {
+    /**
+     * Stored and delivered.
+     */
+    201: MlsMessageId;
+};
+
+export type SendMlsMessageResponse = SendMlsMessageResponses[keyof SendMlsMessageResponses];
+
+export type ListArchivedMessagesData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: {
+        /**
+         * Only copies made before this time; now if missing.
+         */
+        before?: string;
+        limit?: number;
+    };
+    url: '/api/v1/conversations/{conversationId}/archive';
+};
+
+export type ListArchivedMessagesErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+};
+
+export type ListArchivedMessagesError = ListArchivedMessagesErrors[keyof ListArchivedMessagesErrors];
+
+export type ListArchivedMessagesResponses = {
+    /**
+     * The archive copies.
+     */
+    200: Array<ArchivedMessage>;
+};
+
+export type ListArchivedMessagesResponse = ListArchivedMessagesResponses[keyof ListArchivedMessagesResponses];
 
 export type GetAvatarData = {
     body?: never;

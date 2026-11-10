@@ -110,3 +110,17 @@ sql:
       go:
         <<: *go-options
         out: internal/social/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/conversations/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/conversations/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/delivery/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/delivery/store

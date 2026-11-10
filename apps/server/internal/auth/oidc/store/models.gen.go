@@ -19,6 +19,15 @@ type AccountToken struct {
 	ExpiresAt time.Time
 }
 
+type ArchivedMessage struct {
+	ConversationID uuid.UUID
+	MessageID      uuid.UUID
+	Epoch          int64
+	SenderID       *uuid.UUID
+	Sealed         []byte
+	CreatedAt      time.Time
+}
+
 type BackupCode struct {
 	UserID   uuid.UUID
 	CodeHash []byte
@@ -28,6 +37,22 @@ type Block struct {
 	BlockerID uuid.UUID
 	BlockedID uuid.UUID
 	CreatedAt time.Time
+}
+
+type Conversation struct {
+	ID         uuid.UUID
+	Kind       string
+	Name       *string
+	DmPair     *string
+	MlsGroupID []byte
+	CreatedBy  *uuid.UUID
+	CreatedAt  time.Time
+}
+
+type ConversationMember struct {
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+	JoinedAt       time.Time
 }
 
 type FriendRequest struct {
@@ -86,6 +111,23 @@ type KeyPackage struct {
 	Data       []byte
 	LastResort bool
 	CreatedAt  time.Time
+}
+
+type MlsGroup struct {
+	ConversationID uuid.UUID
+	Epoch          int64
+	GroupInfo      []byte
+	UpdatedAt      time.Time
+}
+
+type MlsMessage struct {
+	ID             int64
+	ConversationID uuid.UUID
+	Kind           string
+	Epoch          int64
+	SenderID       *uuid.UUID
+	Data           []byte
+	CreatedAt      time.Time
 }
 
 type OidcFlow struct {

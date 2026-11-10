@@ -12,6 +12,8 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/oidc"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
+	"github.com/aazam476/nexus-chat/apps/server/internal/conversations"
+	"github.com/aazam476/nexus-chat/apps/server/internal/delivery"
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/identities"
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
@@ -26,19 +28,21 @@ import (
 
 // Features holds the handler of every API feature.
 type Features struct {
-	Accounts     *accounts.Handler
-	Admin        *admin.Handler
-	Auth         *auth.Handler
-	Health       *health.Handler
-	Identities   *identities.Handler
-	Instance     *instanceconfig.Handler
-	KeyBackup    *keybackup.Handler
-	KeyPackages  *keypackages.Handler
-	OIDC         *oidc.Handler
-	Profiles     *profiles.Handler
-	Registration *registration.Handler
-	Setup        *setup.Handler
-	Social       *social.Handler
+	Accounts      *accounts.Handler
+	Admin         *admin.Handler
+	Auth          *auth.Handler
+	Conversations *conversations.Handler
+	Delivery      *delivery.Handler
+	Health        *health.Handler
+	Identities    *identities.Handler
+	Instance      *instanceconfig.Handler
+	KeyBackup     *keybackup.Handler
+	KeyPackages   *keypackages.Handler
+	OIDC          *oidc.Handler
+	Profiles      *profiles.Handler
+	Registration  *registration.Handler
+	Setup         *setup.Handler
+	Social        *social.Handler
 }
 
 // Options configures NewHandler.
@@ -58,19 +62,21 @@ type Options struct {
 // Every feature's handler type is called Handler, and two embedded fields
 // cannot share a name. These aliases give each one its own field name.
 type (
-	accountsHandler     = accounts.Handler
-	adminHandler        = admin.Handler
-	authHandler         = auth.Handler
-	healthHandler       = health.Handler
-	identitiesHandler   = identities.Handler
-	instanceHandler     = instanceconfig.Handler
-	keyBackupHandler    = keybackup.Handler
-	keyPackagesHandler  = keypackages.Handler
-	oidcHandler         = oidc.Handler
-	profilesHandler     = profiles.Handler
-	registrationHandler = registration.Handler
-	setupHandler        = setup.Handler
-	socialHandler       = social.Handler
+	accountsHandler      = accounts.Handler
+	adminHandler         = admin.Handler
+	authHandler          = auth.Handler
+	conversationsHandler = conversations.Handler
+	deliveryHandler      = delivery.Handler
+	healthHandler        = health.Handler
+	identitiesHandler    = identities.Handler
+	instanceHandler      = instanceconfig.Handler
+	keyBackupHandler     = keybackup.Handler
+	keyPackagesHandler   = keypackages.Handler
+	oidcHandler          = oidc.Handler
+	profilesHandler      = profiles.Handler
+	registrationHandler  = registration.Handler
+	setupHandler         = setup.Handler
+	socialHandler        = social.Handler
 )
 
 // handlers combines the feature handlers into one value that implements
@@ -80,6 +86,8 @@ type handlers struct {
 	*accountsHandler
 	*adminHandler
 	*authHandler
+	*conversationsHandler
+	*deliveryHandler
 	*healthHandler
 	*identitiesHandler
 	*instanceHandler
@@ -106,7 +114,7 @@ func NewHandler(features Features, options Options) http.Handler {
 			oidcHandler:         features.OIDC,
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
-			socialHandler: features.Social,
+			socialHandler: features.Social, conversationsHandler: features.Conversations, deliveryHandler: features.Delivery,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
 		api.StrictHTTPServerOptions{
