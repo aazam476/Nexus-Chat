@@ -32,7 +32,10 @@ appId: org.nexuschat.app
 - tapOn:
     id: "login-submit"
 - assertVisible: "Welcome, .*Ada Admin.*"
-- assertVisible: "Others see you as: Online"
+# Below the plain-HTTP warning on a phone-sized screen.
+- scrollUntilVisible:
+    element:
+      text: "Others see you as: Online"
 - scrollUntilVisible:
     element:
       id: "logout"
