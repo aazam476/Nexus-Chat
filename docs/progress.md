@@ -224,6 +224,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   password copy in the same statement that sets the new password. Under
   the 100% branch and mutation gates.
 - Every request body is now capped at 16 MiB (`MaximumRequestBody`).
+- History keys and archive copies (`history/archive.ts`): the history key
+  is the MLS exporter over the channel and epoch; an archive copy seals the
+  plaintext with it (AES-256-GCM) together with the sender's credential,
+  MLS signature key and labelled signature, so it can be checked without
+  that epoch's tree. History bundles (`history/bundle.ts`) carry a
+  channel's keys to new members (ADR 0003's recommended design, built
+  while the ADR is still Proposed).
 - Key backup (`backup/backup.ts`): a random backup key seals named blobs
   (XChaCha20-Poly1305) and is wrapped under each unlock method: a 24-word
   recovery phrase (BIP-39, 256 bits, HKDF with the user's salt), the

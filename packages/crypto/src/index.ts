@@ -10,3 +10,6 @@ export * from "./identity/identity.js";
 export * from "./backup/backup.js";
 export * from "./linking/linking.js";
 export * from "./identity/credential.js";
+export * from "./mls/memberKeys.js";
+export * from "./history/archive.js";
+export * from "./history/bundle.js";
