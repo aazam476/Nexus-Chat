@@ -195,10 +195,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   used up and the last resort kept. The server stays MLS-free and checks
   only the header (MLS 1.0, key package, ciphersuite 0x0001) and size.
   Claims are rate-limited per claiming user; packages go with the session.
-- Performance at 10–2,000 devices is in ADR 0002, with the review
-  options. Messages cost the same at any size; joins and commits grow
-  linearly because ts-mls rehashes the whole tree. Device (Hermes)
-  numbers are still needed for the review.
+- Performance at 10–2,000 devices is in ADR 0002. The M3 review kept
+  ts-mls (ADR 0002 accepted): the patch now caches subtree hashes, which
+  makes applying a commit about 27% cheaper at 1,000–2,000 devices, and
+  very large channels batch membership changes. Still to do: reuse
+  imported WebCrypto keys, and measure on a mid-range Android phone.
 
 ## Known issues
 

@@ -167,7 +167,7 @@ overrides:
   eslint-plugin-tsdoc>@typescript-eslint/utils: 8.72.1
 
 patchedDependencies:
-  ts-mls@1.6.4: 89a5885c79b72de2c13b07b672c6e8c01e18aaea144fa6e90241c49c4587d7e9
+  ts-mls@1.6.4: 734a83d559eb114cdd835e56453a48265fe82749af810d37341e6fc9e36d3fd9
 
 importers:
 
@@ -350,7 +350,7 @@ importers:
         version: 2.0.1
       ts-mls:
         specifier: 1.6.4
-        version: 1.6.4(patch_hash=89a5885c79b72de2c13b07b672c6e8c01e18aaea144fa6e90241c49c4587d7e9)(@hpke/chacha20poly1305@1.8.0)(@hpke/dhkem-x448@1.8.0)(@noble/ciphers@2.1.1)(@noble/curves@2.0.1)
+        version: 1.6.4(patch_hash=734a83d559eb114cdd835e56453a48265fe82749af810d37341e6fc9e36d3fd9)(@hpke/chacha20poly1305@1.8.0)(@hpke/dhkem-x448@1.8.0)(@noble/ciphers@2.1.1)(@noble/curves@2.0.1)
     devDependencies:
       '@hpke/chacha20poly1305':
         specifier: 1.8.0
@@ -12566,7 +12566,7 @@ snapshots:
       babel-jest: 30.5.2(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1)
       jest-util: 30.5.1
 
-  ts-mls@1.6.4(patch_hash=89a5885c79b72de2c13b07b672c6e8c01e18aaea144fa6e90241c49c4587d7e9)(@hpke/chacha20poly1305@1.8.0)(@hpke/dhkem-x448@1.8.0)(@noble/ciphers@2.1.1)(@noble/curves@2.0.1):
+  ts-mls@1.6.4(patch_hash=734a83d559eb114cdd835e56453a48265fe82749af810d37341e6fc9e36d3fd9)(@hpke/chacha20poly1305@1.8.0)(@hpke/dhkem-x448@1.8.0)(@noble/ciphers@2.1.1)(@noble/curves@2.0.1):
     dependencies:
       '@hpke/core': 1.9.0
       '@noble/ciphers': 2.1.1

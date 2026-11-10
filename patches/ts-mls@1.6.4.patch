@@ -11,3 +11,85 @@ index 45af97faf0d8094090fe5fdca57ef40bb90480b2..56864bd901ba702b90c300d17626979f
                      return new ValidationError("Unmerged leaf did not represent a non-blank descendant leaf node");
                  for (const parentIdx of dp) {
                      const dpNode = tree[parentIdx];
+diff --git a/dist/src/treeHash.js b/dist/src/treeHash.js
+index 6b03ac312fde357fa391468c95943163a1fd5a56..122ffb59d2e90b327b4fc03a9e26cd1e18f79ef6 100644
+--- a/dist/src/treeHash.js
++++ b/dist/src/treeHash.js
+@@ -43,17 +43,57 @@ export const decodeTreeHashInput = flatMapDecoder(decodeNodeType, (nodeType) =>
+ export async function treeHashRoot(tree, h) {
+     return treeHash(tree, rootFromNodeWidth(tree.length), h);
+ }
++// Subtree hashes are cached per node object. Tree updates put new node
++// objects into a copy of the tree and never change a node in place, so a
++// node seen before at the same index, over children with the same hashes,
++// has the same hash (RFC 9420 section 7.8). Blank nodes are cached by index.
++const hashCaches = new WeakMap();
++function cacheFor(h) {
++    let cache = hashCaches.get(h);
++    if (cache === undefined) {
++        cache = { nodes: new WeakMap(), blanks: new Map() };
++        hashCaches.set(h, cache);
++    }
++    return cache;
++}
++function cached(cache, node, index, leftHash, rightHash) {
++    const entry = node === undefined ? cache.blanks.get(index) : cache.nodes.get(node);
++    if (entry === undefined || entry.index !== index)
++        return undefined;
++    if (leftHash !== undefined && !(sameBytes(entry.leftHash, leftHash) && sameBytes(entry.rightHash, rightHash)))
++        return undefined;
++    return entry.hash;
++}
++function remember(cache, node, entry) {
++    if (node === undefined)
++        cache.blanks.set(entry.index, entry);
++    else
++        cache.nodes.set(node, entry);
++    return entry.hash;
++}
++function sameBytes(a, b) {
++    if (a.length !== b.length)
++        return false;
++    for (let i = 0; i < a.length; i++)
++        if (a[i] !== b[i])
++            return false;
++    return true;
++}
+ export async function treeHash(tree, subtreeIndex, h) {
++    const cache = cacheFor(h);
+     if (isLeaf(subtreeIndex)) {
+         const leafNode = tree[subtreeIndex];
+         if (leafNode?.nodeType === "parent")
+             throw new InternalError("Somehow found parent node in leaf position");
++        const known = cached(cache, leafNode, subtreeIndex);
++        if (known !== undefined)
++            return known;
+         const input = encode(leafNodeHashInputEncoder)({
+             nodeType: "leaf",
+             leafIndex: nodeToLeafIndex(subtreeIndex),
+             leafNode: leafNode?.leaf,
+         });
+-        return await h.digest(input);
++        return remember(cache, leafNode, { index: subtreeIndex, hash: await h.digest(input) });
+     }
+     else {
+         const parentNode = tree[subtreeIndex];
+@@ -61,13 +101,17 @@ export async function treeHash(tree, subtreeIndex, h) {
+             throw new InternalError("Somehow found leaf node in parent position");
+         const leftHash = await treeHash(tree, left(subtreeIndex), h);
+         const rightHash = await treeHash(tree, right(subtreeIndex), h);
++        const known = cached(cache, parentNode, subtreeIndex, leftHash, rightHash);
++        if (known !== undefined)
++            return known;
+         const input = {
+             nodeType: "parent",
+             parentNode: parentNode?.parent,
+             leftHash: leftHash,
+             rightHash: rightHash,
+         };
+-        return await h.digest(encode(parentNodeHashInputEncoder)(input));
++        const hash = await h.digest(encode(parentNodeHashInputEncoder)(input));
++        return remember(cache, parentNode, { index: subtreeIndex, leftHash, rightHash, hash });
+     }
+ }
+ //# sourceMappingURL=treeHash.js.map

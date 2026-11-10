@@ -6,7 +6,7 @@ consequences. "Proposed [REVIEW]" means it is waiting for maintainer approval.
 | #                                                 | Title                                                | Status            |
 | ------------------------------------------------- | ---------------------------------------------------- | ----------------- |
 | [0001](0001-repository-and-tooling.md)            | Repository layout and tooling                        | Accepted          |
-| [0002](0002-mls-library.md)                       | MLS library for React Native and web                 | Proposed [REVIEW] |
+| [0002](0002-mls-library.md)                       | MLS library for React Native and web                 | Accepted          |
 | [0003](0003-history-sharing.md)                   | History for new members and new devices              | Proposed [REVIEW] |
 | [0004](0004-password-handling.md)                 | Password handling: Argon2id now, OPAQUE later        | Proposed [REVIEW] |
 | [0005](0005-federation.md)                        | Federation model and server-to-server authentication | Proposed [REVIEW] |

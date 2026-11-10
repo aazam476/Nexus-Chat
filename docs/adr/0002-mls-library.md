@@ -1,6 +1,6 @@
 # ADR 0002: MLS library for React Native and web
 
-- Status: **Proposed [REVIEW]**
+- Status: Accepted (M3 review, 2026-11-10)
 - Date: 2026-11-07
 
 ## Context
@@ -29,7 +29,7 @@ Evidence gathered (November 2026):
 3. Mixed: ts-mls on web, OpenMLS on native. Rejected: two implementations
    means interop bugs inside one product.
 
-## Decision (proposed)
+## Decision
 
 **Option 1, ts-mls, pinned to 1.6.4**, behind the `packages/crypto` interface
 `MlsEngine`, so the library can be replaced without touching callers. Move to
@@ -123,3 +123,36 @@ Options for the review:
 Recommendation: 1 and 2 together. They keep one readable code path, and
 the costs measured are an implementation detail of one function, not a
 limit of the protocol. Measure on a device before M4 either way.
+
+## Review outcome (November 2026)
+
+The maintainer left the choice to the project; we keep **ts-mls** and take
+options 1 and 2. OpenMLS stays the fallback behind `MlsEngine` if the
+device measurement says otherwise.
+
+First fix, done: `patches/ts-mls@1.6.4.patch` now also caches subtree
+hashes. Tree updates in ts-mls copy the node array and put new node
+objects in it, never changing a node in place, so a hash is reused only
+for the same node object at the same index over children whose hashes
+match; blank nodes are cached by index. The 148 interop vectors still
+pass (they run in one process, so they exercise the cache across many
+trees), and `treeValidation.test.ts` checks that a changed node is hashed
+again. Same machine, same benchmark (milliseconds):
+
+| Devices | Join, before | Join, after | Apply commit, before | Apply commit, after |
+| ------- | ------------ | ----------- | -------------------- | ------------------- |
+| 1,000   | 936          | 1,031       | 815                  | 592                 |
+| 2,000   | 1,598        | 2,067       | 1,410                | 1,031               |
+
+Applying a commit, which every member does for every membership change, is
+about 27% cheaper. Joining is unchanged within this machine's noise (pure-JS
+Ed25519 verification ran 40% slower in this run than in the first one): a
+device that joins hashes and verifies every node once, so there is nothing
+to reuse yet.
+
+Still to do, before M4:
+
+- Reuse imported WebCrypto keys instead of importing one per call (the
+  other half of option 1), and offer both changes upstream.
+- Measure on a mid-range Android phone with Hermes from a development
+  build; that number decides whether the fallback is needed.
