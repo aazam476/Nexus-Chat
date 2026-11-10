@@ -236,6 +236,12 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   Keystore) on native, and AES-GCM-sealed IndexedDB records on web, bound
   to their place. The desktop app wraps the data key with `safeStorage`
   (only for the app's own pages; declined where Linux has no keyring).
+- Mutation testing of `packages/crypto` with Stryker (CI job "Mutation
+  testing (crypto)", break at 70%): 90.9% of 640 mutants caught. The
+  interop vectors are left out of mutation runs, since they test ts-mls.
+- Property-based round-trips (fast-check) for the length-prefixed layout,
+  device credentials, history bundles, and attachment streams split at
+  random points on both sides.
 - Key backup (`backup/backup.ts`): a random backup key seals named blobs
   (XChaCha20-Poly1305) and is wrapped under each unlock method: a 24-word
   recovery phrase (BIP-39, 256 bits, HKDF with the user's salt), the

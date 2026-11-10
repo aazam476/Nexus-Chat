@@ -2,7 +2,7 @@
   "name": "@nexus-chat/crypto",
   "version": "0.0.0",
   "private": true,
-  "description": "End-to-end encryption for Nexus Chat: MLS groups, device keys, key backup and attachment encryption (spec §5).",
+  "description": "End-to-end encryption for Nexus Chat: MLS groups, device keys, key backup and attachment encryption (spec \u00a75).",
   "license": "Apache-2.0",
   "type": "module",
   "main": "src/index.ts",
@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --coverage",
-    "bench": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --roots bench --testRegex \"\\.bench\\.ts$\" --coverage=false --testTimeout=3600000"
+    "bench": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --roots bench --testRegex \"\\.bench\\.ts$\" --coverage=false --testTimeout=3600000",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@noble/ciphers": "2.1.1",
@@ -26,8 +27,11 @@
   "devDependencies": {
     "@hpke/chacha20poly1305": "1.8.0",
     "@hpke/dhkem-x448": "1.8.0",
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/jest-runner": "10.1.1",
     "@types/jest": "30.0.0",
     "@types/node": "26.6.6",
+    "fast-check": "4.10.2",
     "jest": "30.5.2",
     "ts-jest": "29.4.15"
   }

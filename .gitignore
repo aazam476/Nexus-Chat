@@ -9,6 +9,8 @@ coverage.out
 coverage.raw.out
 *.test
 gobco-*
+.stryker-tmp/
+reports/mutation/
 
 # Local environment and data
 .env

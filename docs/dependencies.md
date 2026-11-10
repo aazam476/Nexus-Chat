@@ -104,10 +104,12 @@ compatible native modules), so the app builds on iOS, Android and the web.
 | `libsodium-wrappers-sumo`                          | 0.8.4               | ISC     | libsodium for web, desktop and Node: secretstream for attachments over 64 MiB now; Argon2id (`crypto_pwhash`, only in the sumo build), `crypto_kx` and Ed25519 for key backup and device linking next (e2ee-design.md §1). React Native uses `react-native-libsodium` (same API), added with the native storage work |
 | `@scure/bip39`                                     | 2.4.0               | MIT     | The BIP-39 English word list and checksum for the 24-word recovery phrase (e2ee-design.md §5); by the author of `@noble/*`, and it brings its own `@noble/hashes` 2.4.0                                                                                                                                              |
 
-| Package (dev)                                   | Version      | License | Why                                                               |
-| ----------------------------------------------- | ------------ | ------- | ----------------------------------------------------------------- |
-| `@hpke/chacha20poly1305`, `@hpke/dhkem-x448`    | 1.8.0, 1.8.0 | MIT     | Let the interop vectors run ciphersuites 3–7, which we do not use |
-| `jest`, `ts-jest`, `@types/jest`, `@types/node` | see package  | MIT     | Tests                                                             |
+| Package (dev)                                           | Version        | License    | Why                                                               |
+| ------------------------------------------------------- | -------------- | ---------- | ----------------------------------------------------------------- |
+| `@hpke/chacha20poly1305`, `@hpke/dhkem-x448`            | 1.8.0, 1.8.0   | MIT        | Let the interop vectors run ciphersuites 3–7, which we do not use |
+| `jest`, `ts-jest`, `@types/jest`, `@types/node`         | see package    | MIT        | Tests                                                             |
+| `@stryker-mutator/core`, `@stryker-mutator/jest-runner` | 10.1.1, 10.1.1 | Apache-2.0 | Mutation testing of `packages/crypto` (spec §7.1: ≥ 70%)          |
+| `fast-check`                                            | 4.10.2         | MIT        | Property-based round-trip tests (spec §7.1)                       |
 
 ## TypeScript: `@nexus-chat/desktop`
 
