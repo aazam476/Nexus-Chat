@@ -204,7 +204,10 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
 - Identity keys (`identity/identity.ts`): master and self-signing keys,
   device certificates over `@user@instance/deviceId` and the device's MLS
   signature key, chain checks, self-signing key rotation, and the safety
-  number. Not yet wired into MLS credential validation or the server.
+  number. Every group checks credentials (`identity/credential.ts`): a
+  device is admitted, and a Welcome accepted, only if each member's
+  certificate chains to its user's trusted identity. Publishing identities
+  on the server and pinning them on first contact come next.
 - Key backup (`backup/backup.ts`): a random backup key seals named blobs
   (XChaCha20-Poly1305) and is wrapped under each unlock method: a 24-word
   recovery phrase (BIP-39, 256 bits, HKDF with the user's salt), the

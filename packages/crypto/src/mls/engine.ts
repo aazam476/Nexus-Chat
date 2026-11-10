@@ -17,7 +17,7 @@ import {
   defaultLifetime,
   emptyPskIndex,
   encodeMlsMessage,
-  generateKeyPackage,
+  generateKeyPackageWithKey,
   joinGroup,
   processMessage,
   zeroOutUint8Array,
@@ -28,7 +28,33 @@ import {
   type Proposal,
 } from "ts-mls";
 
+import { defaultClientConfig, type ClientConfig } from "ts-mls/clientConfig.js";
+
 import { ciphersuite } from "./ciphersuite.js";
+
+/**
+ * Decides whether a member's credential (the identity bytes of its
+ * BasicCredential) belongs with its MLS signature key. RFC 9420 §5.3.1
+ * leaves this to the application; ours is `deviceCredentialCheck` in
+ * identity/credential.ts. Without one, every credential is accepted, which
+ * only tests should rely on.
+ */
+export type CredentialCheck = (identity: Uint8Array, signaturePublicKey: Uint8Array) => Promise<boolean>;
+
+function clientConfig(check: CredentialCheck | undefined): ClientConfig {
+  if (check === undefined) {
+    return defaultClientConfig;
+  }
+  return {
+    ...defaultClientConfig,
+    authService: {
+      validateCredential: (credential, signaturePublicKey) =>
+        credential.credentialType === "basic"
+          ? check(credential.identity, signaturePublicKey)
+          : Promise.resolve(false),
+    },
+  };
+}
 
 /** One device's MLS identity for joining groups: a key package and its private keys. */
 export interface Member {
@@ -65,14 +91,31 @@ function decode(bytes: Uint8Array): MLSMessage {
   return decoded[0];
 }
 
-/** Creates a device's key package; `identity` is its credential (RFC 9420 §5.3). */
-export async function createMember(identity: Uint8Array): Promise<Member> {
-  const generated = await generateKeyPackage(
+/** A device's MLS signature key pair, kept for all its key packages. */
+export interface SignatureKeys {
+  signKey: Uint8Array;
+  publicKey: Uint8Array;
+}
+
+/** A new signature key pair for a device, to certify before making key packages. */
+export async function createSignatureKeys(): Promise<SignatureKeys> {
+  return (await ciphersuite()).signature.keygen();
+}
+
+/**
+ * Creates a device's key package; `identity` is its credential (RFC 9420
+ * §5.3). Pass the device's certified `signatureKeys`; without them a new
+ * pair is made, which only tests should rely on.
+ */
+export async function createMember(identity: Uint8Array, signatureKeys?: SignatureKeys): Promise<Member> {
+  const suite = await ciphersuite();
+  const generated = await generateKeyPackageWithKey(
     { credentialType: "basic", identity },
     defaultCapabilities(),
     defaultLifetime,
     [],
-    await ciphersuite(),
+    signatureKeys ?? (await suite.signature.keygen()),
+    suite,
   );
   const keyPackage = encode({
     version: "mls10",
@@ -82,10 +125,21 @@ export async function createMember(identity: Uint8Array): Promise<Member> {
   return { keyPackage, publicPackage: generated.publicPackage, secrets: generated.privatePackage };
 }
 
-/** Starts a group with `member` as its only member. */
-export async function createGroup(groupId: Uint8Array, member: Member): Promise<Group> {
+/** Starts a group with `member` as its only member; `check` vets everyone added later. */
+export async function createGroup(
+  groupId: Uint8Array,
+  member: Member,
+  check?: CredentialCheck,
+): Promise<Group> {
   return {
-    state: await createMlsGroup(groupId, member.publicPackage, member.secrets, [], await ciphersuite()),
+    state: await createMlsGroup(
+      groupId,
+      member.publicPackage,
+      member.secrets,
+      [],
+      await ciphersuite(),
+      clientConfig(check),
+    ),
   };
 }
 
@@ -131,8 +185,15 @@ export async function updateKeys(group: Group): Promise<CommitResult> {
   return commit(group, []);
 }
 
-/** Joins a group from the Welcome a member sent; the ratchet tree travels inside it. */
-export async function joinFromWelcome(welcome: Uint8Array, member: Member): Promise<Group> {
+/**
+ * Joins a group from the Welcome a member sent; the ratchet tree travels
+ * inside it, and `check` vets every member already in it and added later.
+ */
+export async function joinFromWelcome(
+  welcome: Uint8Array,
+  member: Member,
+  check?: CredentialCheck,
+): Promise<Group> {
   const message = decode(welcome);
   if (message.wireformat !== "mls_welcome") {
     throw new MlsMessageError("expected a welcome");
@@ -143,6 +204,9 @@ export async function joinFromWelcome(welcome: Uint8Array, member: Member): Prom
     member.secrets,
     emptyPskIndex,
     await ciphersuite(),
+    undefined,
+    undefined,
+    clientConfig(check),
   );
   return { state };
 }

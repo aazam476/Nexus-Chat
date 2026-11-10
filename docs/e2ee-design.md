@@ -47,10 +47,15 @@ flowchart TB
   key.
 - **Self-signing key (USK).** Signed by the UMK. Present on every verified
   device; used to certify device keys.
-- **Device key.** Each device is its own MLS client. Its MLS leaf uses a
-  `BasicCredential` whose identity is `@user@instance/deviceId`, with a
-  leaf-node extension carrying the USK's signature over the device's MLS
-  signature public key.
+- **Device key.** Each device is its own MLS client with one MLS signature
+  key for all its key packages. Its leaf uses a `BasicCredential` whose
+  identity bytes hold the device address `@user@instance/deviceId` and the
+  USK's certificate over the device's MLS signature key (label
+  `nexus-chat device credential v1`, then each field length-prefixed). The
+  certificate is in the credential rather than a leaf-node extension
+  because the credential is what the MLS library hands to the
+  application's check, with the leaf's signature key
+  (`packages/crypto/src/identity/credential.ts`).
 - **Credential validation (RFC 9420 §5.3.1 leaves this to the application).**
   A client accepts a leaf only if its device certificate chains to the
   user's UMK, and that UMK matches the key the user's home instance publishes
