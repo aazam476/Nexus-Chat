@@ -10,7 +10,7 @@ import {
   receive,
   type Group,
 } from "./engine.js";
-import { joinExternal, loadGroup, loadMember, saveGroup, saveMember } from "./persistence.js";
+import { joinExternal, loadGroup, loadMember, messageEpoch, saveGroup, saveMember } from "./persistence.js";
 
 const text = (value: string): Uint8Array => new TextEncoder().encode(value);
 const read = (value: Uint8Array): string => new TextDecoder().decode(value);
@@ -91,5 +91,20 @@ describe("joining by external commit", () => {
   it("needs a GroupInfo", async () => {
     const ada = await createMember(text("ada"));
     await expect(joinExternal(ada.keyPackage, ada)).rejects.toThrow("expected a group info");
+  });
+});
+
+describe("message epochs", () => {
+  it("are read from commits and application messages, private or public", async () => {
+    const ada = await createMember(text("ada"));
+    const grace = await createMember(text("grace"));
+    const added = await addMembers(await createGroup(text("g"), ada), [grace.keyPackage]);
+    const joined = await joinExternal(added.groupInfo, await createMember(text("phone")));
+
+    expect(messageEpoch(added.commit)).toBe(0n);
+    expect(messageEpoch((await encrypt(added.group, text("x"))).message)).toBe(1n);
+    expect(messageEpoch(joined.commit)).toBe(1n);
+    expect(messageEpoch(added.groupInfo)).toBeUndefined();
+    expect(messageEpoch(new Uint8Array([1]))).toBeUndefined();
   });
 });

@@ -164,3 +164,24 @@ export function safetyNumber(masterPublicKey: Uint8Array): string {
   }
   return groups.join(" ");
 }
+
+const directiveLabel = "nexus-chat membership directive v1\n";
+
+/**
+ * Checks a membership directive's signature against the instance's
+ * published key (docs/e2ee-design.md §3.2): the signature covers the label
+ * and the directive's exact bytes, as apps/server/internal/delivery signs it.
+ */
+export async function verifyDirective(
+  instanceKey: Uint8Array,
+  directive: Uint8Array,
+  signature: Uint8Array,
+): Promise<boolean> {
+  await sodium.ready;
+  const message = new Uint8Array([...new TextEncoder().encode(directiveLabel), ...directive]);
+  try {
+    return sodium.crypto_sign_verify_detached(signature, message, instanceKey);
+  } catch {
+    return false;
+  }
+}

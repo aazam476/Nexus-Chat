@@ -52,9 +52,15 @@ export const payloadLimits = { textLength: 4000, attachments: 10, emojiLength: 6
 
 const version = 1;
 
+/** A payload with the ID its sender gave it, which edits, reactions and replies refer to. */
+export interface Envelope {
+  id: string;
+  payload: Payload;
+}
+
 /** The bytes to encrypt. */
-export function encodePayload(payload: Payload): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify({ v: version, ...payload }));
+export function encodePayload(envelope: Envelope): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify({ v: version, id: envelope.id, ...envelope.payload }));
 }
 
 type Fields = Record<string, unknown>;
@@ -123,7 +129,16 @@ function textPayload(fields: Fields): Payload | undefined {
 }
 
 /** Reads decrypted bytes, or undefined for anything this version can't show. */
-export function decodePayload(bytes: Uint8Array): Payload | undefined {
+export function decodePayload(bytes: Uint8Array): Envelope | undefined {
+  const parsed = parse(bytes);
+  if (parsed === undefined || !isId(parsed.id)) {
+    return undefined;
+  }
+  const payload = payloadOf(parsed);
+  return payload === undefined ? undefined : { id: parsed.id, payload };
+}
+
+function parse(bytes: Uint8Array): Fields | undefined {
   let fields: unknown;
   try {
     fields = JSON.parse(new TextDecoder().decode(bytes));
@@ -133,7 +148,10 @@ export function decodePayload(bytes: Uint8Array): Payload | undefined {
   if (typeof fields !== "object" || fields === null || (fields as Fields).v !== version) {
     return undefined;
   }
-  const object = fields as Fields;
+  return fields as Fields;
+}
+
+function payloadOf(object: Fields): Payload | undefined {
   switch (object.kind) {
     case "text":
       return textPayload(object);

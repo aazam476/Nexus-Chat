@@ -7,6 +7,7 @@ import {
   rotateSelfSigningKey,
   safetyNumber,
   verifyDevice,
+  verifyDirective,
   type NewIdentity,
   type PublishedIdentity,
 } from "./identity.js";
@@ -109,5 +110,24 @@ describe("the safety number", () => {
   it("stays the same across versions", () => {
     // Changing how it is derived would make every verified contact look changed.
     expect(safetyNumber(new Uint8Array(32))).toMatchSnapshot();
+  });
+});
+
+describe("membership directives", () => {
+  it("verify against the instance key over the label and the exact bytes", async () => {
+    await sodium.ready;
+    const instance = sodium.crypto_sign_keypair();
+    const directive = new TextEncoder().encode('{"type":"remove"}');
+    const label = new TextEncoder().encode("nexus-chat membership directive v1\n");
+    const signature = sodium.crypto_sign_detached(
+      new Uint8Array([...label, ...directive]),
+      instance.privateKey,
+    );
+
+    expect(await verifyDirective(instance.publicKey, directive, signature)).toBe(true);
+    expect(
+      await verifyDirective(instance.publicKey, new TextEncoder().encode('{"type":"add"}'), signature),
+    ).toBe(false);
+    expect(await verifyDirective(new Uint8Array(5), directive, signature)).toBe(false);
   });
 });

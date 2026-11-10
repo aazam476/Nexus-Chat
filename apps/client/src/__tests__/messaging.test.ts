@@ -159,7 +159,7 @@ describe("message payloads", () => {
       { kind: "reaction", target: id, emoji: "👍", added: true },
     ];
     for (const payload of payloads) {
-      expect(decodePayload(encodePayload(payload))).toEqual(payload);
+      expect(decodePayload(encodePayload({ id, payload }))).toEqual({ id, payload });
     }
   });
 
@@ -168,22 +168,24 @@ describe("message payloads", () => {
     const refused = [
       new TextEncoder().encode("not json"),
       raw(null),
-      raw({ v: 2, kind: "text", text: "future" }),
-      raw({ v: 1, kind: "poll" }),
-      raw({ v: 1, kind: "text" }),
-      raw({ v: 1, kind: "text", text: "x".repeat(payloadLimits.textLength + 1) }),
-      raw({ v: 1, kind: "text", text: "x", replyTo: "not an id" }),
-      raw({ v: 1, kind: "text", text: "x", attachments: "no" }),
-      raw({ v: 1, kind: "text", text: "x", attachments: [{ id: 1 }] }),
-      raw({ v: 1, kind: "text", text: "x", attachments: [null] }),
-      raw({ v: 1, kind: "text", text: "x", attachments: [{ ...attachment, thumbnail: { id: "t" } }] }),
-      raw({ v: 1, kind: "text", text: "x", attachments: [{ ...attachment, width: -1 }] }),
-      raw({ v: 1, kind: "text", text: "x", attachments: Array.from({ length: 11 }, () => attachment) }),
-      raw({ v: 1, kind: "text", text: "x", preview: { title: "no url" } }),
-      raw({ v: 1, kind: "text", text: "x", preview: "nope" }),
-      raw({ v: 1, kind: "edit", target: id }),
-      raw({ v: 1, kind: "delete", target: "x" }),
-      raw({ v: 1, kind: "reaction", target: id, emoji: "👍" }),
+      raw({ v: 2, id, kind: "text", text: "future" }),
+      raw({ v: 1, id, kind: "poll" }),
+      raw({ v: 1, id, kind: "text" }),
+      raw({ v: 1, id, kind: "text", text: "x".repeat(payloadLimits.textLength + 1) }),
+      raw({ v: 1, id, kind: "text", text: "x", replyTo: "not an id" }),
+      raw({ v: 1, id, kind: "text", text: "x", attachments: "no" }),
+      raw({ v: 1, id, kind: "text", text: "x", attachments: [{ id: 1 }] }),
+      raw({ v: 1, id, kind: "text", text: "x", attachments: [null] }),
+      raw({ v: 1, id, kind: "text", text: "x", attachments: [{ ...attachment, thumbnail: { id: "t" } }] }),
+      raw({ v: 1, id, kind: "text", text: "x", attachments: [{ ...attachment, width: -1 }] }),
+      raw({ v: 1, id, kind: "text", text: "x", attachments: Array.from({ length: 11 }, () => attachment) }),
+      raw({ v: 1, id, kind: "text", text: "x", preview: { title: "no url" } }),
+      raw({ v: 1, id, kind: "text", text: "x", preview: "nope" }),
+      raw({ v: 1, id, kind: "edit", target: id }),
+      raw({ v: 1, id, kind: "delete", target: "x" }),
+      raw({ v: 1, id, kind: "reaction", target: id, emoji: "👍" }),
+      raw({ v: 1, kind: "delete", target: id }),
+      raw({ v: 1, id: "not an id", kind: "delete", target: id }),
     ];
     for (const bytes of refused) {
       expect(decodePayload(bytes)).toBeUndefined();

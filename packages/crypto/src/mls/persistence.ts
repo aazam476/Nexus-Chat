@@ -95,3 +95,15 @@ export async function joinExternal(
   });
   return { group: { state: result.newState }, commit };
 }
+
+/** The epoch a group message (a commit or application message) was made in, or undefined for anything else. */
+export function messageEpoch(bytes: Uint8Array): bigint | undefined {
+  const message = decodeMlsMessage(bytes, 0)?.[0];
+  if (message?.wireformat === "mls_private_message") {
+    return message.privateMessage.epoch;
+  }
+  if (message?.wireformat === "mls_public_message") {
+    return message.publicMessage.content.epoch;
+  }
+  return undefined;
+}

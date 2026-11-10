@@ -47,7 +47,8 @@
     "fake-indexeddb": "6.2.7",
     "fast-check": "4.10.2",
     "jest": "30.5.2",
-    "jest-expo": "58.0.14"
+    "jest-expo": "58.0.14",
+    "libsodium-wrappers-sumo": "0.8.4"
   },
   "op-sqlite": {
     "sqlcipher": true,

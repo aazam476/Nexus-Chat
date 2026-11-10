@@ -295,6 +295,23 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   strikethrough, spoilers, inline and fenced code, quotes, safe links
   (http, https, mailto only) and mentions, with flanking rules so `2 * 3`
   stays text, a nesting limit, and property tests that it never throws.
+- The client messaging engine (`apps/client/src/messaging/engine`), with
+  no screens yet:
+  - identity setup: a new account's first device creates the identity
+    keys, publishes them and backs them up under a 24-word recovery
+    phrase (shown once); a later device restores from the phrase;
+  - this device's MLS signature key, certified by the self-signing key,
+    and a stock of 50 key packages kept on the server;
+  - trust on first use: each user's master key is pinned, and a changed
+    one is flagged rather than trusted until accepted;
+  - conversations: the first device creates the group and adds every
+    other member device; others join by Welcome, or by external commit
+    when the group is already running; sync applies commits, Welcomes,
+    messages and signed removal directives in order; sends carry an
+    archive copy and retry once after catching up on a stale epoch.
+    Tested end to end with real MLS against an in-memory delivery service
+    that follows the server's rules, plus the HTTP adapter against a fake
+    server.
 - `packages/crypto` saves and loads group and member state for the
   device database, joins by external commit, and returns a GroupInfo with
   every commit.
