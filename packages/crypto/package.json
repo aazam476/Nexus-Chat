@@ -2,7 +2,7 @@
   "name": "@nexus-chat/crypto",
   "version": "0.0.0",
   "private": true,
-  "description": "End-to-end encryption for Nexus Chat: MLS groups, device keys, key backup and attachment encryption (spec \u00a75).",
+  "description": "End-to-end encryption for Nexus Chat: MLS groups, device keys, key backup and attachment encryption (spec §5).",
   "license": "Apache-2.0",
   "type": "module",
   "main": "src/index.ts",
@@ -19,6 +19,7 @@
     "@noble/ciphers": "2.1.1",
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1",
+    "libsodium-wrappers-sumo": "0.8.4",
     "ts-mls": "1.6.4"
   },
   "devDependencies": {

@@ -348,6 +348,9 @@ importers:
       '@noble/hashes':
         specifier: 2.0.1
         version: 2.0.1
+      libsodium-wrappers-sumo:
+        specifier: 0.8.4
+        version: 0.8.4
       ts-mls:
         specifier: 1.6.4
         version: 1.6.4(patch_hash=734a83d559eb114cdd835e56453a48265fe82749af810d37341e6fc9e36d3fd9)(@hpke/chacha20poly1305@1.8.0)(@hpke/dhkem-x448@1.8.0)(@noble/ciphers@2.1.1)(@noble/curves@2.0.1)
@@ -4268,6 +4271,12 @@ packages:
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  libsodium-sumo@0.8.4:
+    resolution: {integrity: sha512-TMtHShQfVVsaxDygyapvUC3o7YsPgXa/hRWeIgzyFz6w5k/1hirGptCxp1U7XwW3rCskaTTYKgV10v86UiGgNw==}
+
+  libsodium-wrappers-sumo@0.8.4:
+    resolution: {integrity: sha512-ql7hcgulKZ3ekfa2DGAogcCKsWU0diA/0nArz1CFzh93WQdb46/Kj18ka/Hifq6uA3Ush34Pc6vU/6HXeRwUkg==}
 
   license-checker-rseidelsohn@5.0.1:
     resolution: {integrity: sha512-9X+ikKxt9Hy3zOrOZzW1dXL4St5akoYjLt63Am9JZVzU6aTdN+xfDvqySpnJT+gF/h5RmtMk2waW6TDNNCKbqQ==}
@@ -10851,6 +10860,12 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  libsodium-sumo@0.8.4: {}
+
+  libsodium-wrappers-sumo@0.8.4:
+    dependencies:
+      libsodium-sumo: 0.8.4
 
   license-checker-rseidelsohn@5.0.1(supports-color@8.1.1):
     dependencies:

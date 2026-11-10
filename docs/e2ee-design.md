@@ -18,6 +18,7 @@ step goes beyond what MLS defines, this document says so and explains why.
 | Group key agreement, membership, message encryption | MLS, ciphersuite `MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519` (0x0001)       | MLS library ([ADR 0002](adr/0002-mls-library.md))                  |
 | User identity / cross-signing                       | Ed25519                                                                        | libsodium (`react-native-libsodium`, `libsodium-wrappers-sumo`)    |
 | History archive and attachments                     | AES-256-GCM                                                                    | WebCrypto (`crypto.subtle`; `react-native-quick-crypto` on native) |
+| Attachments over 64 MiB                             | XChaCha20-Poly1305 secretstream (`crypto_secretstream_xchacha20poly1305`)      | libsodium                                                          |
 | Key backup encryption                               | XChaCha20-Poly1305 (`crypto_secretbox` / `crypto_aead_xchacha20poly1305_ietf`) | libsodium                                                          |
 | Password-derived backup key                         | Argon2id (`crypto_pwhash`)                                                     | libsodium                                                          |
 | Media frames                                        | LiveKit frame encryption (SFU), WebRTC encoded transforms (P2P)                | LiveKit SDKs / browser                                             |
@@ -236,11 +237,17 @@ members' own new devices and search.
 - **Files up to 64 MiB:** one-shot AES-256-GCM through WebCrypto with a
   random 96-bit nonce. This covers the default 25 MB limit.
 - **Larger files** (approved; allowed whenever the limits below permit)
-  can't be held in memory on phones, so they need a streaming AEAD built on
-  AES-256-GCM. We use Tink's published `AES256_GCM_HKDF_1MB` streaming format
-  (Apache-2.0 specification, with test vectors). Segment keys and nonces
-  follow that spec exactly, and CI checks our output against Tink's vectors.
-  No other chunking scheme is allowed.
+  can't be held in memory on phones, so they are encrypted as a stream with
+  libsodium's `crypto_secretstream_xchacha20poly1305`, in 1 MiB pieces.
+  The ciphertext is the 24-byte stream header, then one secretstream
+  message per piece (piece + 17 bytes); the last carries the `FINAL` tag,
+  so a cut-off, reordered or extended file is refused. We use the
+  construction exactly as libsodium documents it: no chunking scheme or
+  nonce handling of our own. (Tink's streaming AEAD was considered first,
+  but no maintained JavaScript implementation exists.)
+- Pieces are authenticated one by one as they are decrypted, but a file is
+  only known to be complete when the last piece and the ciphertext hash
+  check out; clients write to a temporary file and keep it only then.
 - **Size limits** ([ADR 0014](adr/0014-attachment-limits-and-compression.md)):
   the instance admin sets the instance maximum (default 25 MB). Each server
   owner may set a lower limit for their server. DMs and group DMs use the
@@ -249,7 +256,7 @@ members' own new devices and search.
 - **Optional lossy compression** happens on the sender's device before
   encryption, because nothing else ever sees the plaintext. Details and
   defaults are in ADR 0014.
-- The key, nonce prefix, ciphertext SHA-256, MIME type, name, size,
+- The scheme, key, nonce (one-shot files only), ciphertext SHA-256, MIME type, name, size,
   dimensions and thumbnail reference travel inside the message plaintext.
 - Custom emoji and server icons are public assets and are **not** encrypted.
 

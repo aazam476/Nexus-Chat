@@ -195,6 +195,12 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   used up and the last resort kept. The server stays MLS-free and checks
   only the header (MLS 1.0, key package, ciphersuite 0x0001) and size.
   Claims are rate-limited per claiming user; packages go with the session.
+- Attachment encryption (`attachments/attachments.ts`): a fresh key per
+  file; one-shot AES-256-GCM (WebCrypto) up to 64 MiB, libsodium
+  secretstream in 1 MiB pieces above, read and written as streams. Cut-off,
+  reordered, extended or changed files are refused, and the ciphertext
+  SHA-256 is checked. Tink's streaming format was dropped: there is no
+  maintained JavaScript implementation (ADR 0014).
 - Performance at 10–2,000 devices is in ADR 0002. The M3 review kept
   ts-mls (ADR 0002 accepted): the patch now caches subtree hashes, which
   makes applying a commit about 27% cheaper at 1,000–2,000 devices, and

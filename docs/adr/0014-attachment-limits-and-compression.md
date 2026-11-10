@@ -32,8 +32,12 @@ anything.
   who set it.
 - For a remote user in a federated server, the hosting instance's limits
   apply.
-- Files over 64 MiB use the Tink streaming format
-  ([e2ee-design.md §7](../e2ee-design.md#7-attachments)).
+- Files over 64 MiB are encrypted as a stream with libsodium's
+  `crypto_secretstream_xchacha20poly1305` in 1 MiB pieces
+  ([e2ee-design.md §7](../e2ee-design.md#7-attachments)). This replaces the
+  Tink streaming format first planned: no maintained JavaScript library
+  implements it, and writing one would mean our own crypto code. The
+  maintainer left the choice to the project (November 2026).
 
 ### Lossy compression (sender side, before encryption)
 
@@ -56,8 +60,9 @@ anything.
 
 ## Consequences
 
-- Large files depend on the streaming format, which must pass Tink's test
-  vectors in CI.
+- Large files depend on libsodium's secretstream on every platform
+  (`libsodium-wrappers-sumo` on web, desktop and Node;
+  `react-native-libsodium`, with the same API, on iOS and Android).
 - Image and video compression adds platform-specific code to the client
   (M4). Its exact quality settings live in named constants and may be tuned
   after testing.
