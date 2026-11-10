@@ -3,18 +3,32 @@
 appId: org.nexuschat.app
 ---
 - runFlow: common/connect.yaml
-- assertVisible:
-    id: "login-submit"
+- scrollUntilVisible:
+    element:
+      id: "login-submit"
 - runFlow: { file: common/fill.yaml, env: { FIELD: "login-name", TEXT: "admin" } }
 - runFlow: { file: common/fill.yaml, env: { FIELD: "login-password", TEXT: "not the password" } }
+- scrollUntilVisible:
+    element:
+      id: "login-submit"
 - tapOn:
     id: "login-submit"
-- assertVisible: "The username or password is wrong."
+- scrollUntilVisible:
+    element:
+      text: "The username or password is wrong."
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "login-password"
+    centerElement: true
 - tapOn:
     id: "login-password"
 - eraseText
 - inputText: ${PASSWORD}
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "login-submit"
 - tapOn:
     id: "login-submit"
 - assertVisible: "Welcome, .*Ada Admin.*"
@@ -24,5 +38,6 @@ appId: org.nexuschat.app
       id: "logout"
 - tapOn:
     id: "logout"
-- assertVisible:
-    id: "login-submit"
+- scrollUntilVisible:
+    element:
+      id: "login-submit"

@@ -3,8 +3,11 @@
 appId: org.nexuschat.app
 ---
 - runFlow: common/connect.yaml
-- assertVisible:
-    id: "setup-token"
+# On plain HTTP, warnings above the form can push the first field off a
+# phone-sized screen, so scroll to it rather than expect it in view.
+- scrollUntilVisible:
+    element:
+      id: "setup-token"
 - runFlow: { file: common/fill.yaml, env: { FIELD: "setup-token", TEXT: "${SETUP_TOKEN}" } }
 - runFlow: { file: common/fill.yaml, env: { FIELD: "setup-username", TEXT: "admin" } }
 - runFlow: { file: common/fill.yaml, env: { FIELD: "setup-displayName", TEXT: "Ada Admin" } }

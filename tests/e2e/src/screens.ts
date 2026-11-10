@@ -43,6 +43,9 @@ export async function logIn(page: Page, account: Account): Promise<void> {
 
 /** Waits for the home screen of `account`, connected over the gateway. */
 export async function expectHome(page: Page, account: Account): Promise<void> {
-  await expect(page.getByRole("heading", { name: `Welcome, ${account.displayName}` })).toBeVisible();
+  // The client isolates names (FSI … PDI) so right-to-left names display in order.
+  await expect(
+    page.getByRole("heading", { name: `Welcome, \u2068${account.displayName}\u2069` }),
+  ).toBeVisible();
   await expect(page.getByTestId("presence")).toHaveText("Others see you as: Online");
 }

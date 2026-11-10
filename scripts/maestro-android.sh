@@ -28,5 +28,12 @@ if ! maestro test "$repository_root/apps/client/.maestro" \
   cat "$repository_root/maestro-report.xml" 2>/dev/null || true
   echo "== Maestro log (last 200 lines)"
   find "$debug_output" -name 'maestro.log' -exec tail -n 200 {} \; 2>/dev/null || true
+  # What was on screen when it stopped: the ids and texts Maestro could see,
+  # and what the app logged.
+  echo "== Screen at the failure"
+  adb shell uiautomator dump /sdcard/screen.xml >/dev/null 2>&1 &&
+    adb shell cat /sdcard/screen.xml | grep -oE '(resource-id|text|content-desc)="[^"]+"' || true
+  echo "== App log (last 100 lines)"
+  adb logcat -d -s ReactNativeJS:V | tail -n 100 || true
   exit 1
 fi
