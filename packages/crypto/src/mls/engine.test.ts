@@ -12,7 +12,11 @@ import {
   removeMembers,
   updateKeys,
   type Group,
+  type Member,
 } from "./engine.js";
+import { defaultCapabilities, defaultLifetime, encodeMlsMessage, generateKeyPackage } from "ts-mls";
+
+import { ciphersuite } from "./ciphersuite.js";
 
 const text = (value: string): Uint8Array => new TextEncoder().encode(value);
 const read = (value: Uint8Array): string => new TextDecoder().decode(value);
@@ -88,5 +92,51 @@ describe("an MLS group", () => {
       .commit;
     await expect(joinFromWelcome(welcomeFromCommit, device)).rejects.toThrow("expected a welcome");
     await expect(addMembers(group, [welcomeFromCommit])).rejects.toThrow("expected a key package");
+  });
+});
+
+describe("message senders", () => {
+  it("are named by the credential MLS authenticated, from the epoch the message was sent in", async () => {
+    const ada = await createMember(text("ada"));
+    const grace = await createMember(text("grace"));
+    const added = await addMembers(await createGroup(text("g"), ada), [grace.keyPackage]);
+    const graceGroup = await joinFromWelcome(added.welcome ?? new Uint8Array(), grace);
+    const first = await encrypt(graceGroup, text("first"));
+    const second = await encrypt(first.group, text("second"));
+
+    const hello = await receive(added.group, first.message);
+    expect(hello.kind === "message" && read(hello.sender ?? new Uint8Array())).toBe("grace");
+    // Ada removes Grace before reading her second message, which was sent
+    // in the earlier epoch: it is read with that epoch's keys and tree.
+    const removed = await removeMembers(hello.group, [1]);
+    const late = await receive(removed.group, second.message);
+    expect(late.kind === "message" && read(late.sender ?? new Uint8Array())).toBe("grace");
+  });
+
+  it("are left unnamed when the credential is not a basic one", async () => {
+    const suite = await ciphersuite();
+    const generated = await generateKeyPackage(
+      { credentialType: "x509", certificates: [new Uint8Array([1])] },
+      defaultCapabilities(),
+      defaultLifetime,
+      [],
+      suite,
+    );
+    const x509: Member = {
+      keyPackage: encodeMlsMessage({
+        version: "mls10",
+        wireformat: "mls_key_package",
+        keyPackage: generated.publicPackage,
+      }),
+      publicPackage: generated.publicPackage,
+      secrets: generated.privatePackage,
+    };
+    const added = await addMembers(await createGroup(text("g"), await createMember(text("ada"))), [
+      x509.keyPackage,
+    ]);
+    const theirs = await joinFromWelcome(added.welcome ?? new Uint8Array(), x509);
+    const received = await receive(added.group, (await encrypt(theirs, text("hi"))).message);
+
+    expect(received.kind === "message" && received.sender).toBeUndefined();
   });
 });

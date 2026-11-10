@@ -150,6 +150,11 @@ Ed25519 verification ran 40% slower in this run than in the first one): a
 device that joins hashes and verifies every node once, so there is nothing
 to reuse yet.
 
+The patch also makes an application message report its sender's
+credential, taken from the ratchet tree of the epoch it was sent in (a
+removed member's leaf can be reused later, so today's tree could name
+someone else). ts-mls 1.6.4 returns only the plaintext.
+
 Still to do, before M4:
 
 - Reuse imported WebCrypto keys instead of importing one per call (the

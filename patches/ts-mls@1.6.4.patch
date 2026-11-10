@@ -11,6 +11,55 @@ index 45af97faf0d8094090fe5fdca57ef40bb90480b2..56864bd901ba702b90c300d17626979f
                      return new ValidationError("Unmerged leaf did not represent a non-blank descendant leaf node");
                  for (const parentIdx of dp) {
                      const dpNode = tree[parentIdx];
+diff --git a/dist/src/processMessages.d.ts b/dist/src/processMessages.d.ts
+index dc12496e08675bbd103eb51e56cff2b4d264180d..d2d6c7a2859fb20ed419fd2b82d499985f10388c 100644
+--- a/dist/src/processMessages.d.ts
++++ b/dist/src/processMessages.d.ts
+@@ -16,6 +16,7 @@ export type ProcessMessageResult = {
+     message: Uint8Array;
+     newState: ClientState;
+     consumed: Uint8Array[];
++    senderCredential?: import("./credential.js").Credential;
+ };
+ /**
+  * Process private message and apply proposal or commit and return the updated ClientState or return an application message
+diff --git a/dist/src/processMessages.js b/dist/src/processMessages.js
+index 22712f849db9dcfdb77ed0d4f6416ff6c8ed6c3a..caf1a079f07ea3188984c05fccdc8f02b2b1f217 100644
+--- a/dist/src/processMessages.js
++++ b/dist/src/processMessages.js
+@@ -23,6 +23,16 @@ import { zeroOutUint8Array } from "./util/byteArray.js";
+  *
+  * @public
+  */
++// The sender's credential, from the ratchet tree of the epoch the message
++// was sent in: a leaf can be reused after its member leaves, so a later
++// tree could name someone else.
++function senderCredentialOf(tree, sender) {
++    if (sender.senderType !== "member") {
++        return undefined;
++    }
++    const node = tree[sender.leafIndex * 2];
++    return node?.nodeType === "leaf" ? node.leaf.credential : undefined;
++}
+ export async function processPrivateMessage(state, pm, pskSearch, cs, callback = acceptAll) {
+     if (pm.epoch < state.groupContext.epoch) {
+         const receiverData = state.historicalReceiverData.get(pm.epoch);
+@@ -39,6 +49,7 @@ export async function processPrivateMessage(state, pm, pskSearch, cs, callback =
+                     message: result.content.content.applicationData,
+                     newState,
+                     consumed: result.consumed,
++                    senderCredential: senderCredentialOf(receiverData.ratchetTree, result.content.content.sender),
+                 };
+             }
+             else {
+@@ -57,6 +68,7 @@ export async function processPrivateMessage(state, pm, pskSearch, cs, callback =
+             message: result.content.content.applicationData,
+             newState: updatedState,
+             consumed: result.consumed,
++            senderCredential: senderCredentialOf(state.ratchetTree, result.content.content.sender),
+         };
+     }
+     else if (result.content.content.contentType === "commit") {
 diff --git a/dist/src/treeHash.js b/dist/src/treeHash.js
 index 6b03ac312fde357fa391468c95943163a1fd5a56..122ffb59d2e90b327b4fc03a9e26cd1e18f79ef6 100644
 --- a/dist/src/treeHash.js

@@ -229,9 +229,13 @@ export async function joinFromWelcome(
   return { state };
 }
 
-/** What processing a message produced. */
+/**
+ * What processing a message produced. A message names its sender by their
+ * credential's identity bytes, as MLS authenticated it.
+ */
 export type Received =
-  { kind: "commit"; group: Group } | { kind: "message"; group: Group; plaintext: Uint8Array };
+  | { kind: "commit"; group: Group }
+  | { kind: "message"; group: Group; plaintext: Uint8Array; sender: Uint8Array | undefined };
 
 /** Applies a commit or decrypts an application message from another member. */
 export async function receive(group: Group, bytes: Uint8Array): Promise<Received> {
@@ -242,7 +246,9 @@ export async function receive(group: Group, bytes: Uint8Array): Promise<Received
   const result = await processMessage(message, group.state, emptyPskIndex, acceptAll, await ciphersuite());
   result.consumed.forEach(zeroOutUint8Array);
   if (result.kind === "applicationMessage") {
-    return { kind: "message", group: { state: result.newState }, plaintext: result.message };
+    const sender =
+      result.senderCredential?.credentialType === "basic" ? result.senderCredential.identity : undefined;
+    return { kind: "message", group: { state: result.newState }, plaintext: result.message, sender };
   }
   return { kind: "commit", group: { state: result.newState } };
 }
