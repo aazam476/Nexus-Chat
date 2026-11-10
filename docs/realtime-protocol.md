@@ -109,16 +109,17 @@ nothing that matters.
 Frames without `seq` are about the connection itself and are never
 replayed. Frames with `seq` are events.
 
-| `type`            | `seq` | `data`                                                              |
-| ----------------- | ----- | ------------------------------------------------------------------- |
-| `hello`           | no    | `{ "heartbeatIntervalMs": 30000, "protocolVersion": 1 }`            |
-| `ready`           | yes   | `{ "gatewaySessionId", "user": CurrentUser, "presence": Presence }` |
-| `resumed`         | no    | `{ "replayed": 3 }`                                                 |
-| `invalid_session` | no    | `{}`                                                                |
-| `heartbeat_ack`   | no    | `{}`                                                                |
-| `error`           | no    | `{ "code": "unknown_type", "message": "…" }` (+ `id`)               |
-| `presence_update` | yes   | `Presence` of a user this device follows                            |
-| `user_update`     | yes   | `{ "user": CurrentUser }`, after the account changes                |
+| `type`                | `seq` | `data`                                                                                                                                                                                                  |
+| --------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hello`               | no    | `{ "heartbeatIntervalMs": 30000, "protocolVersion": 1 }`                                                                                                                                                |
+| `ready`               | yes   | `{ "gatewaySessionId", "user": CurrentUser, "presence": Presence }`                                                                                                                                     |
+| `resumed`             | no    | `{ "replayed": 3 }`                                                                                                                                                                                     |
+| `invalid_session`     | no    | `{}`                                                                                                                                                                                                    |
+| `heartbeat_ack`       | no    | `{}`                                                                                                                                                                                                    |
+| `error`               | no    | `{ "code": "unknown_type", "message": "…" }` (+ `id`)                                                                                                                                                   |
+| `presence_update`     | yes   | `Presence` of a user this device follows                                                                                                                                                                |
+| `user_update`         | yes   | `{ "user": CurrentUser }`, after the account changes                                                                                                                                                    |
+| `relationship_update` | yes   | `{ "userId", "relationship" }`: a friend request, friendship or block with that user changed; `relationship` is `none`, `friend`, `incoming`, `outgoing` or `blocked` (only the blocker sees `blocked`) |
 
 `CurrentUser` is the object from `GET /api/v1/users/me`. `Presence` is:
 

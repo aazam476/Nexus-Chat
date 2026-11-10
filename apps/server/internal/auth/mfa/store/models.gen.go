@@ -24,6 +24,24 @@ type BackupCode struct {
 	CodeHash []byte
 }
 
+type Block struct {
+	BlockerID uuid.UUID
+	BlockedID uuid.UUID
+	CreatedAt time.Time
+}
+
+type FriendRequest struct {
+	SenderID    uuid.UUID
+	RecipientID uuid.UUID
+	CreatedAt   time.Time
+}
+
+type Friendship struct {
+	UserID    uuid.UUID
+	FriendID  uuid.UUID
+	CreatedAt time.Time
+}
+
 type InstanceInvite struct {
 	ID        uuid.UUID
 	CodeHash  []byte
@@ -102,6 +120,12 @@ type OidcProvider struct {
 	AllowSignup        bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+}
+
+type PrivacySetting struct {
+	UserID              uuid.UUID
+	WhoCanDm            string
+	WhoCanFriendRequest string
 }
 
 type Session struct {

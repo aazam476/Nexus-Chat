@@ -260,6 +260,20 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   very large channels batch membership changes. Still to do: reuse
   imported WebCrypto keys, and measure on a mid-range Android phone.
 
+## M4: DMs and E2EE messaging (in progress)
+
+- Friends, blocks and privacy (`internal/social`, migration 00013):
+  friend requests (send, accept, decline, cancel; requesting someone who
+  requested you accepts theirs), removing friends, blocking (ends any
+  friendship and request, stops requests and DMs both ways, not revealed
+  to the blocked user), and who may DM you (everyone / friends / friends
+  and server members, the default) or friend-request you (everyone, the
+  default / server members / nobody). Friend requests are rate-limited per
+  sender. Both users' devices get a `relationship_update` event.
+- Two M3 items move here, since they need the key-setup screens and the
+  native crypto stack: the E2E "signup → recovery phrase → second device
+  verifies", and running the RFC 9420 vectors on Hermes.
+
 ## Known issues
 
 - **Left out by the maintainer's decision (November 2026):** publishing to

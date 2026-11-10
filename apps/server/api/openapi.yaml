@@ -25,6 +25,8 @@ tags:
     description: Instance administration. Every operation needs an instance admin.
   - name: encryption
     description: End-to-end encryption support. The server stores and relays opaque MLS data; it never sees keys or plaintext.
+  - name: social
+    description: Friends, blocks and privacy settings (spec §4.2).
 paths:
   /api/v1/auth/login:
     post:
@@ -1775,6 +1777,267 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/friends:
+    get:
+      operationId: listFriends
+      summary: This user's friends and pending friend requests
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Friends, requests received and requests sent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Friends"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/friends/requests:
+    post:
+      operationId: sendFriendRequest
+      summary: Send a friend request
+      description: |
+        Sends a request to the user with this username. If they had already
+        sent one to you, you become friends instead. Blocks in either
+        direction and the recipient's privacy setting both answer
+        `friend_request_not_allowed`, so a block is not revealed.
+      tags: [social]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FriendRequestTarget"
+      responses:
+        "200":
+          description: Sent, or accepted their earlier request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelationshipChange"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: This user does not accept friend requests from you (`friend_request_not_allowed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No user has this username (`user_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already friends (`already_friends`) or already requested (`already_requested`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: That is your own username (`cannot_befriend_self`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/friends/requests/{userId}/accept:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: acceptFriendRequest
+      summary: Accept a friend request
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: You are now friends.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: This user sent you no request (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/friends/requests/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteFriendRequest
+      summary: Decline a request you received, or cancel one you sent
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Declined or cancelled.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No request between you and this user (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/friends/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: removeFriend
+      summary: Remove a friend
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: No longer friends.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: You are not friends with this user (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/blocks:
+    get:
+      operationId: listBlocked
+      summary: Users you blocked
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The blocked users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contact"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/blocks/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: blockUser
+      summary: Block a user
+      description: |
+        Ends any friendship and pending request between you, and stops
+        friend requests and DMs in both directions. Their messages are
+        hidden on your devices. They are not told.
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Blocked.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: There is no such user (`user_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: You cannot block yourself (`cannot_block_self`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: unblockUser
+      summary: Unblock a user
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Unblocked.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: You have not blocked this user (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/privacy:
+    get:
+      operationId: getPrivacySettings
+      summary: Who may DM you or send you friend requests
+      tags: [social]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivacySettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      operationId: updatePrivacySettings
+      summary: Change who may DM you or send you friend requests
+      tags: [social]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivacySettings"
+      responses:
+        "204":
+          description: Saved.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/v1/avatars/{avatarId}:
     get:
       operationId: getAvatar
@@ -2436,6 +2699,82 @@ components:
           type: string
           format: byte
           description: Sealed with the backup key, at most 1 MiB.
+    UserSummary:
+      type: object
+      description: Enough to show another user in a list.
+      required: [id, username, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          description: Path of the profile picture; missing without one.
+    Contact:
+      type: object
+      required: [user, since]
+      properties:
+        user:
+          $ref: "#/components/schemas/UserSummary"
+        since:
+          type: string
+          format: date-time
+          description: When the friendship, request or block began.
+    Friends:
+      type: object
+      required: [friends, incoming, outgoing]
+      properties:
+        friends:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contact"
+        incoming:
+          type: array
+          description: Requests other users sent you.
+          items:
+            $ref: "#/components/schemas/Contact"
+        outgoing:
+          type: array
+          description: Requests you sent.
+          items:
+            $ref: "#/components/schemas/Contact"
+    FriendRequestTarget:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+    Relationship:
+      type: string
+      description: |
+        How you stand towards another user. `blocked` means you blocked
+        them; a user you are blocked by shows as `none`.
+      enum: [none, friend, incoming, outgoing, blocked]
+    RelationshipChange:
+      type: object
+      required: [userId, relationship]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        relationship:
+          $ref: "#/components/schemas/Relationship"
+    PrivacySettings:
+      type: object
+      required: [whoCanDirectMessage, whoCanFriendRequest]
+      properties:
+        whoCanDirectMessage:
+          type: string
+          enum: [everyone, friends, friends_and_server_members]
+          description: Default `friends_and_server_members`.
+        whoCanFriendRequest:
+          type: string
+          enum: [everyone, server_members, nobody]
+          description: Default `everyone`.
     KeyPackageStock:
       type: object
       additionalProperties: false

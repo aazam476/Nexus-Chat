@@ -32,9 +32,11 @@ const (
 	typeInvalidSession = "invalid_session"
 	typeHeartbeatAck   = "heartbeat_ack"
 	typeError          = "error"
-	// TypePresenceUpdate and TypeUserUpdate are events.
+	// TypePresenceUpdate, TypeUserUpdate and the types below are events.
 	TypePresenceUpdate = "presence_update"
 	TypeUserUpdate     = "user_update"
+	// TypeRelationshipUpdate: a friend request, friendship or block changed.
+	TypeRelationshipUpdate = "relationship_update"
 )
 
 var errMalformed = errors.New("malformed frame")

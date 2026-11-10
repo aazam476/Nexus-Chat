@@ -21,6 +21,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
+	"github.com/aazam476/nexus-chat/apps/server/internal/social"
 )
 
 // Features holds the handler of every API feature.
@@ -37,6 +38,7 @@ type Features struct {
 	Profiles     *profiles.Handler
 	Registration *registration.Handler
 	Setup        *setup.Handler
+	Social       *social.Handler
 }
 
 // Options configures NewHandler.
@@ -68,6 +70,7 @@ type (
 	profilesHandler     = profiles.Handler
 	registrationHandler = registration.Handler
 	setupHandler        = setup.Handler
+	socialHandler       = social.Handler
 )
 
 // handlers combines the feature handlers into one value that implements
@@ -86,6 +89,7 @@ type handlers struct {
 	*profilesHandler
 	*registrationHandler
 	*setupHandler
+	*socialHandler
 }
 
 // Compile-time check that every OpenAPI operation has an implementation.
@@ -102,6 +106,7 @@ func NewHandler(features Features, options Options) http.Handler {
 			oidcHandler:         features.OIDC,
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
+			socialHandler: features.Social,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
 		api.StrictHTTPServerOptions{

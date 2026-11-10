@@ -320,6 +320,66 @@ export type BackupBlob = {
     data: string;
 };
 
+/**
+ * Enough to show another user in a list.
+ */
+export type UserSummary = {
+    id: string;
+    username: string;
+    displayName: string;
+    /**
+     * Path of the profile picture; missing without one.
+     */
+    avatarUrl?: string;
+};
+
+export type Contact = {
+    user: UserSummary;
+    /**
+     * When the friendship, request or block began.
+     */
+    since: string;
+};
+
+export type Friends = {
+    friends: Array<Contact>;
+    /**
+     * Requests other users sent you.
+     */
+    incoming: Array<Contact>;
+    /**
+     * Requests you sent.
+     */
+    outgoing: Array<Contact>;
+};
+
+export type FriendRequestTarget = {
+    username: string;
+};
+
+/**
+ * How you stand towards another user. `blocked` means you blocked
+ * them; a user you are blocked by shows as `none`.
+ *
+ */
+export type Relationship = 'none' | 'friend' | 'incoming' | 'outgoing' | 'blocked';
+
+export type RelationshipChange = {
+    userId: string;
+    relationship: Relationship;
+};
+
+export type PrivacySettings = {
+    /**
+     * Default `friends_and_server_members`.
+     */
+    whoCanDirectMessage: 'everyone' | 'friends' | 'friends_and_server_members';
+    /**
+     * Default `everyone`.
+     */
+    whoCanFriendRequest: 'everyone' | 'server_members' | 'nobody';
+};
+
 export type KeyPackageStock = {
     /**
      * One-time key packages stored for this device.
@@ -2759,6 +2819,338 @@ export type PutBackupBlobResponses = {
 };
 
 export type PutBackupBlobResponse = PutBackupBlobResponses[keyof PutBackupBlobResponses];
+
+export type ListFriendsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/friends';
+};
+
+export type ListFriendsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListFriendsError = ListFriendsErrors[keyof ListFriendsErrors];
+
+export type ListFriendsResponses = {
+    /**
+     * Friends, requests received and requests sent.
+     */
+    200: Friends;
+};
+
+export type ListFriendsResponse = ListFriendsResponses[keyof ListFriendsResponses];
+
+export type SendFriendRequestData = {
+    body: FriendRequestTarget;
+    path?: never;
+    query?: never;
+    url: '/api/v1/friends/requests';
+};
+
+export type SendFriendRequestErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This user does not accept friend requests from you (`friend_request_not_allowed`).
+     */
+    403: Error;
+    /**
+     * No user has this username (`user_not_found`).
+     */
+    404: Error;
+    /**
+     * Already friends (`already_friends`) or already requested (`already_requested`).
+     */
+    409: Error;
+    /**
+     * That is your own username (`cannot_befriend_self`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type SendFriendRequestError = SendFriendRequestErrors[keyof SendFriendRequestErrors];
+
+export type SendFriendRequestResponses = {
+    /**
+     * Sent, or accepted their earlier request.
+     */
+    200: RelationshipChange;
+};
+
+export type SendFriendRequestResponse = SendFriendRequestResponses[keyof SendFriendRequestResponses];
+
+export type AcceptFriendRequestData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/friends/requests/{userId}/accept';
+};
+
+export type AcceptFriendRequestErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This user sent you no request (`not_found`).
+     */
+    404: Error;
+};
+
+export type AcceptFriendRequestError = AcceptFriendRequestErrors[keyof AcceptFriendRequestErrors];
+
+export type AcceptFriendRequestResponses = {
+    /**
+     * You are now friends.
+     */
+    204: void;
+};
+
+export type AcceptFriendRequestResponse = AcceptFriendRequestResponses[keyof AcceptFriendRequestResponses];
+
+export type DeleteFriendRequestData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/friends/requests/{userId}';
+};
+
+export type DeleteFriendRequestErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No request between you and this user (`not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteFriendRequestError = DeleteFriendRequestErrors[keyof DeleteFriendRequestErrors];
+
+export type DeleteFriendRequestResponses = {
+    /**
+     * Declined or cancelled.
+     */
+    204: void;
+};
+
+export type DeleteFriendRequestResponse = DeleteFriendRequestResponses[keyof DeleteFriendRequestResponses];
+
+export type RemoveFriendData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/friends/{userId}';
+};
+
+export type RemoveFriendErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You are not friends with this user (`not_found`).
+     */
+    404: Error;
+};
+
+export type RemoveFriendError = RemoveFriendErrors[keyof RemoveFriendErrors];
+
+export type RemoveFriendResponses = {
+    /**
+     * No longer friends.
+     */
+    204: void;
+};
+
+export type RemoveFriendResponse = RemoveFriendResponses[keyof RemoveFriendResponses];
+
+export type ListBlockedData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/blocks';
+};
+
+export type ListBlockedErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListBlockedError = ListBlockedErrors[keyof ListBlockedErrors];
+
+export type ListBlockedResponses = {
+    /**
+     * The blocked users.
+     */
+    200: Array<Contact>;
+};
+
+export type ListBlockedResponse = ListBlockedResponses[keyof ListBlockedResponses];
+
+export type UnblockUserData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/blocks/{userId}';
+};
+
+export type UnblockUserErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You have not blocked this user (`not_found`).
+     */
+    404: Error;
+};
+
+export type UnblockUserError = UnblockUserErrors[keyof UnblockUserErrors];
+
+export type UnblockUserResponses = {
+    /**
+     * Unblocked.
+     */
+    204: void;
+};
+
+export type UnblockUserResponse = UnblockUserResponses[keyof UnblockUserResponses];
+
+export type BlockUserData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/blocks/{userId}';
+};
+
+export type BlockUserErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * There is no such user (`user_not_found`).
+     */
+    404: Error;
+    /**
+     * You cannot block yourself (`cannot_block_self`).
+     */
+    422: Error;
+};
+
+export type BlockUserError = BlockUserErrors[keyof BlockUserErrors];
+
+export type BlockUserResponses = {
+    /**
+     * Blocked.
+     */
+    204: void;
+};
+
+export type BlockUserResponse = BlockUserResponses[keyof BlockUserResponses];
+
+export type GetPrivacySettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/privacy';
+};
+
+export type GetPrivacySettingsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type GetPrivacySettingsError = GetPrivacySettingsErrors[keyof GetPrivacySettingsErrors];
+
+export type GetPrivacySettingsResponses = {
+    /**
+     * The settings.
+     */
+    200: PrivacySettings;
+};
+
+export type GetPrivacySettingsResponse = GetPrivacySettingsResponses[keyof GetPrivacySettingsResponses];
+
+export type UpdatePrivacySettingsData = {
+    body: PrivacySettings;
+    path?: never;
+    query?: never;
+    url: '/api/v1/privacy';
+};
+
+export type UpdatePrivacySettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type UpdatePrivacySettingsError = UpdatePrivacySettingsErrors[keyof UpdatePrivacySettingsErrors];
+
+export type UpdatePrivacySettingsResponses = {
+    /**
+     * Saved.
+     */
+    204: void;
+};
+
+export type UpdatePrivacySettingsResponse = UpdatePrivacySettingsResponses[keyof UpdatePrivacySettingsResponses];
 
 export type GetAvatarData = {
     body?: never;

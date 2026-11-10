@@ -103,3 +103,10 @@ sql:
       go:
         <<: *go-options
         out: internal/keybackup/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/social/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/social/store

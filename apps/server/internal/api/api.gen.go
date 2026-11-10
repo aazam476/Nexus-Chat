@@ -82,6 +82,48 @@ func (e PresenceStatus) Valid() bool {
 	}
 }
 
+// Defines values for PrivacySettingsWhoCanDirectMessage.
+const (
+	PrivacySettingsWhoCanDirectMessageEveryone                PrivacySettingsWhoCanDirectMessage = "everyone"
+	PrivacySettingsWhoCanDirectMessageFriends                 PrivacySettingsWhoCanDirectMessage = "friends"
+	PrivacySettingsWhoCanDirectMessageFriendsAndServerMembers PrivacySettingsWhoCanDirectMessage = "friends_and_server_members"
+)
+
+// Valid indicates whether the value is a known member of the PrivacySettingsWhoCanDirectMessage enum.
+func (e PrivacySettingsWhoCanDirectMessage) Valid() bool {
+	switch e {
+	case PrivacySettingsWhoCanDirectMessageEveryone:
+		return true
+	case PrivacySettingsWhoCanDirectMessageFriends:
+		return true
+	case PrivacySettingsWhoCanDirectMessageFriendsAndServerMembers:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacySettingsWhoCanFriendRequest.
+const (
+	PrivacySettingsWhoCanFriendRequestEveryone      PrivacySettingsWhoCanFriendRequest = "everyone"
+	PrivacySettingsWhoCanFriendRequestNobody        PrivacySettingsWhoCanFriendRequest = "nobody"
+	PrivacySettingsWhoCanFriendRequestServerMembers PrivacySettingsWhoCanFriendRequest = "server_members"
+)
+
+// Valid indicates whether the value is a known member of the PrivacySettingsWhoCanFriendRequest enum.
+func (e PrivacySettingsWhoCanFriendRequest) Valid() bool {
+	switch e {
+	case PrivacySettingsWhoCanFriendRequestEveryone:
+		return true
+	case PrivacySettingsWhoCanFriendRequestNobody:
+		return true
+	case PrivacySettingsWhoCanFriendRequestServerMembers:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RegistrationMode.
 const (
 	RegistrationModeClosed     RegistrationMode = "closed"
@@ -97,6 +139,33 @@ func (e RegistrationMode) Valid() bool {
 	case RegistrationModeInviteOnly:
 		return true
 	case RegistrationModeOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Relationship.
+const (
+	RelationshipBlocked  Relationship = "blocked"
+	RelationshipFriend   Relationship = "friend"
+	RelationshipIncoming Relationship = "incoming"
+	RelationshipNone     Relationship = "none"
+	RelationshipOutgoing Relationship = "outgoing"
+)
+
+// Valid indicates whether the value is a known member of the Relationship enum.
+func (e Relationship) Valid() bool {
+	switch e {
+	case RelationshipBlocked:
+		return true
+	case RelationshipFriend:
+		return true
+	case RelationshipIncoming:
+		return true
+	case RelationshipNone:
+		return true
+	case RelationshipOutgoing:
 		return true
 	default:
 		return false
@@ -270,6 +339,15 @@ type CompleteProviderSignInRequest struct {
 	FlowId     openapi_types.UUID `json:"flowId"`
 }
 
+// Contact defines model for Contact.
+type Contact struct {
+	// Since When the friendship, request or block began.
+	Since time.Time `json:"since"`
+
+	// User Enough to show another user in a list.
+	User UserSummary `json:"user"`
+}
+
 // CreateInviteRequest defines model for CreateInviteRequest.
 type CreateInviteRequest struct {
 	// ExpiresAt When the invite stops working. Omit for never.
@@ -356,6 +434,22 @@ type FieldError struct {
 	// Field Path of the field in the request, for example `admin.email`.
 	Field   string `json:"field"`
 	Message string `json:"message"`
+}
+
+// FriendRequestTarget defines model for FriendRequestTarget.
+type FriendRequestTarget struct {
+	Username string `json:"username"`
+}
+
+// Friends defines model for Friends.
+type Friends struct {
+	Friends []Contact `json:"friends"`
+
+	// Incoming Requests other users sent you.
+	Incoming []Contact `json:"incoming"`
+
+	// Outgoing Requests you sent.
+	Outgoing []Contact `json:"outgoing"`
 }
 
 // HealthCheck defines model for HealthCheck.
@@ -511,6 +605,21 @@ type PasswordResetRequest struct {
 // PresenceStatus What others see. A user who chose invisible, or has no device connected, is offline.
 type PresenceStatus string
 
+// PrivacySettings defines model for PrivacySettings.
+type PrivacySettings struct {
+	// WhoCanDirectMessage Default `friends_and_server_members`.
+	WhoCanDirectMessage PrivacySettingsWhoCanDirectMessage `json:"whoCanDirectMessage"`
+
+	// WhoCanFriendRequest Default `everyone`.
+	WhoCanFriendRequest PrivacySettingsWhoCanFriendRequest `json:"whoCanFriendRequest"`
+}
+
+// PrivacySettingsWhoCanDirectMessage Default `friends_and_server_members`.
+type PrivacySettingsWhoCanDirectMessage string
+
+// PrivacySettingsWhoCanFriendRequest Default `everyone`.
+type PrivacySettingsWhoCanFriendRequest string
+
 // ProviderFlow defines model for ProviderFlow.
 type ProviderFlow struct {
 	AuthorizationUrl string `json:"authorizationUrl"`
@@ -552,6 +661,18 @@ type RegisterRequest struct {
 
 // RegistrationMode Who may create accounts.
 type RegistrationMode string
+
+// Relationship How you stand towards another user. `blocked` means you blocked
+// them; a user you are blocked by shows as `none`.
+type Relationship string
+
+// RelationshipChange defines model for RelationshipChange.
+type RelationshipChange struct {
+	// Relationship How you stand towards another user. `blocked` means you blocked
+	// them; a user you are blocked by shows as `none`.
+	Relationship Relationship       `json:"relationship"`
+	UserId       openapi_types.UUID `json:"userId"`
+}
 
 // SecondFactors defines model for SecondFactors.
 type SecondFactors struct {
@@ -749,6 +870,15 @@ type UserProfile struct {
 // UserStatus The status the user chose.
 type UserStatus string
 
+// UserSummary Enough to show another user in a list.
+type UserSummary struct {
+	// AvatarUrl Path of the profile picture; missing without one.
+	AvatarUrl   *string            `json:"avatarUrl,omitempty"`
+	DisplayName string             `json:"displayName"`
+	Id          openapi_types.UUID `json:"id"`
+	Username    string             `json:"username"`
+}
+
 // WebAuthnCeremony defines model for WebAuthnCeremony.
 type WebAuthnCeremony struct {
 	CeremonyId openapi_types.UUID `json:"ceremonyId"`
@@ -930,6 +1060,9 @@ type BeginWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationRequest
 // FinishWebAuthnRegistrationJSONRequestBody defines body for FinishWebAuthnRegistration for application/json ContentType.
 type FinishWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationAnswer
 
+// SendFriendRequestJSONRequestBody defines body for SendFriendRequest for application/json ContentType.
+type SendFriendRequestJSONRequestBody = FriendRequestTarget
+
 // PublishIdentityJSONRequestBody defines body for PublishIdentity for application/json ContentType.
 type PublishIdentityJSONRequestBody = PublishedIdentity
 
@@ -941,6 +1074,9 @@ type PutWrappedBackupKeyJSONRequestBody = WrappedBackupKeyUpload
 
 // UploadKeyPackagesJSONRequestBody defines body for UploadKeyPackages for application/json ContentType.
 type UploadKeyPackagesJSONRequestBody = KeyPackageUpload
+
+// UpdatePrivacySettingsJSONRequestBody defines body for UpdatePrivacySettings for application/json ContentType.
+type UpdatePrivacySettingsJSONRequestBody = PrivacySettings
 
 // CompleteSetupJSONRequestBody defines body for CompleteSetup for application/json ContentType.
 type CompleteSetupJSONRequestBody = SetupRequest
@@ -1091,6 +1227,30 @@ type ServerInterface interface {
 	// GetAvatar A profile picture
 	// (GET /api/v1/avatars/{avatarId})
 	GetAvatar(w http.ResponseWriter, r *http.Request, avatarId openapi_types.UUID)
+	// ListBlocked Users you blocked
+	// (GET /api/v1/blocks)
+	ListBlocked(w http.ResponseWriter, r *http.Request)
+	// UnblockUser Unblock a user
+	// (DELETE /api/v1/blocks/{userId})
+	UnblockUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// BlockUser Block a user
+	// (PUT /api/v1/blocks/{userId})
+	BlockUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// ListFriends This user's friends and pending friend requests
+	// (GET /api/v1/friends)
+	ListFriends(w http.ResponseWriter, r *http.Request)
+	// SendFriendRequest Send a friend request
+	// (POST /api/v1/friends/requests)
+	SendFriendRequest(w http.ResponseWriter, r *http.Request)
+	// DeleteFriendRequest Decline a request you received, or cancel one you sent
+	// (DELETE /api/v1/friends/requests/{userId})
+	DeleteFriendRequest(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// AcceptFriendRequest Accept a friend request
+	// (POST /api/v1/friends/requests/{userId}/accept)
+	AcceptFriendRequest(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// RemoveFriend Remove a friend
+	// (DELETE /api/v1/friends/{userId})
+	RemoveFriend(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// PublishIdentity Publish this user's identity keys
 	// (PUT /api/v1/identity)
 	PublishIdentity(w http.ResponseWriter, r *http.Request)
@@ -1121,6 +1281,12 @@ type ServerInterface interface {
 	// UploadKeyPackages Store key packages for this device
 	// (POST /api/v1/key-packages)
 	UploadKeyPackages(w http.ResponseWriter, r *http.Request)
+	// GetPrivacySettings Who may DM you or send you friend requests
+	// (GET /api/v1/privacy)
+	GetPrivacySettings(w http.ResponseWriter, r *http.Request)
+	// UpdatePrivacySettings Change who may DM you or send you friend requests
+	// (PUT /api/v1/privacy)
+	UpdatePrivacySettings(w http.ResponseWriter, r *http.Request)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(w http.ResponseWriter, r *http.Request)
@@ -1989,6 +2155,178 @@ func (siw *ServerInterfaceWrapper) GetAvatar(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListBlocked operation middleware
+func (siw *ServerInterfaceWrapper) ListBlocked(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBlocked(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnblockUser operation middleware
+func (siw *ServerInterfaceWrapper) UnblockUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnblockUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BlockUser operation middleware
+func (siw *ServerInterfaceWrapper) BlockUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BlockUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFriends operation middleware
+func (siw *ServerInterfaceWrapper) ListFriends(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFriends(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendFriendRequest operation middleware
+func (siw *ServerInterfaceWrapper) SendFriendRequest(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendFriendRequest(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteFriendRequest operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFriendRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteFriendRequest(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptFriendRequest operation middleware
+func (siw *ServerInterfaceWrapper) AcceptFriendRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptFriendRequest(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveFriend operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFriend(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveFriend(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PublishIdentity operation middleware
 func (siw *ServerInterfaceWrapper) PublishIdentity(w http.ResponseWriter, r *http.Request) {
 
@@ -2180,6 +2518,34 @@ func (siw *ServerInterfaceWrapper) UploadKeyPackages(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadKeyPackages(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPrivacySettings operation middleware
+func (siw *ServerInterfaceWrapper) GetPrivacySettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPrivacySettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePrivacySettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePrivacySettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePrivacySettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2620,6 +2986,16 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/key-backup/blobs/{name}", wrapper.DeleteBackupBlob)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/key-backup/blobs/{name}", wrapper.GetBackupBlob)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/key-backup/blobs/{name}", wrapper.PutBackupBlob)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/friends", wrapper.ListFriends)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/friends/requests", wrapper.SendFriendRequest)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/friends/requests/{userId}/accept", wrapper.AcceptFriendRequest)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/friends/requests/{userId}", wrapper.DeleteFriendRequest)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/friends/{userId}", wrapper.RemoveFriend)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/blocks", wrapper.ListBlocked)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/blocks/{userId}", wrapper.UnblockUser)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/blocks/{userId}", wrapper.BlockUser)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/privacy", wrapper.GetPrivacySettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/privacy", wrapper.UpdatePrivacySettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
@@ -5479,6 +5855,500 @@ func (response GetAvatar404JSONResponse) VisitGetAvatarResponse(w http.ResponseW
 	return err
 }
 
+type ListBlockedRequestObject struct {
+}
+
+type ListBlockedResponseObject interface {
+	VisitListBlockedResponse(w http.ResponseWriter) error
+}
+
+type ListBlocked200JSONResponse []Contact
+
+func (response ListBlocked200JSONResponse) VisitListBlockedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBlocked401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBlocked401JSONResponse) VisitListBlockedResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnblockUserRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type UnblockUserResponseObject interface {
+	VisitUnblockUserResponse(w http.ResponseWriter) error
+}
+
+type UnblockUser204Response struct {
+}
+
+func (response UnblockUser204Response) VisitUnblockUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnblockUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UnblockUser400JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnblockUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnblockUser401JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnblockUser404JSONResponse Error
+
+func (response UnblockUser404JSONResponse) VisitUnblockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BlockUserRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type BlockUserResponseObject interface {
+	VisitBlockUserResponse(w http.ResponseWriter) error
+}
+
+type BlockUser204Response struct {
+}
+
+func (response BlockUser204Response) VisitBlockUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type BlockUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BlockUser400JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BlockUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BlockUser401JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BlockUser404JSONResponse Error
+
+func (response BlockUser404JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BlockUser422JSONResponse Error
+
+func (response BlockUser422JSONResponse) VisitBlockUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFriendsRequestObject struct {
+}
+
+type ListFriendsResponseObject interface {
+	VisitListFriendsResponse(w http.ResponseWriter) error
+}
+
+type ListFriends200JSONResponse Friends
+
+func (response ListFriends200JSONResponse) VisitListFriendsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFriends401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListFriends401JSONResponse) VisitListFriendsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequestRequestObject struct {
+	Body *SendFriendRequestJSONRequestBody
+}
+
+type SendFriendRequestResponseObject interface {
+	VisitSendFriendRequestResponse(w http.ResponseWriter) error
+}
+
+type SendFriendRequest200JSONResponse RelationshipChange
+
+func (response SendFriendRequest200JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SendFriendRequest400JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SendFriendRequest401JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest403JSONResponse Error
+
+func (response SendFriendRequest403JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest404JSONResponse Error
+
+func (response SendFriendRequest404JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest409JSONResponse Error
+
+func (response SendFriendRequest409JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest422JSONResponse Error
+
+func (response SendFriendRequest422JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendFriendRequest429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SendFriendRequest429JSONResponse) VisitSendFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteFriendRequestRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type DeleteFriendRequestResponseObject interface {
+	VisitDeleteFriendRequestResponse(w http.ResponseWriter) error
+}
+
+type DeleteFriendRequest204Response struct {
+}
+
+func (response DeleteFriendRequest204Response) VisitDeleteFriendRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteFriendRequest400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteFriendRequest400JSONResponse) VisitDeleteFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteFriendRequest401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteFriendRequest401JSONResponse) VisitDeleteFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteFriendRequest404JSONResponse Error
+
+func (response DeleteFriendRequest404JSONResponse) VisitDeleteFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptFriendRequestRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type AcceptFriendRequestResponseObject interface {
+	VisitAcceptFriendRequestResponse(w http.ResponseWriter) error
+}
+
+type AcceptFriendRequest204Response struct {
+}
+
+func (response AcceptFriendRequest204Response) VisitAcceptFriendRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AcceptFriendRequest400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AcceptFriendRequest400JSONResponse) VisitAcceptFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptFriendRequest401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AcceptFriendRequest401JSONResponse) VisitAcceptFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptFriendRequest404JSONResponse Error
+
+func (response AcceptFriendRequest404JSONResponse) VisitAcceptFriendRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveFriendRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type RemoveFriendResponseObject interface {
+	VisitRemoveFriendResponse(w http.ResponseWriter) error
+}
+
+type RemoveFriend204Response struct {
+}
+
+func (response RemoveFriend204Response) VisitRemoveFriendResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveFriend400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RemoveFriend400JSONResponse) VisitRemoveFriendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveFriend401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveFriend401JSONResponse) VisitRemoveFriendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveFriend404JSONResponse Error
+
+func (response RemoveFriend404JSONResponse) VisitRemoveFriendResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PublishIdentityRequestObject struct {
 	Body *PublishIdentityJSONRequestBody
 }
@@ -6062,6 +6932,85 @@ func (response UploadKeyPackages422JSONResponse) VisitUploadKeyPackagesResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPrivacySettingsRequestObject struct {
+}
+
+type GetPrivacySettingsResponseObject interface {
+	VisitGetPrivacySettingsResponse(w http.ResponseWriter) error
+}
+
+type GetPrivacySettings200JSONResponse PrivacySettings
+
+func (response GetPrivacySettings200JSONResponse) VisitGetPrivacySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPrivacySettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetPrivacySettings401JSONResponse) VisitGetPrivacySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePrivacySettingsRequestObject struct {
+	Body *UpdatePrivacySettingsJSONRequestBody
+}
+
+type UpdatePrivacySettingsResponseObject interface {
+	VisitUpdatePrivacySettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdatePrivacySettings204Response struct {
+}
+
+func (response UpdatePrivacySettings204Response) VisitUpdatePrivacySettingsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdatePrivacySettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdatePrivacySettings400JSONResponse) VisitUpdatePrivacySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePrivacySettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdatePrivacySettings401JSONResponse) VisitUpdatePrivacySettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -6796,6 +7745,30 @@ type StrictServerInterface interface {
 	// GetAvatar A profile picture
 	// (GET /api/v1/avatars/{avatarId})
 	GetAvatar(ctx context.Context, request GetAvatarRequestObject) (GetAvatarResponseObject, error)
+	// ListBlocked Users you blocked
+	// (GET /api/v1/blocks)
+	ListBlocked(ctx context.Context, request ListBlockedRequestObject) (ListBlockedResponseObject, error)
+	// UnblockUser Unblock a user
+	// (DELETE /api/v1/blocks/{userId})
+	UnblockUser(ctx context.Context, request UnblockUserRequestObject) (UnblockUserResponseObject, error)
+	// BlockUser Block a user
+	// (PUT /api/v1/blocks/{userId})
+	BlockUser(ctx context.Context, request BlockUserRequestObject) (BlockUserResponseObject, error)
+	// ListFriends This user's friends and pending friend requests
+	// (GET /api/v1/friends)
+	ListFriends(ctx context.Context, request ListFriendsRequestObject) (ListFriendsResponseObject, error)
+	// SendFriendRequest Send a friend request
+	// (POST /api/v1/friends/requests)
+	SendFriendRequest(ctx context.Context, request SendFriendRequestRequestObject) (SendFriendRequestResponseObject, error)
+	// DeleteFriendRequest Decline a request you received, or cancel one you sent
+	// (DELETE /api/v1/friends/requests/{userId})
+	DeleteFriendRequest(ctx context.Context, request DeleteFriendRequestRequestObject) (DeleteFriendRequestResponseObject, error)
+	// AcceptFriendRequest Accept a friend request
+	// (POST /api/v1/friends/requests/{userId}/accept)
+	AcceptFriendRequest(ctx context.Context, request AcceptFriendRequestRequestObject) (AcceptFriendRequestResponseObject, error)
+	// RemoveFriend Remove a friend
+	// (DELETE /api/v1/friends/{userId})
+	RemoveFriend(ctx context.Context, request RemoveFriendRequestObject) (RemoveFriendResponseObject, error)
 	// PublishIdentity Publish this user's identity keys
 	// (PUT /api/v1/identity)
 	PublishIdentity(ctx context.Context, request PublishIdentityRequestObject) (PublishIdentityResponseObject, error)
@@ -6826,6 +7799,12 @@ type StrictServerInterface interface {
 	// UploadKeyPackages Store key packages for this device
 	// (POST /api/v1/key-packages)
 	UploadKeyPackages(ctx context.Context, request UploadKeyPackagesRequestObject) (UploadKeyPackagesResponseObject, error)
+	// GetPrivacySettings Who may DM you or send you friend requests
+	// (GET /api/v1/privacy)
+	GetPrivacySettings(ctx context.Context, request GetPrivacySettingsRequestObject) (GetPrivacySettingsResponseObject, error)
+	// UpdatePrivacySettings Change who may DM you or send you friend requests
+	// (PUT /api/v1/privacy)
+	UpdatePrivacySettings(ctx context.Context, request UpdatePrivacySettingsRequestObject) (UpdatePrivacySettingsResponseObject, error)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
@@ -8192,6 +9171,215 @@ func (sh *strictHandler) GetAvatar(w http.ResponseWriter, r *http.Request, avata
 	}
 }
 
+// ListBlocked operation middleware
+func (sh *strictHandler) ListBlocked(w http.ResponseWriter, r *http.Request) {
+	var request ListBlockedRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBlocked(ctx, request.(ListBlockedRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBlocked")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBlockedResponseObject); ok {
+		if err := validResponse.VisitListBlockedResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnblockUser operation middleware
+func (sh *strictHandler) UnblockUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request UnblockUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnblockUser(ctx, request.(UnblockUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnblockUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnblockUserResponseObject); ok {
+		if err := validResponse.VisitUnblockUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BlockUser operation middleware
+func (sh *strictHandler) BlockUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request BlockUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BlockUser(ctx, request.(BlockUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BlockUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BlockUserResponseObject); ok {
+		if err := validResponse.VisitBlockUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFriends operation middleware
+func (sh *strictHandler) ListFriends(w http.ResponseWriter, r *http.Request) {
+	var request ListFriendsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListFriends(ctx, request.(ListFriendsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFriends")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListFriendsResponseObject); ok {
+		if err := validResponse.VisitListFriendsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SendFriendRequest operation middleware
+func (sh *strictHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request) {
+	var request SendFriendRequestRequestObject
+
+	var body SendFriendRequestJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendFriendRequest(ctx, request.(SendFriendRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendFriendRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendFriendRequestResponseObject); ok {
+		if err := validResponse.VisitSendFriendRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteFriendRequest operation middleware
+func (sh *strictHandler) DeleteFriendRequest(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request DeleteFriendRequestRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFriendRequest(ctx, request.(DeleteFriendRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFriendRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteFriendRequestResponseObject); ok {
+		if err := validResponse.VisitDeleteFriendRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptFriendRequest operation middleware
+func (sh *strictHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request AcceptFriendRequestRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptFriendRequest(ctx, request.(AcceptFriendRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptFriendRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptFriendRequestResponseObject); ok {
+		if err := validResponse.VisitAcceptFriendRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveFriend operation middleware
+func (sh *strictHandler) RemoveFriend(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request RemoveFriendRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveFriend(ctx, request.(RemoveFriendRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveFriend")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveFriendResponseObject); ok {
+		if err := validResponse.VisitRemoveFriendResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // PublishIdentity operation middleware
 func (sh *strictHandler) PublishIdentity(w http.ResponseWriter, r *http.Request) {
 	var request PublishIdentityRequestObject
@@ -8463,6 +9651,61 @@ func (sh *strictHandler) UploadKeyPackages(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UploadKeyPackagesResponseObject); ok {
 		if err := validResponse.VisitUploadKeyPackagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPrivacySettings operation middleware
+func (sh *strictHandler) GetPrivacySettings(w http.ResponseWriter, r *http.Request) {
+	var request GetPrivacySettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPrivacySettings(ctx, request.(GetPrivacySettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPrivacySettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPrivacySettingsResponseObject); ok {
+		if err := validResponse.VisitGetPrivacySettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePrivacySettings operation middleware
+func (sh *strictHandler) UpdatePrivacySettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdatePrivacySettingsRequestObject
+
+	var body UpdatePrivacySettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePrivacySettings(ctx, request.(UpdatePrivacySettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePrivacySettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePrivacySettingsResponseObject); ok {
+		if err := validResponse.VisitUpdatePrivacySettingsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

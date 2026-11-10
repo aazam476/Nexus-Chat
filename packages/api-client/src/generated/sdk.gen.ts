@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { AcceptFriendRequestData, AcceptFriendRequestErrors, AcceptFriendRequestResponses, BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, BlockUserData, BlockUserErrors, BlockUserResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteFriendRequestData, DeleteFriendRequestErrors, DeleteFriendRequestResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetPrivacySettingsData, GetPrivacySettingsErrors, GetPrivacySettingsResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListBlockedData, ListBlockedErrors, ListBlockedResponses, ListFriendsData, ListFriendsErrors, ListFriendsResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveFriendData, RemoveFriendErrors, RemoveFriendResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendFriendRequestData, SendFriendRequestErrors, SendFriendRequestResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnblockUserData, UnblockUserErrors, UnblockUserResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdatePrivacySettingsData, UpdatePrivacySettingsErrors, UpdatePrivacySettingsResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -834,6 +834,115 @@ export const getBackupBlob = <ThrowOnError extends boolean = false>(options: Opt
 export const putBackupBlob = <ThrowOnError extends boolean = false>(options: Options<PutBackupBlobData, ThrowOnError>): RequestResult<PutBackupBlobResponses, PutBackupBlobErrors, ThrowOnError> => (options.client ?? client).put<PutBackupBlobResponses, PutBackupBlobErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/key-backup/blobs/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * This user's friends and pending friend requests
+ */
+export const listFriends = <ThrowOnError extends boolean = false>(options?: Options<ListFriendsData, ThrowOnError>): RequestResult<ListFriendsResponses, ListFriendsErrors, ThrowOnError> => (options?.client ?? client).get<ListFriendsResponses, ListFriendsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/friends',
+    ...options
+});
+
+/**
+ * Send a friend request
+ *
+ * Sends a request to the user with this username. If they had already
+ * sent one to you, you become friends instead. Blocks in either
+ * direction and the recipient's privacy setting both answer
+ * `friend_request_not_allowed`, so a block is not revealed.
+ *
+ */
+export const sendFriendRequest = <ThrowOnError extends boolean = false>(options: Options<SendFriendRequestData, ThrowOnError>): RequestResult<SendFriendRequestResponses, SendFriendRequestErrors, ThrowOnError> => (options.client ?? client).post<SendFriendRequestResponses, SendFriendRequestErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/friends/requests',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Accept a friend request
+ */
+export const acceptFriendRequest = <ThrowOnError extends boolean = false>(options: Options<AcceptFriendRequestData, ThrowOnError>): RequestResult<AcceptFriendRequestResponses, AcceptFriendRequestErrors, ThrowOnError> => (options.client ?? client).post<AcceptFriendRequestResponses, AcceptFriendRequestErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/friends/requests/{userId}/accept',
+    ...options
+});
+
+/**
+ * Decline a request you received, or cancel one you sent
+ */
+export const deleteFriendRequest = <ThrowOnError extends boolean = false>(options: Options<DeleteFriendRequestData, ThrowOnError>): RequestResult<DeleteFriendRequestResponses, DeleteFriendRequestErrors, ThrowOnError> => (options.client ?? client).delete<DeleteFriendRequestResponses, DeleteFriendRequestErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/friends/requests/{userId}',
+    ...options
+});
+
+/**
+ * Remove a friend
+ */
+export const removeFriend = <ThrowOnError extends boolean = false>(options: Options<RemoveFriendData, ThrowOnError>): RequestResult<RemoveFriendResponses, RemoveFriendErrors, ThrowOnError> => (options.client ?? client).delete<RemoveFriendResponses, RemoveFriendErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/friends/{userId}',
+    ...options
+});
+
+/**
+ * Users you blocked
+ */
+export const listBlocked = <ThrowOnError extends boolean = false>(options?: Options<ListBlockedData, ThrowOnError>): RequestResult<ListBlockedResponses, ListBlockedErrors, ThrowOnError> => (options?.client ?? client).get<ListBlockedResponses, ListBlockedErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/blocks',
+    ...options
+});
+
+/**
+ * Unblock a user
+ */
+export const unblockUser = <ThrowOnError extends boolean = false>(options: Options<UnblockUserData, ThrowOnError>): RequestResult<UnblockUserResponses, UnblockUserErrors, ThrowOnError> => (options.client ?? client).delete<UnblockUserResponses, UnblockUserErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/blocks/{userId}',
+    ...options
+});
+
+/**
+ * Block a user
+ *
+ * Ends any friendship and pending request between you, and stops
+ * friend requests and DMs in both directions. Their messages are
+ * hidden on your devices. They are not told.
+ *
+ */
+export const blockUser = <ThrowOnError extends boolean = false>(options: Options<BlockUserData, ThrowOnError>): RequestResult<BlockUserResponses, BlockUserErrors, ThrowOnError> => (options.client ?? client).put<BlockUserResponses, BlockUserErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/blocks/{userId}',
+    ...options
+});
+
+/**
+ * Who may DM you or send you friend requests
+ */
+export const getPrivacySettings = <ThrowOnError extends boolean = false>(options?: Options<GetPrivacySettingsData, ThrowOnError>): RequestResult<GetPrivacySettingsResponses, GetPrivacySettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetPrivacySettingsResponses, GetPrivacySettingsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/privacy',
+    ...options
+});
+
+/**
+ * Change who may DM you or send you friend requests
+ */
+export const updatePrivacySettings = <ThrowOnError extends boolean = false>(options: Options<UpdatePrivacySettingsData, ThrowOnError>): RequestResult<UpdatePrivacySettingsResponses, UpdatePrivacySettingsErrors, ThrowOnError> => (options.client ?? client).put<UpdatePrivacySettingsResponses, UpdatePrivacySettingsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/privacy',
     ...options,
     headers: {
         'Content-Type': 'application/json',
