@@ -215,6 +215,15 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   accepted as is; a new master key needs a recent login.
   `GET /api/v1/users/{userId}/identity` returns it. The package is under the
   100% branch and mutation gates. Pinning on first contact is client work.
+- Key-backup storage (`internal/keybackup`, migration 00012):
+  `GET /api/v1/key-backup` returns the user's salt (made on first use),
+  wrapped backup keys and blob list; `PUT`/`DELETE` on
+  `/api/v1/key-backup/wrapped-keys/{method}` turn unlock methods on and off
+  (recent login required); `/api/v1/key-backup/blobs/{name}` stores sealed
+  blobs (1 MiB each, 10,000 per user). An email password reset deletes the
+  password copy in the same statement that sets the new password. Under
+  the 100% branch and mutation gates.
+- Every request body is now capped at 16 MiB (`MaximumRequestBody`).
 - Key backup (`backup/backup.ts`): a random backup key seals named blobs
   (XChaCha20-Poly1305) and is wrapped under each unlock method: a 24-word
   recovery phrase (BIP-39, 256 bits, HKDF with the user's salt), the
@@ -234,6 +243,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   imported WebCrypto keys, and measure on a mid-range Android phone.
 
 ## Known issues
+
+- **Left out by the maintainer's decision (November 2026):** publishing to
+  the App Store, Mac App Store, Google Play, Microsoft Store and Flathub;
+  deploying the hosted official push relay; signing images with cosign; and
+  running Maestro on the iOS Simulator (needs macOS runners). The build
+  pipelines are written so these can be switched on with the publisher's
+  accounts and keys, but they are not run.
 
 - Moderate and low `pnpm audit` findings remain in development-only tools
   (`glob`, `minimatch`, `deepmerge`); see

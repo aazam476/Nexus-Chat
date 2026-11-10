@@ -124,6 +124,27 @@ func (e SmtpSecurity) Valid() bool {
 	}
 }
 
+// Defines values for UnlockMethod.
+const (
+	UnlockMethodPasskey        UnlockMethod = "passkey"
+	UnlockMethodPassword       UnlockMethod = "password"
+	UnlockMethodRecoveryPhrase UnlockMethod = "recovery-phrase"
+)
+
+// Valid indicates whether the value is a known member of the UnlockMethod enum.
+func (e UnlockMethod) Valid() bool {
+	switch e {
+	case UnlockMethodPasskey:
+		return true
+	case UnlockMethodPassword:
+		return true
+	case UnlockMethodRecoveryPhrase:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserStatus.
 const (
 	UserStatusDnd       UserStatus = "dnd"
@@ -171,6 +192,21 @@ type Authenticator struct {
 	CreatedAt time.Time          `json:"createdAt"`
 	Id        openapi_types.UUID `json:"id"`
 	Name      string             `json:"name"`
+}
+
+// BackupBlob defines model for BackupBlob.
+type BackupBlob struct {
+	// Data Sealed with the backup key, at most 1 MiB.
+	Data []byte `json:"data"`
+}
+
+// BackupBlobInfo defines model for BackupBlobInfo.
+type BackupBlobInfo struct {
+	Name string `json:"name"`
+
+	// Size Bytes.
+	Size      int32     `json:"size"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // BackupCodes defines model for BackupCodes.
@@ -371,6 +407,15 @@ type Invite struct {
 	Id        openapi_types.UUID `json:"id"`
 	MaxUses   *int32             `json:"maxUses,omitempty"`
 	Uses      int32              `json:"uses"`
+}
+
+// KeyBackup defines model for KeyBackup.
+type KeyBackup struct {
+	Blobs []BackupBlobInfo `json:"blobs"`
+
+	// Salt 16 random bytes, the salt for the recovery-phrase and passkey wrapping keys.
+	Salt        []byte             `json:"salt"`
+	WrappedKeys []WrappedBackupKey `json:"wrappedKeys"`
 }
 
 // KeyPackageStock defines model for KeyPackageStock.
@@ -647,6 +692,9 @@ type TotpEnrollment struct {
 	Secret string `json:"secret"`
 }
 
+// UnlockMethod How a wrapped copy of the backup key is unlocked (docs/e2ee-design.md §5).
+type UnlockMethod string
+
 // UpdateOidcProviderRequest defines model for UpdateOidcProviderRequest.
 type UpdateOidcProviderRequest struct {
 	AllowSignup bool   `json:"allowSignup"`
@@ -746,6 +794,24 @@ type WebAuthnRegistrationRequest struct {
 	// Kind A passkey replaces the password; a security key is a second factor after it.
 	Kind WebAuthnKind `json:"kind"`
 	Name string       `json:"name"`
+}
+
+// WrappedBackupKey defines model for WrappedBackupKey.
+type WrappedBackupKey struct {
+	// Method How a wrapped copy of the backup key is unlocked (docs/e2ee-design.md §5).
+	Method UnlockMethod `json:"method"`
+
+	// Parameters What the client needs to derive the key again, e.g. Argon2id settings (at most 1 KiB).
+	Parameters *[]byte `json:"parameters,omitempty"`
+
+	// WrappedKey The backup key sealed under this method's key (at most 256 bytes).
+	WrappedKey []byte `json:"wrappedKey"`
+}
+
+// WrappedBackupKeyUpload defines model for WrappedBackupKeyUpload.
+type WrappedBackupKeyUpload struct {
+	Parameters *[]byte `json:"parameters,omitempty"`
+	WrappedKey []byte  `json:"wrappedKey"`
 }
 
 // ProviderId defines model for ProviderId.
@@ -866,6 +932,12 @@ type FinishWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationAnswer
 
 // PublishIdentityJSONRequestBody defines body for PublishIdentity for application/json ContentType.
 type PublishIdentityJSONRequestBody = PublishedIdentity
+
+// PutBackupBlobJSONRequestBody defines body for PutBackupBlob for application/json ContentType.
+type PutBackupBlobJSONRequestBody = BackupBlob
+
+// PutWrappedBackupKeyJSONRequestBody defines body for PutWrappedBackupKey for application/json ContentType.
+type PutWrappedBackupKeyJSONRequestBody = WrappedBackupKeyUpload
 
 // UploadKeyPackagesJSONRequestBody defines body for UploadKeyPackages for application/json ContentType.
 type UploadKeyPackagesJSONRequestBody = KeyPackageUpload
@@ -1025,6 +1097,24 @@ type ServerInterface interface {
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(w http.ResponseWriter, r *http.Request)
+	// GetKeyBackup This user's encrypted key backup
+	// (GET /api/v1/key-backup)
+	GetKeyBackup(w http.ResponseWriter, r *http.Request)
+	// DeleteBackupBlob Delete a backup blob
+	// (DELETE /api/v1/key-backup/blobs/{name})
+	DeleteBackupBlob(w http.ResponseWriter, r *http.Request, name string)
+	// GetBackupBlob One backup blob
+	// (GET /api/v1/key-backup/blobs/{name})
+	GetBackupBlob(w http.ResponseWriter, r *http.Request, name string)
+	// PutBackupBlob Store or replace a backup blob
+	// (PUT /api/v1/key-backup/blobs/{name})
+	PutBackupBlob(w http.ResponseWriter, r *http.Request, name string)
+	// DeleteWrappedBackupKey Turn off an unlock method
+	// (DELETE /api/v1/key-backup/wrapped-keys/{method})
+	DeleteWrappedBackupKey(w http.ResponseWriter, r *http.Request, method UnlockMethod)
+	// PutWrappedBackupKey Turn on or replace an unlock method
+	// (PUT /api/v1/key-backup/wrapped-keys/{method})
+	PutWrappedBackupKey(w http.ResponseWriter, r *http.Request, method UnlockMethod)
 	// GetKeyPackageStock How many key packages this device has stored
 	// (GET /api/v1/key-packages)
 	GetKeyPackageStock(w http.ResponseWriter, r *http.Request)
@@ -1927,6 +2017,150 @@ func (siw *ServerInterfaceWrapper) GetInstanceInfo(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetKeyBackup operation middleware
+func (siw *ServerInterfaceWrapper) GetKeyBackup(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetKeyBackup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBackupBlob operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBackupBlob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBackupBlob(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBackupBlob operation middleware
+func (siw *ServerInterfaceWrapper) GetBackupBlob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBackupBlob(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutBackupBlob operation middleware
+func (siw *ServerInterfaceWrapper) PutBackupBlob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutBackupBlob(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteWrappedBackupKey operation middleware
+func (siw *ServerInterfaceWrapper) DeleteWrappedBackupKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "method" -------------
+	var method UnlockMethod
+
+	err = runtime.BindStyledParameterWithOptions("simple", "method", r.PathValue("method"), &method, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "method", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteWrappedBackupKey(w, r, method)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutWrappedBackupKey operation middleware
+func (siw *ServerInterfaceWrapper) PutWrappedBackupKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "method" -------------
+	var method UnlockMethod
+
+	err = runtime.BindStyledParameterWithOptions("simple", "method", r.PathValue("method"), &method, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "method", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutWrappedBackupKey(w, r, method)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetKeyPackageStock operation middleware
 func (siw *ServerInterfaceWrapper) GetKeyPackageStock(w http.ResponseWriter, r *http.Request) {
 
@@ -2380,6 +2614,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/users/{userId}/key-packages/claim", wrapper.ClaimKeyPackages)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/identity", wrapper.PublishIdentity)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/users/{userId}/identity", wrapper.GetIdentity)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/key-backup", wrapper.GetKeyBackup)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/key-backup/wrapped-keys/{method}", wrapper.DeleteWrappedBackupKey)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/key-backup/wrapped-keys/{method}", wrapper.PutWrappedBackupKey)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/key-backup/blobs/{name}", wrapper.DeleteBackupBlob)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/key-backup/blobs/{name}", wrapper.GetBackupBlob)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/key-backup/blobs/{name}", wrapper.PutBackupBlob)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
@@ -5334,6 +5574,385 @@ func (response GetInstanceInfo200JSONResponse) VisitGetInstanceInfoResponse(w ht
 	return err
 }
 
+type GetKeyBackupRequestObject struct {
+}
+
+type GetKeyBackupResponseObject interface {
+	VisitGetKeyBackupResponse(w http.ResponseWriter) error
+}
+
+type GetKeyBackup200JSONResponse KeyBackup
+
+func (response GetKeyBackup200JSONResponse) VisitGetKeyBackupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKeyBackup401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetKeyBackup401JSONResponse) VisitGetKeyBackupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBackupBlobRequestObject struct {
+	Name string `json:"name"`
+}
+
+type DeleteBackupBlobResponseObject interface {
+	VisitDeleteBackupBlobResponse(w http.ResponseWriter) error
+}
+
+type DeleteBackupBlob204Response struct {
+}
+
+func (response DeleteBackupBlob204Response) VisitDeleteBackupBlobResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteBackupBlob400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteBackupBlob400JSONResponse) VisitDeleteBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBackupBlob401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteBackupBlob401JSONResponse) VisitDeleteBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBackupBlob404JSONResponse Error
+
+func (response DeleteBackupBlob404JSONResponse) VisitDeleteBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackupBlobRequestObject struct {
+	Name string `json:"name"`
+}
+
+type GetBackupBlobResponseObject interface {
+	VisitGetBackupBlobResponse(w http.ResponseWriter) error
+}
+
+type GetBackupBlob200JSONResponse BackupBlob
+
+func (response GetBackupBlob200JSONResponse) VisitGetBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackupBlob400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetBackupBlob400JSONResponse) VisitGetBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackupBlob401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetBackupBlob401JSONResponse) VisitGetBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBackupBlob404JSONResponse Error
+
+func (response GetBackupBlob404JSONResponse) VisitGetBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutBackupBlobRequestObject struct {
+	Name string `json:"name"`
+	Body *PutBackupBlobJSONRequestBody
+}
+
+type PutBackupBlobResponseObject interface {
+	VisitPutBackupBlobResponse(w http.ResponseWriter) error
+}
+
+type PutBackupBlob204Response struct {
+}
+
+func (response PutBackupBlob204Response) VisitPutBackupBlobResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PutBackupBlob400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PutBackupBlob400JSONResponse) VisitPutBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutBackupBlob401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PutBackupBlob401JSONResponse) VisitPutBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutBackupBlob409JSONResponse Error
+
+func (response PutBackupBlob409JSONResponse) VisitPutBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutBackupBlob422JSONResponse Error
+
+func (response PutBackupBlob422JSONResponse) VisitPutBackupBlobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteWrappedBackupKeyRequestObject struct {
+	Method UnlockMethod `json:"method"`
+}
+
+type DeleteWrappedBackupKeyResponseObject interface {
+	VisitDeleteWrappedBackupKeyResponse(w http.ResponseWriter) error
+}
+
+type DeleteWrappedBackupKey204Response struct {
+}
+
+func (response DeleteWrappedBackupKey204Response) VisitDeleteWrappedBackupKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteWrappedBackupKey400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteWrappedBackupKey400JSONResponse) VisitDeleteWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteWrappedBackupKey401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteWrappedBackupKey401JSONResponse) VisitDeleteWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteWrappedBackupKey403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response DeleteWrappedBackupKey403JSONResponse) VisitDeleteWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteWrappedBackupKey404JSONResponse Error
+
+func (response DeleteWrappedBackupKey404JSONResponse) VisitDeleteWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWrappedBackupKeyRequestObject struct {
+	Method UnlockMethod `json:"method"`
+	Body   *PutWrappedBackupKeyJSONRequestBody
+}
+
+type PutWrappedBackupKeyResponseObject interface {
+	VisitPutWrappedBackupKeyResponse(w http.ResponseWriter) error
+}
+
+type PutWrappedBackupKey204Response struct {
+}
+
+func (response PutWrappedBackupKey204Response) VisitPutWrappedBackupKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PutWrappedBackupKey400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PutWrappedBackupKey400JSONResponse) VisitPutWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWrappedBackupKey401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PutWrappedBackupKey401JSONResponse) VisitPutWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWrappedBackupKey403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response PutWrappedBackupKey403JSONResponse) VisitPutWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWrappedBackupKey422JSONResponse Error
+
+func (response PutWrappedBackupKey422JSONResponse) VisitPutWrappedBackupKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetKeyPackageStockRequestObject struct {
 }
 
@@ -6183,6 +6802,24 @@ type StrictServerInterface interface {
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(ctx context.Context, request GetInstanceInfoRequestObject) (GetInstanceInfoResponseObject, error)
+	// GetKeyBackup This user's encrypted key backup
+	// (GET /api/v1/key-backup)
+	GetKeyBackup(ctx context.Context, request GetKeyBackupRequestObject) (GetKeyBackupResponseObject, error)
+	// DeleteBackupBlob Delete a backup blob
+	// (DELETE /api/v1/key-backup/blobs/{name})
+	DeleteBackupBlob(ctx context.Context, request DeleteBackupBlobRequestObject) (DeleteBackupBlobResponseObject, error)
+	// GetBackupBlob One backup blob
+	// (GET /api/v1/key-backup/blobs/{name})
+	GetBackupBlob(ctx context.Context, request GetBackupBlobRequestObject) (GetBackupBlobResponseObject, error)
+	// PutBackupBlob Store or replace a backup blob
+	// (PUT /api/v1/key-backup/blobs/{name})
+	PutBackupBlob(ctx context.Context, request PutBackupBlobRequestObject) (PutBackupBlobResponseObject, error)
+	// DeleteWrappedBackupKey Turn off an unlock method
+	// (DELETE /api/v1/key-backup/wrapped-keys/{method})
+	DeleteWrappedBackupKey(ctx context.Context, request DeleteWrappedBackupKeyRequestObject) (DeleteWrappedBackupKeyResponseObject, error)
+	// PutWrappedBackupKey Turn on or replace an unlock method
+	// (PUT /api/v1/key-backup/wrapped-keys/{method})
+	PutWrappedBackupKey(ctx context.Context, request PutWrappedBackupKeyRequestObject) (PutWrappedBackupKeyResponseObject, error)
 	// GetKeyPackageStock How many key packages this device has stored
 	// (GET /api/v1/key-packages)
 	GetKeyPackageStock(ctx context.Context, request GetKeyPackageStockRequestObject) (GetKeyPackageStockResponseObject, error)
@@ -7603,6 +8240,174 @@ func (sh *strictHandler) GetInstanceInfo(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetInstanceInfoResponseObject); ok {
 		if err := validResponse.VisitGetInstanceInfoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetKeyBackup operation middleware
+func (sh *strictHandler) GetKeyBackup(w http.ResponseWriter, r *http.Request) {
+	var request GetKeyBackupRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetKeyBackup(ctx, request.(GetKeyBackupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetKeyBackup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetKeyBackupResponseObject); ok {
+		if err := validResponse.VisitGetKeyBackupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBackupBlob operation middleware
+func (sh *strictHandler) DeleteBackupBlob(w http.ResponseWriter, r *http.Request, name string) {
+	var request DeleteBackupBlobRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBackupBlob(ctx, request.(DeleteBackupBlobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBackupBlob")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteBackupBlobResponseObject); ok {
+		if err := validResponse.VisitDeleteBackupBlobResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBackupBlob operation middleware
+func (sh *strictHandler) GetBackupBlob(w http.ResponseWriter, r *http.Request, name string) {
+	var request GetBackupBlobRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBackupBlob(ctx, request.(GetBackupBlobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBackupBlob")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBackupBlobResponseObject); ok {
+		if err := validResponse.VisitGetBackupBlobResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutBackupBlob operation middleware
+func (sh *strictHandler) PutBackupBlob(w http.ResponseWriter, r *http.Request, name string) {
+	var request PutBackupBlobRequestObject
+
+	request.Name = name
+
+	var body PutBackupBlobJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutBackupBlob(ctx, request.(PutBackupBlobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutBackupBlob")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutBackupBlobResponseObject); ok {
+		if err := validResponse.VisitPutBackupBlobResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteWrappedBackupKey operation middleware
+func (sh *strictHandler) DeleteWrappedBackupKey(w http.ResponseWriter, r *http.Request, method UnlockMethod) {
+	var request DeleteWrappedBackupKeyRequestObject
+
+	request.Method = method
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteWrappedBackupKey(ctx, request.(DeleteWrappedBackupKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteWrappedBackupKey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteWrappedBackupKeyResponseObject); ok {
+		if err := validResponse.VisitDeleteWrappedBackupKeyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutWrappedBackupKey operation middleware
+func (sh *strictHandler) PutWrappedBackupKey(w http.ResponseWriter, r *http.Request, method UnlockMethod) {
+	var request PutWrappedBackupKeyRequestObject
+
+	request.Method = method
+
+	var body PutWrappedBackupKeyJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutWrappedBackupKey(ctx, request.(PutWrappedBackupKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutWrappedBackupKey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutWrappedBackupKeyResponseObject); ok {
+		if err := validResponse.VisitPutWrappedBackupKeyResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

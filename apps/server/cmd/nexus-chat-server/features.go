@@ -3,8 +3,11 @@ package main
 import (
 	"net/http"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/httpserver"
 	"github.com/aazam476/nexus-chat/apps/server/internal/identities"
 	identitiesstore "github.com/aazam476/nexus-chat/apps/server/internal/identities/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/keybackup"
+	keybackupstore "github.com/aazam476/nexus-chat/apps/server/internal/keybackup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	keypackagesstore "github.com/aazam476/nexus-chat/apps/server/internal/keypackages/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
@@ -34,4 +37,17 @@ func (app *application) newKeyPackagesHandler() *keypackages.Handler {
 // newIdentitiesHandler builds the published-identity directory.
 func (app *application) newIdentitiesHandler() *identities.Handler {
 	return identities.NewHandler(identities.NewService(identitiesstore.New(app.pool), clock.System{}))
+}
+
+// newKeyBackupHandler builds the encrypted key-backup store.
+func (app *application) newKeyBackupHandler() *keybackup.Handler {
+	return keybackup.NewHandler(keybackup.NewService(keybackupstore.New(app.pool), clock.System{}))
+}
+
+// addEncryptionFeatures adds what end-to-end encryption needs from the
+// server: the key-package directory, published identities and the key backup.
+func (app *application) addEncryptionFeatures(features *httpserver.Features) {
+	features.KeyPackages = app.newKeyPackagesHandler()
+	features.Identities = app.newIdentitiesHandler()
+	features.KeyBackup = app.newKeyBackupHandler()
 }

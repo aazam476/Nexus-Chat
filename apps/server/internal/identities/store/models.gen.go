@@ -40,6 +40,27 @@ type InstanceSetting struct {
 	UpdatedAt time.Time
 }
 
+type KeyBackup struct {
+	UserID    uuid.UUID
+	Salt      []byte
+	CreatedAt time.Time
+}
+
+type KeyBackupBlob struct {
+	UserID    uuid.UUID
+	Name      string
+	Data      []byte
+	UpdatedAt time.Time
+}
+
+type KeyBackupWrappedKey struct {
+	UserID     uuid.UUID
+	Method     string
+	WrappedKey []byte
+	Parameters []byte
+	UpdatedAt  time.Time
+}
+
 type KeyPackage struct {
 	ID         int64
 	SessionID  uuid.UUID

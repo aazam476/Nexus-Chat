@@ -1612,6 +1612,169 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/key-backup:
+    get:
+      operationId: getKeyBackup
+      summary: This user's encrypted key backup
+      description: |
+        The salt for deriving wrapping keys (created on first use), the
+        backup key wrapped under each unlock method the user turned on, and
+        the names and sizes of the blobs (docs/e2ee-design.md §5). All of it
+        is encrypted on the client; the server cannot open it.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The backup.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyBackup"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/key-backup/wrapped-keys/{method}:
+    parameters:
+      - name: method
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UnlockMethod"
+    put:
+      operationId: putWrappedBackupKey
+      summary: Turn on or replace an unlock method
+      description: |
+        Stores the backup key wrapped under this method's key. Needs a
+        recent login, because it changes who can open the backup.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WrappedBackupKeyUpload"
+      responses:
+        "204":
+          description: Stored.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
+        "422":
+          description: The wrapped key or its parameters are too large or empty (`invalid_wrapped_key`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteWrappedBackupKey
+      summary: Turn off an unlock method
+      description: Needs a recent login.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Turned off.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
+        "404":
+          description: This method is not turned on (`backup_item_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/key-backup/blobs/{name}:
+    parameters:
+      - name: name
+        in: path
+        required: true
+        description: Lowercase letters, digits and `_.-`, up to 128, e.g. `identity` or `history.<group>.2026-11`.
+        schema:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_.-]{0,127}$"
+    get:
+      operationId: getBackupBlob
+      summary: One backup blob
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The blob, sealed with the backup key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupBlob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No blob by that name (`backup_item_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: putBackupBlob
+      summary: Store or replace a backup blob
+      description: At most 1 MiB each and 10,000 per user.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BackupBlob"
+      responses:
+        "204":
+          description: Stored.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: The backup already holds 10,000 blobs (`backup_full`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: The blob is empty or larger than 1 MiB (`invalid_backup_blob`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteBackupBlob
+      summary: Delete a backup blob
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No blob by that name (`backup_item_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/avatars/{avatarId}:
     get:
       operationId: getAvatar
@@ -2208,6 +2371,71 @@ components:
             The master key's signature (64 bytes) over the statement
             `nexus-chat self-signing key v1` and the self-signing key, each
             preceded by its length as 4 bytes, big-endian.
+    UnlockMethod:
+      type: string
+      enum: [recovery-phrase, password, passkey]
+      description: How a wrapped copy of the backup key is unlocked (docs/e2ee-design.md §5).
+    WrappedBackupKey:
+      type: object
+      required: [method, wrappedKey]
+      properties:
+        method:
+          $ref: "#/components/schemas/UnlockMethod"
+        wrappedKey:
+          type: string
+          format: byte
+          description: The backup key sealed under this method's key (at most 256 bytes).
+        parameters:
+          type: string
+          format: byte
+          description: What the client needs to derive the key again, e.g. Argon2id settings (at most 1 KiB).
+    WrappedBackupKeyUpload:
+      type: object
+      required: [wrappedKey]
+      properties:
+        wrappedKey:
+          type: string
+          format: byte
+        parameters:
+          type: string
+          format: byte
+    BackupBlobInfo:
+      type: object
+      required: [name, size, updatedAt]
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+          format: int32
+          description: Bytes.
+        updatedAt:
+          type: string
+          format: date-time
+    KeyBackup:
+      type: object
+      required: [salt, wrappedKeys, blobs]
+      properties:
+        salt:
+          type: string
+          format: byte
+          description: 16 random bytes, the salt for the recovery-phrase and passkey wrapping keys.
+        wrappedKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/WrappedBackupKey"
+        blobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/BackupBlobInfo"
+    BackupBlob:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+          format: byte
+          description: Sealed with the backup key, at most 1 MiB.
     KeyPackageStock:
       type: object
       additionalProperties: false

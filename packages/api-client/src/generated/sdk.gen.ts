@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLivenessData, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetStatusData, SetStatusErrors, SetStatusResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -763,6 +763,82 @@ export const getIdentity = <ThrowOnError extends boolean = false>(options: Optio
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/users/{userId}/identity',
     ...options
+});
+
+/**
+ * This user's encrypted key backup
+ *
+ * The salt for deriving wrapping keys (created on first use), the
+ * backup key wrapped under each unlock method the user turned on, and
+ * the names and sizes of the blobs (docs/e2ee-design.md §5). All of it
+ * is encrypted on the client; the server cannot open it.
+ *
+ */
+export const getKeyBackup = <ThrowOnError extends boolean = false>(options?: Options<GetKeyBackupData, ThrowOnError>): RequestResult<GetKeyBackupResponses, GetKeyBackupErrors, ThrowOnError> => (options?.client ?? client).get<GetKeyBackupResponses, GetKeyBackupErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-backup',
+    ...options
+});
+
+/**
+ * Turn off an unlock method
+ *
+ * Needs a recent login.
+ */
+export const deleteWrappedBackupKey = <ThrowOnError extends boolean = false>(options: Options<DeleteWrappedBackupKeyData, ThrowOnError>): RequestResult<DeleteWrappedBackupKeyResponses, DeleteWrappedBackupKeyErrors, ThrowOnError> => (options.client ?? client).delete<DeleteWrappedBackupKeyResponses, DeleteWrappedBackupKeyErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-backup/wrapped-keys/{method}',
+    ...options
+});
+
+/**
+ * Turn on or replace an unlock method
+ *
+ * Stores the backup key wrapped under this method's key. Needs a
+ * recent login, because it changes who can open the backup.
+ *
+ */
+export const putWrappedBackupKey = <ThrowOnError extends boolean = false>(options: Options<PutWrappedBackupKeyData, ThrowOnError>): RequestResult<PutWrappedBackupKeyResponses, PutWrappedBackupKeyErrors, ThrowOnError> => (options.client ?? client).put<PutWrappedBackupKeyResponses, PutWrappedBackupKeyErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-backup/wrapped-keys/{method}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a backup blob
+ */
+export const deleteBackupBlob = <ThrowOnError extends boolean = false>(options: Options<DeleteBackupBlobData, ThrowOnError>): RequestResult<DeleteBackupBlobResponses, DeleteBackupBlobErrors, ThrowOnError> => (options.client ?? client).delete<DeleteBackupBlobResponses, DeleteBackupBlobErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-backup/blobs/{name}',
+    ...options
+});
+
+/**
+ * One backup blob
+ */
+export const getBackupBlob = <ThrowOnError extends boolean = false>(options: Options<GetBackupBlobData, ThrowOnError>): RequestResult<GetBackupBlobResponses, GetBackupBlobErrors, ThrowOnError> => (options.client ?? client).get<GetBackupBlobResponses, GetBackupBlobErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-backup/blobs/{name}',
+    ...options
+});
+
+/**
+ * Store or replace a backup blob
+ *
+ * At most 1 MiB each and 10,000 per user.
+ */
+export const putBackupBlob = <ThrowOnError extends boolean = false>(options: Options<PutBackupBlobData, ThrowOnError>): RequestResult<PutBackupBlobResponses, PutBackupBlobErrors, ThrowOnError> => (options.client ?? client).put<PutBackupBlobResponses, PutBackupBlobErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/key-backup/blobs/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

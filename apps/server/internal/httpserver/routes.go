@@ -15,6 +15,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/health"
 	"github.com/aazam476/nexus-chat/apps/server/internal/identities"
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
+	"github.com/aazam476/nexus-chat/apps/server/internal/keybackup"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
@@ -30,6 +31,7 @@ type Features struct {
 	Health       *health.Handler
 	Identities   *identities.Handler
 	Instance     *instanceconfig.Handler
+	KeyBackup    *keybackup.Handler
 	KeyPackages  *keypackages.Handler
 	OIDC         *oidc.Handler
 	Profiles     *profiles.Handler
@@ -60,6 +62,7 @@ type (
 	healthHandler       = health.Handler
 	identitiesHandler   = identities.Handler
 	instanceHandler     = instanceconfig.Handler
+	keyBackupHandler    = keybackup.Handler
 	keyPackagesHandler  = keypackages.Handler
 	oidcHandler         = oidc.Handler
 	profilesHandler     = profiles.Handler
@@ -77,6 +80,7 @@ type handlers struct {
 	*healthHandler
 	*identitiesHandler
 	*instanceHandler
+	*keyBackupHandler
 	*keyPackagesHandler
 	*oidcHandler
 	*profilesHandler
@@ -93,7 +97,8 @@ func NewHandler(features Features, options Options) http.Handler {
 	strict := api.NewStrictHandlerWithOptions(
 		handlers{
 			accountsHandler: features.Accounts, adminHandler: features.Admin, authHandler: features.Auth,
-			healthHandler: features.Health, identitiesHandler: features.Identities, instanceHandler: features.Instance, keyPackagesHandler: features.KeyPackages,
+			healthHandler: features.Health, identitiesHandler: features.Identities, instanceHandler: features.Instance, keyBackupHandler: features.KeyBackup,
+			keyPackagesHandler:  features.KeyPackages,
 			oidcHandler:         features.OIDC,
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
@@ -111,7 +116,7 @@ func NewHandler(features Features, options Options) http.Handler {
 		mux.Handle("GET /", options.WebClient)
 	}
 	routes := api.HandlerFromMux(strict, mux)
-	withMiddleware := clientip.Middleware(options.TrustedProxies, securityHeaders(allowCrossOrigin(routes)))
+	withMiddleware := clientip.Middleware(options.TrustedProxies, securityHeaders(allowCrossOrigin(limitRequestBodies(routes))))
 	return recoverPanics(logRequests(withMiddleware, options.Logger), options.Logger)
 }
 

@@ -96,3 +96,10 @@ sql:
       go:
         <<: *go-options
         out: internal/identities/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/keybackup/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/keybackup/store

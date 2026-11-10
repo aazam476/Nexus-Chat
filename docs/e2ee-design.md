@@ -198,7 +198,8 @@ same treatment.
 
 ## 5. Key backup and recovery
 
-The backup is a set of encrypted blobs on the user's home instance:
+The backup is a set of encrypted blobs on the user's home instance
+(`/api/v1/key-backup`, `internal/keybackup`):
 
 ```
 backupKey: 256-bit random key, created at signup

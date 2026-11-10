@@ -273,6 +273,53 @@ export type PublishedIdentity = {
     selfSigningSignature: string;
 };
 
+/**
+ * How a wrapped copy of the backup key is unlocked (docs/e2ee-design.md §5).
+ */
+export type UnlockMethod = 'recovery-phrase' | 'password' | 'passkey';
+
+export type WrappedBackupKey = {
+    method: UnlockMethod;
+    /**
+     * The backup key sealed under this method's key (at most 256 bytes).
+     */
+    wrappedKey: string;
+    /**
+     * What the client needs to derive the key again, e.g. Argon2id settings (at most 1 KiB).
+     */
+    parameters?: string;
+};
+
+export type WrappedBackupKeyUpload = {
+    wrappedKey: string;
+    parameters?: string;
+};
+
+export type BackupBlobInfo = {
+    name: string;
+    /**
+     * Bytes.
+     */
+    size: number;
+    updatedAt: string;
+};
+
+export type KeyBackup = {
+    /**
+     * 16 random bytes, the salt for the recovery-phrase and passkey wrapping keys.
+     */
+    salt: string;
+    wrappedKeys: Array<WrappedBackupKey>;
+    blobs: Array<BackupBlobInfo>;
+};
+
+export type BackupBlob = {
+    /**
+     * Sealed with the backup key, at most 1 MiB.
+     */
+    data: string;
+};
+
 export type KeyPackageStock = {
     /**
      * One-time key packages stored for this device.
@@ -2485,6 +2532,233 @@ export type GetIdentityResponses = {
 };
 
 export type GetIdentityResponse = GetIdentityResponses[keyof GetIdentityResponses];
+
+export type GetKeyBackupData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/key-backup';
+};
+
+export type GetKeyBackupErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type GetKeyBackupError = GetKeyBackupErrors[keyof GetKeyBackupErrors];
+
+export type GetKeyBackupResponses = {
+    /**
+     * The backup.
+     */
+    200: KeyBackup;
+};
+
+export type GetKeyBackupResponse = GetKeyBackupResponses[keyof GetKeyBackupResponses];
+
+export type DeleteWrappedBackupKeyData = {
+    body?: never;
+    path: {
+        method: UnlockMethod;
+    };
+    query?: never;
+    url: '/api/v1/key-backup/wrapped-keys/{method}';
+};
+
+export type DeleteWrappedBackupKeyErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
+    /**
+     * This method is not turned on (`backup_item_not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteWrappedBackupKeyError = DeleteWrappedBackupKeyErrors[keyof DeleteWrappedBackupKeyErrors];
+
+export type DeleteWrappedBackupKeyResponses = {
+    /**
+     * Turned off.
+     */
+    204: void;
+};
+
+export type DeleteWrappedBackupKeyResponse = DeleteWrappedBackupKeyResponses[keyof DeleteWrappedBackupKeyResponses];
+
+export type PutWrappedBackupKeyData = {
+    body: WrappedBackupKeyUpload;
+    path: {
+        method: UnlockMethod;
+    };
+    query?: never;
+    url: '/api/v1/key-backup/wrapped-keys/{method}';
+};
+
+export type PutWrappedBackupKeyErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
+    /**
+     * The wrapped key or its parameters are too large or empty (`invalid_wrapped_key`).
+     */
+    422: Error;
+};
+
+export type PutWrappedBackupKeyError = PutWrappedBackupKeyErrors[keyof PutWrappedBackupKeyErrors];
+
+export type PutWrappedBackupKeyResponses = {
+    /**
+     * Stored.
+     */
+    204: void;
+};
+
+export type PutWrappedBackupKeyResponse = PutWrappedBackupKeyResponses[keyof PutWrappedBackupKeyResponses];
+
+export type DeleteBackupBlobData = {
+    body?: never;
+    path: {
+        /**
+         * Lowercase letters, digits and `_.-`, up to 128, e.g. `identity` or `history.<group>.2026-11`.
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/key-backup/blobs/{name}';
+};
+
+export type DeleteBackupBlobErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No blob by that name (`backup_item_not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteBackupBlobError = DeleteBackupBlobErrors[keyof DeleteBackupBlobErrors];
+
+export type DeleteBackupBlobResponses = {
+    /**
+     * Deleted.
+     */
+    204: void;
+};
+
+export type DeleteBackupBlobResponse = DeleteBackupBlobResponses[keyof DeleteBackupBlobResponses];
+
+export type GetBackupBlobData = {
+    body?: never;
+    path: {
+        /**
+         * Lowercase letters, digits and `_.-`, up to 128, e.g. `identity` or `history.<group>.2026-11`.
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/key-backup/blobs/{name}';
+};
+
+export type GetBackupBlobErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No blob by that name (`backup_item_not_found`).
+     */
+    404: Error;
+};
+
+export type GetBackupBlobError = GetBackupBlobErrors[keyof GetBackupBlobErrors];
+
+export type GetBackupBlobResponses = {
+    /**
+     * The blob, sealed with the backup key.
+     */
+    200: BackupBlob;
+};
+
+export type GetBackupBlobResponse = GetBackupBlobResponses[keyof GetBackupBlobResponses];
+
+export type PutBackupBlobData = {
+    body: BackupBlob;
+    path: {
+        /**
+         * Lowercase letters, digits and `_.-`, up to 128, e.g. `identity` or `history.<group>.2026-11`.
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/key-backup/blobs/{name}';
+};
+
+export type PutBackupBlobErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The backup already holds 10,000 blobs (`backup_full`).
+     */
+    409: Error;
+    /**
+     * The blob is empty or larger than 1 MiB (`invalid_backup_blob`).
+     */
+    422: Error;
+};
+
+export type PutBackupBlobError = PutBackupBlobErrors[keyof PutBackupBlobErrors];
+
+export type PutBackupBlobResponses = {
+    /**
+     * Stored.
+     */
+    204: void;
+};
+
+export type PutBackupBlobResponse = PutBackupBlobResponses[keyof PutBackupBlobResponses];
 
 export type GetAvatarData = {
     body?: never;

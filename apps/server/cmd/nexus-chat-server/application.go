@@ -108,8 +108,7 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 		return nil, err
 	}
 	features.Profiles = app.buildRealtimeAndProfiles(configuration)
-	features.KeyPackages = app.newKeyPackagesHandler()
-	features.Identities = app.newIdentitiesHandler()
+	app.addEncryptionFeatures(&features)
 	handler := httpserver.NewHandler(features, httpserver.Options{
 		Logger: logger, TrustedProxies: configuration.TrustedProxies, Authenticator: app.sessions, Gateway: app.gateway,
 		WebClient: webClient(configuration.WebDirectory),
