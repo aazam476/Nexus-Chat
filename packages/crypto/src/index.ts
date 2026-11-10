@@ -13,3 +13,4 @@ export * from "./identity/credential.js";
 export * from "./mls/memberKeys.js";
 export * from "./history/archive.js";
 export * from "./history/bundle.js";
+export * from "./mls/persistence.js";

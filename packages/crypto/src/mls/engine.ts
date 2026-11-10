@@ -11,6 +11,7 @@ import {
   acceptAll,
   createApplicationMessage,
   createCommit,
+  createGroupInfoWithExternalPubAndRatchetTree,
   createGroup as createMlsGroup,
   decodeMlsMessage,
   defaultCapabilities,
@@ -41,7 +42,8 @@ import { ciphersuite } from "./ciphersuite.js";
  */
 export type CredentialCheck = (identity: Uint8Array, signaturePublicKey: Uint8Array) => Promise<boolean>;
 
-function clientConfig(check: CredentialCheck | undefined): ClientConfig {
+/** The ts-mls client settings, with `check` as the credential check. */
+export function clientConfig(check: CredentialCheck | undefined): ClientConfig {
   if (check === undefined) {
     return defaultClientConfig;
   }
@@ -69,11 +71,16 @@ export interface Group {
   readonly state: ClientState;
 }
 
-/** A change to a group, to deliver to its members (and a Welcome to new ones). */
+/**
+ * A change to a group, to deliver to its members (and a Welcome to new
+ * ones), with the new epoch's GroupInfo for the delivery service, from
+ * which other devices can join by external commit.
+ */
 export interface CommitResult {
   group: Group;
   commit: Uint8Array;
   welcome: Uint8Array | undefined;
+  groupInfo: Uint8Array;
 }
 
 /** Thrown when bytes are not the MLS message the caller expected. */
@@ -153,7 +160,18 @@ async function commit(group: Group, proposals: Proposal[]): Promise<CommitResult
     result.welcome === undefined
       ? undefined
       : encode({ version: "mls10", wireformat: "mls_welcome", welcome: result.welcome });
-  return { group: { state: result.newState }, commit: encode(result.commit), welcome };
+  return {
+    group: { state: result.newState },
+    commit: encode(result.commit),
+    welcome,
+    groupInfo: await encodeGroupInfo(result.newState),
+  };
+}
+
+/** The GroupInfo for the state's epoch, with the ratchet tree and external key, as an MLSMessage. */
+export async function encodeGroupInfo(state: ClientState): Promise<Uint8Array> {
+  const groupInfo = await createGroupInfoWithExternalPubAndRatchetTree(state, [], await ciphersuite());
+  return encode({ version: "mls10", wireformat: "mls_group_info", groupInfo });
 }
 
 /** Adds the devices whose key packages are given, in one commit. */
