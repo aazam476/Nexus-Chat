@@ -24,6 +24,7 @@ import {
 import { encodePayload, type Payload } from "../payload";
 import { utf8 } from "./bytes";
 import { loadState, saveState, type EngineContext } from "./context";
+import { storeMessages } from "./history";
 import { syncConversation } from "./sync";
 
 /** Thrown when the conversation cannot be joined or sent to now. */
@@ -123,6 +124,8 @@ export async function sendPayload(
     });
     if (outcome.accepted) {
       await saveState(context, conversationId, { ...state, group: encrypted.group });
+      const sentAt = new Date().toISOString();
+      await storeMessages(context, conversationId, [{ id, sender: context.device.address, payload, sentAt }]);
       return id;
     }
     await syncConversation(context, conversationId);

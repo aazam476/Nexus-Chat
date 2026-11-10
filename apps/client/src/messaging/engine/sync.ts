@@ -26,6 +26,7 @@ import type { DeliveredMessage } from "./api";
 import { fromBase64 } from "./bytes";
 import { loadState, saveState, type EngineContext } from "./context";
 import { forgetMember, heldMembers } from "./device";
+import { storeMessages } from "./history";
 
 /** A decrypted message, ready for the conversation view. */
 export interface DecryptedMessage {
@@ -165,6 +166,7 @@ export async function syncConversation(
     state.group = await apply({ context, conversationId, out }, state.group, message);
     state.cursor = message.id;
   }
+  await storeMessages(context, conversationId, out);
   await saveState(context, conversationId, state);
   return out;
 }
