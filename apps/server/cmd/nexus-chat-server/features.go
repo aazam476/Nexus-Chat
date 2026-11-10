@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/identities"
+	identitiesstore "github.com/aazam476/nexus-chat/apps/server/internal/identities/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	keypackagesstore "github.com/aazam476/nexus-chat/apps/server/internal/keypackages/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
@@ -27,4 +29,9 @@ func (app *application) newKeyPackagesHandler() *keypackages.Handler {
 	return keypackages.NewHandler(keypackages.NewService(
 		keypackagesstore.NewStock(app.pool), ratelimit.New(ratelimit.PerMinute(60, 20), system), system,
 	))
+}
+
+// newIdentitiesHandler builds the published-identity directory.
+func (app *application) newIdentitiesHandler() *identities.Handler {
+	return identities.NewHandler(identities.NewService(identitiesstore.New(app.pool), clock.System{}))
 }

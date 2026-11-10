@@ -474,6 +474,20 @@ type ProviderFlow struct {
 	FlowId openapi_types.UUID `json:"flowId"`
 }
 
+// PublishedIdentity A user's identity keys, Ed25519, base64.
+type PublishedIdentity struct {
+	// MasterPublicKey The user master key's public half (32 bytes).
+	MasterPublicKey []byte `json:"masterPublicKey"`
+
+	// SelfSigningPublicKey The self-signing key's public half (32 bytes).
+	SelfSigningPublicKey []byte `json:"selfSigningPublicKey"`
+
+	// SelfSigningSignature The master key's signature (64 bytes) over the statement
+	// `nexus-chat self-signing key v1` and the self-signing key, each
+	// preceded by its length as 4 bytes, big-endian.
+	SelfSigningSignature []byte `json:"selfSigningSignature"`
+}
+
 // ReauthenticateRequest defines model for ReauthenticateRequest.
 type ReauthenticateRequest struct {
 	Password string `json:"password"`
@@ -850,6 +864,9 @@ type BeginWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationRequest
 // FinishWebAuthnRegistrationJSONRequestBody defines body for FinishWebAuthnRegistration for application/json ContentType.
 type FinishWebAuthnRegistrationJSONRequestBody = WebAuthnRegistrationAnswer
 
+// PublishIdentityJSONRequestBody defines body for PublishIdentity for application/json ContentType.
+type PublishIdentityJSONRequestBody = PublishedIdentity
+
 // UploadKeyPackagesJSONRequestBody defines body for UploadKeyPackages for application/json ContentType.
 type UploadKeyPackagesJSONRequestBody = KeyPackageUpload
 
@@ -1002,6 +1019,9 @@ type ServerInterface interface {
 	// GetAvatar A profile picture
 	// (GET /api/v1/avatars/{avatarId})
 	GetAvatar(w http.ResponseWriter, r *http.Request, avatarId openapi_types.UUID)
+	// PublishIdentity Publish this user's identity keys
+	// (PUT /api/v1/identity)
+	PublishIdentity(w http.ResponseWriter, r *http.Request)
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(w http.ResponseWriter, r *http.Request)
@@ -1035,6 +1055,9 @@ type ServerInterface interface {
 	// GetUserProfile Someone's public profile
 	// (GET /api/v1/users/{userId})
 	GetUserProfile(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// GetIdentity A user's published identity keys
+	// (GET /api/v1/users/{userId}/identity)
+	GetIdentity(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// ClaimKeyPackages Take a key package for each of a user's devices
 	// (POST /api/v1/users/{userId}/key-packages/claim)
 	ClaimKeyPackages(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
@@ -1876,6 +1899,20 @@ func (siw *ServerInterfaceWrapper) GetAvatar(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// PublishIdentity operation middleware
+func (siw *ServerInterfaceWrapper) PublishIdentity(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishIdentity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstanceInfo operation middleware
 func (siw *ServerInterfaceWrapper) GetInstanceInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -2078,6 +2115,32 @@ func (siw *ServerInterfaceWrapper) GetUserProfile(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetUserProfile(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIdentity operation middleware
+func (siw *ServerInterfaceWrapper) GetIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIdentity(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2315,6 +2378,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/key-packages", wrapper.GetKeyPackageStock)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/key-packages", wrapper.UploadKeyPackages)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/users/{userId}/key-packages/claim", wrapper.ClaimKeyPackages)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/identity", wrapper.PublishIdentity)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/users/{userId}/identity", wrapper.GetIdentity)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
@@ -5174,6 +5239,80 @@ func (response GetAvatar404JSONResponse) VisitGetAvatarResponse(w http.ResponseW
 	return err
 }
 
+type PublishIdentityRequestObject struct {
+	Body *PublishIdentityJSONRequestBody
+}
+
+type PublishIdentityResponseObject interface {
+	VisitPublishIdentityResponse(w http.ResponseWriter) error
+}
+
+type PublishIdentity204Response struct {
+}
+
+func (response PublishIdentity204Response) VisitPublishIdentityResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PublishIdentity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response PublishIdentity400JSONResponse) VisitPublishIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishIdentity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PublishIdentity401JSONResponse) VisitPublishIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishIdentity403JSONResponse struct {
+	ReauthenticationRequiredJSONResponse
+}
+
+func (response PublishIdentity403JSONResponse) VisitPublishIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PublishIdentity422JSONResponse Error
+
+func (response PublishIdentity422JSONResponse) VisitPublishIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetInstanceInfoRequestObject struct {
 }
 
@@ -5742,6 +5881,56 @@ func (response GetUserProfile404JSONResponse) VisitGetUserProfileResponse(w http
 	return err
 }
 
+type GetIdentityRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type GetIdentityResponseObject interface {
+	VisitGetIdentityResponse(w http.ResponseWriter) error
+}
+
+type GetIdentity200JSONResponse PublishedIdentity
+
+func (response GetIdentity200JSONResponse) VisitGetIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIdentity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetIdentity401JSONResponse) VisitGetIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIdentity404JSONResponse Error
+
+func (response GetIdentity404JSONResponse) VisitGetIdentityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ClaimKeyPackagesRequestObject struct {
 	UserId openapi_types.UUID `json:"userId"`
 }
@@ -5988,6 +6177,9 @@ type StrictServerInterface interface {
 	// GetAvatar A profile picture
 	// (GET /api/v1/avatars/{avatarId})
 	GetAvatar(ctx context.Context, request GetAvatarRequestObject) (GetAvatarResponseObject, error)
+	// PublishIdentity Publish this user's identity keys
+	// (PUT /api/v1/identity)
+	PublishIdentity(ctx context.Context, request PublishIdentityRequestObject) (PublishIdentityResponseObject, error)
 	// GetInstanceInfo Public instance information
 	// (GET /api/v1/instance)
 	GetInstanceInfo(ctx context.Context, request GetInstanceInfoRequestObject) (GetInstanceInfoResponseObject, error)
@@ -6021,6 +6213,9 @@ type StrictServerInterface interface {
 	// GetUserProfile Someone's public profile
 	// (GET /api/v1/users/{userId})
 	GetUserProfile(ctx context.Context, request GetUserProfileRequestObject) (GetUserProfileResponseObject, error)
+	// GetIdentity A user's published identity keys
+	// (GET /api/v1/users/{userId}/identity)
+	GetIdentity(ctx context.Context, request GetIdentityRequestObject) (GetIdentityResponseObject, error)
 	// ClaimKeyPackages Take a key package for each of a user's devices
 	// (POST /api/v1/users/{userId}/key-packages/claim)
 	ClaimKeyPackages(ctx context.Context, request ClaimKeyPackagesRequestObject) (ClaimKeyPackagesResponseObject, error)
@@ -7360,6 +7555,37 @@ func (sh *strictHandler) GetAvatar(w http.ResponseWriter, r *http.Request, avata
 	}
 }
 
+// PublishIdentity operation middleware
+func (sh *strictHandler) PublishIdentity(w http.ResponseWriter, r *http.Request) {
+	var request PublishIdentityRequestObject
+
+	var body PublishIdentityJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PublishIdentity(ctx, request.(PublishIdentityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PublishIdentity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PublishIdentityResponseObject); ok {
+		if err := validResponse.VisitPublishIdentityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetInstanceInfo operation middleware
 func (sh *strictHandler) GetInstanceInfo(w http.ResponseWriter, r *http.Request) {
 	var request GetInstanceInfoRequestObject
@@ -7651,6 +7877,32 @@ func (sh *strictHandler) GetUserProfile(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetUserProfileResponseObject); ok {
 		if err := validResponse.VisitGetUserProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIdentity operation middleware
+func (sh *strictHandler) GetIdentity(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request GetIdentityRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIdentity(ctx, request.(GetIdentityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIdentity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIdentityResponseObject); ok {
+		if err := validResponse.VisitGetIdentityResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

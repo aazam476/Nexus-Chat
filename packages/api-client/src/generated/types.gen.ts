@@ -252,6 +252,27 @@ export type WebAuthnCredential = {
     lastUsedAt?: string;
 };
 
+/**
+ * A user's identity keys, Ed25519, base64.
+ */
+export type PublishedIdentity = {
+    /**
+     * The user master key's public half (32 bytes).
+     */
+    masterPublicKey: string;
+    /**
+     * The self-signing key's public half (32 bytes).
+     */
+    selfSigningPublicKey: string;
+    /**
+     * The master key's signature (64 bytes) over the statement
+     * `nexus-chat self-signing key v1` and the self-signing key, each
+     * preceded by its length as 4 bytes, big-endian.
+     *
+     */
+    selfSigningSignature: string;
+};
+
 export type KeyPackageStock = {
     /**
      * One-time key packages stored for this device.
@@ -2390,6 +2411,80 @@ export type ClaimKeyPackagesResponses = {
 };
 
 export type ClaimKeyPackagesResponse = ClaimKeyPackagesResponses[keyof ClaimKeyPackagesResponses];
+
+export type PublishIdentityData = {
+    body: PublishedIdentity;
+    path?: never;
+    query?: never;
+    url: '/api/v1/identity';
+};
+
+export type PublishIdentityErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * This change needs a recent login (`reauthentication_required`): the
+     * session must have logged in, or confirmed the password with
+     * `POST /api/v1/auth/reauthenticate`, in the last 10 minutes.
+     *
+     */
+    403: Error;
+    /**
+     * A key is not 32 bytes or the signature not 64
+     * (`invalid_identity`), or the master key did not sign the
+     * self-signing key (`invalid_signature`).
+     *
+     */
+    422: Error;
+};
+
+export type PublishIdentityError = PublishIdentityErrors[keyof PublishIdentityErrors];
+
+export type PublishIdentityResponses = {
+    /**
+     * Published.
+     */
+    204: void;
+};
+
+export type PublishIdentityResponse = PublishIdentityResponses[keyof PublishIdentityResponses];
+
+export type GetIdentityData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{userId}/identity';
+};
+
+export type GetIdentityErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The user has not published an identity (`identity_not_found`).
+     */
+    404: Error;
+};
+
+export type GetIdentityError = GetIdentityErrors[keyof GetIdentityErrors];
+
+export type GetIdentityResponses = {
+    /**
+     * The identity.
+     */
+    200: PublishedIdentity;
+};
+
+export type GetIdentityResponse = GetIdentityResponses[keyof GetIdentityResponses];
 
 export type GetAvatarData = {
     body?: never;

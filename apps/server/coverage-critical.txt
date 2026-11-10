@@ -6,3 +6,4 @@
 ./internal/auth/mfa
 ./internal/auth/passkeys
 ./internal/auth/oidc
+./internal/identities

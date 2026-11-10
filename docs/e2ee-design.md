@@ -41,7 +41,9 @@ flowchart TB
 ```
 
 - **User master key (UMK).** Created at signup. Its public half is published
-  on the user's home instance and fingerprinted on the profile ("safety
+  on the user's home instance (`PUT /api/v1/identity`, which checks the
+  UMK's signature over the USK and asks for a recent login before replacing
+  the UMK) and fingerprinted on the profile ("safety
   number"). The private half lives only in the encrypted key backup (§5) and is
   loaded on a device only when that device needs to sign a new self-signing
   key.

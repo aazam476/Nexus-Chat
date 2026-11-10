@@ -1541,6 +1541,77 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /api/v1/identity:
+    put:
+      operationId: publishIdentity
+      summary: Publish this user's identity keys
+      description: |
+        Stores the public halves of the user master key and self-signing
+        key, and the master key's signature over the self-signing key
+        (docs/e2ee-design.md §2). The server checks the signature. A new
+        self-signing key under the same master key is accepted as is;
+        replacing the master key, which every contact sees as an identity
+        change, needs a recent login.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishedIdentity"
+      responses:
+        "204":
+          description: Published.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ReauthenticationRequired"
+        "422":
+          description: |
+            A key is not 32 bytes or the signature not 64
+            (`invalid_identity`), or the master key did not sign the
+            self-signing key (`invalid_signature`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/users/{userId}/identity:
+    get:
+      operationId: getIdentity
+      summary: A user's published identity keys
+      description: |
+        What a client pins on first contact and checks device certificates
+        against. A different master key than the one pinned means the user
+        started a new identity, and the client warns before trusting it.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishedIdentity"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: The user has not published an identity (`identity_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/avatars/{avatarId}:
     get:
       operationId: getAvatar
@@ -2117,6 +2188,26 @@ components:
         lastUsedAt:
           type: string
           format: date-time
+    PublishedIdentity:
+      type: object
+      description: A user's identity keys, Ed25519, base64.
+      required: [masterPublicKey, selfSigningPublicKey, selfSigningSignature]
+      properties:
+        masterPublicKey:
+          type: string
+          format: byte
+          description: The user master key's public half (32 bytes).
+        selfSigningPublicKey:
+          type: string
+          format: byte
+          description: The self-signing key's public half (32 bytes).
+        selfSigningSignature:
+          type: string
+          format: byte
+          description: |
+            The master key's signature (64 bytes) over the statement
+            `nexus-chat self-signing key v1` and the self-signing key, each
+            preceded by its length as 4 bytes, big-endian.
     KeyPackageStock:
       type: object
       additionalProperties: false

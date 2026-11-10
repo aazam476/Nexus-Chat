@@ -124,6 +124,14 @@ type User struct {
 	CustomStatusExpiresAt *time.Time
 }
 
+type UserIdentity struct {
+	UserID               uuid.UUID
+	MasterPublicKey      []byte
+	SelfSigningPublicKey []byte
+	SelfSigningSignature []byte
+	UpdatedAt            time.Time
+}
+
 type WebauthnCeremony struct {
 	ID        uuid.UUID
 	UserID    *uuid.UUID
