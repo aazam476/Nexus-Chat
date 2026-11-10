@@ -4,7 +4,7 @@
  * and account changes made on other devices.
  */
 import type { CurrentUser } from "@nexus-chat/api-client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
 import { GatewayClient, type GatewayEvent } from "./gatewayClient";
@@ -14,10 +14,17 @@ export interface OwnPresence {
   status: string | undefined;
 }
 
-/** Connects to the gateway for the logged-in user. */
-export function useGateway(token: string | undefined): OwnPresence {
+/**
+ * Connects to the gateway for the logged-in user. `onEvent` hears every
+ * event too, for features such as messaging; it may change between renders.
+ */
+export function useGateway(token: string | undefined, onEvent?: (event: GatewayEvent) => void): OwnPresence {
   const connection = useConnection();
   const [status, setStatus] = useState<string | undefined>(undefined);
+  const listenerRef = useRef(onEvent);
+  useEffect(() => {
+    listenerRef.current = onEvent;
+  });
   const { address, setUser, signOut } = connection;
   useEffect(() => {
     if (address === undefined || token === undefined) {
@@ -28,6 +35,7 @@ export function useGateway(token: string | undefined): OwnPresence {
       token,
       onEvent: (event) => {
         apply(event, { setStatus, setUser });
+        listenerRef.current?.(event);
       },
       onSignedOut: () => void signOut(),
     });

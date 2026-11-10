@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConnectionContext } from "../connection/ConnectionContext";
 import type { Connection } from "../connection/useConnectionState";
 import { createI18n } from "../i18n/i18n";
+import { GatewayProvider } from "../realtime/GatewayContext";
 import { createMemoryStorage } from "../storage/storage";
 import { fakeServer, type FakeServer } from "./fakeServer";
 
@@ -70,7 +71,9 @@ export async function renderWithApp(
     >
       <ThemeProvider preference="light">
         <I18nextProvider i18n={createI18n()}>
-          <ConnectionContext value={connection}>{ui}</ConnectionContext>
+          <ConnectionContext value={connection}>
+            <GatewayProvider>{ui}</GatewayProvider>
+          </ConnectionContext>
         </I18nextProvider>
       </ThemeProvider>
     </SafeAreaProvider>,

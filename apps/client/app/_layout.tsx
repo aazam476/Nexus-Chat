@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ConnectionProvider } from "../src/connection/ConnectionContext";
 import { createI18n } from "../src/i18n/i18n";
+import { GatewayProvider } from "../src/realtime/GatewayContext";
 import { createSecureStorage } from "../src/storage/platformStorage";
 
 /**
@@ -24,8 +25,10 @@ export default function RootLayout(): ReactNode {
         <ThemeProvider preference="system">
           <I18nextProvider i18n={i18n}>
             <ConnectionProvider storage={storage}>
-              <StatusBar style="auto" />
-              <Stack screenOptions={{ headerShown: false }} />
+              <GatewayProvider>
+                <StatusBar style="auto" />
+                <Stack screenOptions={{ headerShown: false }} />
+              </GatewayProvider>
             </ConnectionProvider>
           </I18nextProvider>
         </ThemeProvider>
