@@ -248,7 +248,12 @@ describe("the login screen", () => {
 
     const closed = fakeConnection(server);
     closed.instance = {
-      info: { name: "Closed", registrationMode: "closed", secureConnection: true },
+      info: {
+        name: "Closed",
+        registrationMode: "closed",
+        secureConnection: true,
+        signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      },
       setupRequired: false,
       domainFromEnvironment: false,
     };

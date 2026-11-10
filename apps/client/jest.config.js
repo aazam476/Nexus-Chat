@@ -7,6 +7,13 @@ module.exports = {
   // Tests live under src/: every file in app/ becomes a route.
   roots: ["<rootDir>/src"],
   setupFiles: ["<rootDir>/jest.setup.js"],
+  // packages/crypto imports "./x.js" (NodeNext); Jest must load x.ts.
+  moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
+  // The crypto libraries ship ES modules only, so Babel transforms them
+  // like React Native's own packages (pnpm keeps them under .pnpm).
+  transformIgnorePatterns: [
+    "node_modules/(?!(\\.pnpm|((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|ts-mls|@noble|@hpke|@scure|libsodium-wrappers-sumo|libsodium-sumo))",
+  ],
   // Test helpers and the root layout (only providers) are not app logic.
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",

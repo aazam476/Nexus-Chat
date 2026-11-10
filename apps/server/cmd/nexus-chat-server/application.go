@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -225,7 +226,8 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 	return httpserver.Features{
 		Accounts: accounts.NewHandler(accountQueries),
 		Admin:    admin.NewHandler(accountQueries, app.certificates, mailSettings),
-		Instance: instanceconfig.NewHandler(settings),
+		// An Ed25519 private key holds its public key in its last 32 bytes.
+		Instance: instanceconfig.NewHandler(settings, ed25519.PublicKey(app.secrets.FederationKey[ed25519.SeedSize:])),
 		OIDC:     app.newOIDCHandler(settings, logins, accountQueries, inputs.settingsBox),
 		Auth: auth.NewHandler(auth.HandlerDependencies{
 			Logins: logins, Sessions: app.sessions, Resets: resets,

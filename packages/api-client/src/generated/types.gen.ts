@@ -594,6 +594,12 @@ export type HealthCheck = {
 export type HealthState = 'ok' | 'unavailable';
 
 export type InstanceInfo = {
+    /**
+     * The instance's Ed25519 public key (32 bytes). Devices check
+     * membership directives against it (docs/e2ee-design.md §3.2).
+     *
+     */
+    signingKey: string;
     name: string;
     /**
      * The public domain, once one is set.

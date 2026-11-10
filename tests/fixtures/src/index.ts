@@ -41,6 +41,7 @@ export const demo: Dataset = {
     domain: "chat.example.com",
     registrationMode: "open",
     secureConnection: true,
+    signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   },
   user: {
     id: "0195f0e0-0000-7000-8000-000000000001",
@@ -86,6 +87,7 @@ export const worstCase: Dataset = {
     registrationMode: "open",
     // Plain HTTP, so every screen also carries the HTTPS warning.
     secureConnection: false,
+    signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   },
   user: {
     id: "0195f0e0-0000-7000-8000-000000000002",

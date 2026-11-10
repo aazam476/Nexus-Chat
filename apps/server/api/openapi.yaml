@@ -3594,8 +3594,14 @@ components:
     InstanceInfo:
       type: object
       additionalProperties: false
-      required: [name, registrationMode, secureConnection]
+      required: [name, registrationMode, secureConnection, signingKey]
       properties:
+        signingKey:
+          type: string
+          format: byte
+          description: |
+            The instance's Ed25519 public key (32 bytes). Devices check
+            membership directives against it (docs/e2ee-design.md §3.2).
         name:
           type: string
         domain:

@@ -578,6 +578,10 @@ type InstanceInfo struct {
 	// SecureConnection True when this request arrived over HTTPS (directly or via a
 	// trusted proxy) or is addressed to localhost.
 	SecureConnection bool `json:"secureConnection"`
+
+	// SigningKey The instance's Ed25519 public key (32 bytes). Devices check
+	// membership directives against it (docs/e2ee-design.md §3.2).
+	SigningKey []byte `json:"signingKey"`
 }
 
 // Invite defines model for Invite.

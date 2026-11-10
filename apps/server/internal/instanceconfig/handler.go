@@ -2,6 +2,7 @@ package instanceconfig
 
 import (
 	"context"
+	"crypto/ed25519"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
@@ -9,12 +10,15 @@ import (
 
 // Handler serves the public instance information.
 type Handler struct {
-	service *Service
+	service    *Service
+	signingKey ed25519.PublicKey
 }
 
 // NewHandler returns a Handler reading settings from service.
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+// signingKey is the instance's public key, which members' devices use to
+// check membership directives (docs/e2ee-design.md §3.2).
+func NewHandler(service *Service, signingKey ed25519.PublicKey) *Handler {
+	return &Handler{service: service, signingKey: signingKey}
 }
 
 // GetInstanceInfo answers GET /api/v1/instance. secureConnection is what
@@ -36,6 +40,7 @@ func (handler *Handler) GetInstanceInfo(ctx context.Context, _ api.GetInstanceIn
 		Name:             name,
 		RegistrationMode: api.RegistrationMode(mode),
 		SecureConnection: clientip.FromContext(ctx).SecureContext(),
+		SigningKey:       handler.signingKey,
 	}
 	if domain != "" {
 		response.Domain = &domain

@@ -221,6 +221,9 @@ importers:
       '@nexus-chat/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@nexus-chat/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@nexus-chat/ui':
         specifier: workspace:*
         version: link:../../packages/ui

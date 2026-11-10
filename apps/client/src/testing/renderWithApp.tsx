@@ -20,6 +20,7 @@ export const exampleInstance: InstanceInfo = {
   name: "Example",
   registrationMode: "open",
   secureConnection: true,
+  signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   domain: "chat.example.com",
 };
 

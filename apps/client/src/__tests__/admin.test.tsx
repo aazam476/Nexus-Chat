@@ -68,7 +68,12 @@ describe("the Admin panel", () => {
     const server = adminServer();
     const connection = fakeConnection(server, { user: admin });
     connection.instance = {
-      info: { name: "Example", registrationMode: "open", secureConnection: false },
+      info: {
+        name: "Example",
+        registrationMode: "open",
+        secureConnection: false,
+        signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      },
       setupRequired: false,
       domainFromEnvironment: false,
     };
