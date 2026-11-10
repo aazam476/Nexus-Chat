@@ -38,6 +38,8 @@ function mapStore(): KeyValueStore {
       values.delete(key);
       return Promise.resolve();
     },
+    keys: (lower, upper) =>
+      Promise.resolve([...values.keys()].filter((key) => key >= lower && key <= upper).sort()),
   };
 }
 

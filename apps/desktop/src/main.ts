@@ -4,11 +4,12 @@
  * (WebCrypto, IndexedDB) treat it as a secure context. Native features
  * (screen picker, tray, push-to-talk) arrive in milestone M11.
  */
-import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from "electron";
+import { app, BrowserWindow, ipcMain, net, protocol, safeStorage, session, shell } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { appOrigin, contentTypeFor, fileFor } from "./files";
+import { protectKey, unprotectKey } from "./keyProtection";
 import {
   contentSecurityPolicy,
   isAppAddress,
@@ -104,6 +105,26 @@ function handleProviderSignIn(): void {
   });
 }
 
+/**
+ * Database-key wrapping for the web build (keyProtection.ts). Only the
+ * app's own pages may ask; a provider's window never can.
+ */
+function handleKeyProtection(): void {
+  const fromApp = (event: Electron.IpcMainInvokeEvent): boolean => isAppAddress(event.senderFrame?.url ?? "");
+  ipcMain.handle("protect-key", (event, key: unknown) => {
+    if (!fromApp(event)) {
+      throw new Error("only the app may protect keys");
+    }
+    return protectKey(safeStorage, key);
+  });
+  ipcMain.handle("unprotect-key", (event, sealed: unknown) => {
+    if (!fromApp(event)) {
+      throw new Error("only the app may unprotect keys");
+    }
+    return unprotectKey(safeStorage, sealed);
+  });
+}
+
 void app.whenReady().then(() => {
   // No page may use the camera, microphone or notifications until the
   // features that need them ask the user (M8, M9).
@@ -112,6 +133,7 @@ void app.whenReady().then(() => {
   });
   serveWebBuild();
   handleProviderSignIn();
+  handleKeyProtection();
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

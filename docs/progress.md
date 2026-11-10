@@ -231,6 +231,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   that epoch's tree. History bundles (`history/bundle.ts`) carry a
   channel's keys to new members (ADR 0003's recommended design, built
   while the ADR is still Proposed).
+- Encrypted device database (ADR 0013, `apps/client/src/storage`): records
+  by collection and ID in SQLCipher (op-sqlite, key in the Keychain or
+  Keystore) on native, and AES-GCM-sealed IndexedDB records on web, bound
+  to their place. The desktop app wraps the data key with `safeStorage`
+  (only for the app's own pages; declined where Linux has no keyring).
 - Key backup (`backup/backup.ts`): a random backup key seals named blobs
   (XChaCha20-Poly1305) and is wrapped under each unlock method: a 24-word
   recovery phrase (BIP-39, 256 bits, HKDF with the user's salt), the
