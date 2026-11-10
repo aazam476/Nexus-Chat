@@ -205,6 +205,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   device certificates over `@user@instance/deviceId` and the device's MLS
   signature key, chain checks, self-signing key rotation, and the safety
   number. Not yet wired into MLS credential validation or the server.
+- Key backup (`backup/backup.ts`): a random backup key seals named blobs
+  (XChaCha20-Poly1305) and is wrapped under each unlock method: a 24-word
+  recovery phrase (BIP-39, 256 bits, HKDF with the user's salt), the
+  password (Argon2id, 3 passes, 256 MiB by default and never under 64 MiB,
+  then HKDF with the backup context), or a passkey's PRF output. The
+  additional data names each blob and method, so copies can't be swapped.
+  Server storage and the signup screens come next.
 - Performance at 10–2,000 devices is in ADR 0002. The M3 review kept
   ts-mls (ADR 0002 accepted): the patch now caches subtree hashes, which
   makes applying a commit about 27% cheaper at 1,000–2,000 devices, and
