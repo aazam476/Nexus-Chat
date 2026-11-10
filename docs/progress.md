@@ -286,6 +286,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   a group DM. The server reads only the cleartext MLS header
   (`mlsheader`, fuzz-tested, checked against messages from ts-mls). Devices
   hear about changes through `conversation_update` and `mls_messages`.
+- Message payloads (`apps/client/src/messaging/payload.ts`): one
+  versioned JSON object per MLS message; text (with replies, attachments
+  and a link preview), edits, deletions and reactions name the message
+  they act on. Malformed or unknown payloads are dropped, with every
+  attachment field checked.
+- The Markdown subset (`messaging/markdown.ts`): bold, italic,
+  strikethrough, spoilers, inline and fenced code, quotes, safe links
+  (http, https, mailto only) and mentions, with flanking rules so `2 * 3`
+  stays text, a nesting limit, and property tests that it never throws.
+- `packages/crypto` saves and loads group and member state for the
+  device database, joins by external commit, and returns a GroupInfo with
+  every commit.
 - Two M3 items move here, since they need the key-setup screens and the
   native crypto stack: the E2E "signup → recovery phrase → second device
   verifies", and running the RFC 9420 vectors on Hermes.
