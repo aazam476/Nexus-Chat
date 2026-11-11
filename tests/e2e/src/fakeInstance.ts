@@ -31,6 +31,12 @@ function answers(dataset: Dataset, options: FakeInstanceOptions): Record<string,
     expiresAt: "x",
     current: true,
   };
+  const key = "A".repeat(43) + "=";
+  const identity = {
+    masterPublicKey: key,
+    selfSigningPublicKey: key,
+    selfSigningSignature: "A".repeat(86) + "==",
+  };
   return {
     "GET /api/v1/instance": [200, dataset.instance],
     "GET /api/v1/setup": [
@@ -46,6 +52,10 @@ function answers(dataset: Dataset, options: FakeInstanceOptions): Record<string,
     "GET /api/v1/auth/oidc/providers": [200, dataset.providers],
     "POST /api/v1/auth/login": [200, { token: "nxs_visual", session, user: dataset.user }],
     "GET /api/v1/users/me": [200, dataset.user],
+    // The account already has an identity, so this browser is a new device
+    // that must restore it: the screens show that step.
+    "GET /api/v1/auth/sessions": [200, [session]],
+    [`GET /api/v1/users/${dataset.user.id}/identity`]: [200, identity],
     "GET /api/v1/admin/tls": [200, dataset.tls],
     "GET /api/v1/admin/smtp": [200, dataset.smtp],
   };

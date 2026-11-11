@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { open, type DB, type QueryResult, type Scalar } from "@op-engineering/op-sqlite";
 
-import { createMemoryDatabase, type LocalDatabase } from "../storage/localDatabase";
+import { createMemoryDatabase, scopedDatabase, type LocalDatabase } from "../storage/localDatabase";
 import { createSqliteDatabase, openDatabase as openNative } from "../storage/database.native";
 import { createSealedDatabase, loadDataKey, openDatabase as openWeb } from "../storage/database.web";
 import { openStore, type KeyValueStore } from "../storage/indexedDb";
@@ -62,6 +62,18 @@ function fakeSqlite(): DB {
 describe("the local database", () => {
   it("keeps records in memory where no platform file applies", async () => {
     await behavesAsADatabase(createMemoryDatabase());
+  });
+
+  it("keeps each account's records apart", async () => {
+    const shared = createMemoryDatabase();
+    const ada = scopedDatabase(shared, "ada@example.com");
+    const grace = scopedDatabase(shared, "grace@example.com");
+    await behavesAsADatabase(ada);
+    await ada.put("keys", "identity", new Uint8Array([1]));
+    expect(await grace.get("keys", "identity")).toBeUndefined();
+    expect(await grace.list("keys")).toEqual([]);
+    await grace.put("keys", "identity", new Uint8Array([2]));
+    expect(await ada.get("keys", "identity")).toEqual(new Uint8Array([1]));
   });
 
   it("stores records in SQLCipher on native, keyed from secure storage", async () => {

@@ -12,6 +12,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConnectionContext } from "../connection/ConnectionContext";
 import type { Connection } from "../connection/useConnectionState";
 import { createI18n } from "../i18n/i18n";
+import { MessagingContext } from "../messaging/MessagingContext";
+import type { Messaging, MessagingStatus } from "../messaging/useMessagingState";
 import { GatewayProvider } from "../realtime/GatewayContext";
 import { createMemoryStorage } from "../storage/storage";
 import { fakeServer, type FakeServer } from "./fakeServer";
@@ -57,10 +59,23 @@ export function fakeConnection(server: FakeServer, overrides: Partial<Connection
   };
 }
 
-/** Renders `ui` inside the app's providers with `connection`. */
+/** Messaging in the given state; `overrides` change any part of it. */
+export function fakeMessaging(
+  overrides: Partial<Messaging> & MessagingStatus = { status: "off" },
+): Messaging {
+  return {
+    restore: jest.fn().mockResolvedValue(false),
+    confirmPhrase: jest.fn().mockResolvedValue(undefined),
+    retry: jest.fn(),
+    ...overrides,
+  };
+}
+
+/** Renders `ui` inside the app's providers with `connection` and `messaging`. */
 export async function renderWithApp(
   ui: ReactElement,
   connection: Connection = fakeConnection(fakeServer()),
+  messaging: Messaging = fakeMessaging(),
 ): Promise<Connection> {
   await render(
     <SafeAreaProvider
@@ -72,7 +87,9 @@ export async function renderWithApp(
       <ThemeProvider preference="light">
         <I18nextProvider i18n={createI18n()}>
           <ConnectionContext value={connection}>
-            <GatewayProvider>{ui}</GatewayProvider>
+            <GatewayProvider>
+              <MessagingContext value={messaging}>{ui}</MessagingContext>
+            </GatewayProvider>
           </ConnectionContext>
         </I18nextProvider>
       </ThemeProvider>

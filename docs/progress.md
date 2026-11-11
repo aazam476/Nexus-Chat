@@ -295,8 +295,7 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   strikethrough, spoilers, inline and fenced code, quotes, safe links
   (http, https, mailto only) and mentions, with flanking rules so `2 * 3`
   stays text, a nesting limit, and property tests that it never throws.
-- The client messaging engine (`apps/client/src/messaging/engine`), with
-  no screens yet:
+- The client messaging engine (`apps/client/src/messaging/engine`):
   - identity setup: a new account's first device creates the identity
     keys, publishes them and backs them up under a 24-word recovery
     phrase (shown once); a later device restores from the phrase;
@@ -312,6 +311,27 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
     Tested end to end with real MLS against an in-memory delivery service
     that follows the server's rules, plus the HTTP adapter against a fake
     server.
+- Decrypted messages and the device's own sends are kept in the
+  encrypted device database, in the same pass that moves the
+  conversation's cursor; each signed-in account gets its own part of the
+  database.
+- The messenger (`messaging/messenger.ts`) and `MessagingProvider`: they
+  set up the identity and device keys once a user is logged in (the
+  device is its session), run each conversation's work one step at a
+  time, and apply new messages when the gateway sends `mls_messages`. A
+  new recovery phrase stays on the device until the user confirms it by
+  typing back three of its words.
+- Screens: the recovery phrase (shown, then checked), restoring on a new
+  device, the conversation list, a conversation (Markdown, replies,
+  reactions, edits, deletes, a warning with "trust the new identity" when
+  a member's identity changed), and friends (requests both ways, removing,
+  starting a DM). Home leads to them, or to the recovery step first.
+- Still to do in M4: typing indicators, read state and jump to unread,
+  attachments (upload endpoints, thumbnails), link previews and the web
+  preview proxy toggle, group DM creation and icons, the native crypto
+  stack (Hermes has no WebCrypto, so Android shows that encryption could
+  not be set up), multi-user Playwright DM flows, WebSocket frame fuzzing,
+  and visual snapshots of the conversation screens.
 - `packages/crypto` saves and loads group and member state for the
   device database, joins by external commit, and returns a GroupInfo with
   every commit.

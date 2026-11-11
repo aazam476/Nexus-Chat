@@ -13,12 +13,18 @@ jest.mock("react-native-reanimated", () => {
 });
 
 // Navigation is checked by what the screens ask for, not by a real router.
+// Tests set a route's parameters with globalThis.mockSearchParams.
 jest.mock("expo-router", () => {
   const { createElement } = jest.requireActual("react");
   const { Text } = jest.requireActual("react-native");
   return {
-    router: { replace: jest.fn(), push: jest.fn() },
+    router: { replace: jest.fn(), push: jest.fn(), back: jest.fn() },
+    useLocalSearchParams: () => globalThis.mockSearchParams ?? {},
     Redirect: ({ href }) => createElement(Text, null, `redirect:${href}`),
     Stack: () => null,
   };
 });
+
+// op-sqlite is native code; screens get the database through the messaging
+// environment, and the database tests drive a fake of it.
+jest.mock("@op-engineering/op-sqlite", () => ({ open: jest.fn() }));

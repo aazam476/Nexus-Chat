@@ -40,3 +40,18 @@ export function createMemoryDatabase(): LocalDatabase {
     list: (collection) => Promise.resolve([...collectionOf(collection).keys()].sort()),
   };
 }
+
+/**
+ * One account's part of the device's database: every collection name is
+ * prefixed with `scope`, so two accounts signed in on the same device in
+ * turn never read each other's keys or messages.
+ */
+export function scopedDatabase(database: LocalDatabase, scope: string): LocalDatabase {
+  const scoped = (collection: string): string => `${scope}/${collection}`;
+  return {
+    get: (collection, id) => database.get(scoped(collection), id),
+    put: (collection, id, data) => database.put(scoped(collection), id, data),
+    delete: (collection, id) => database.delete(scoped(collection), id),
+    list: (collection) => database.list(scoped(collection)),
+  };
+}

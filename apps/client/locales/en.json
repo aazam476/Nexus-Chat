@@ -93,7 +93,7 @@
   },
   "home": {
     "title": "Welcome, {{name}}",
-    "intro": "You are logged in to {{instance}}. Servers and messages arrive in the next releases.",
+    "intro": "You are logged in to {{instance}}.",
     "status": "Status",
     "statusOnline": "Online",
     "statusIdle": "Idle",
@@ -114,7 +114,16 @@
     "expiryFourHours": "4 hours",
     "expiryDay": "1 day",
     "customSave": "Set custom status",
-    "customClear": "Clear custom status"
+    "customClear": "Clear custom status",
+    "messages": "Messages",
+    "friends": "Friends",
+    "messagingStarting": "Setting up encryption on this device…",
+    "messagingFailed": "Encryption could not be set up on this device. Check your connection and try again.",
+    "messagingRetry": "Try again",
+    "phraseNeeded": "Your messages are end-to-end encrypted. Write down your recovery phrase so you can read them on a new device.",
+    "writePhrase": "Write down your recovery phrase",
+    "restoreNeeded": "Your account's encryption keys are on another device. Restore them here to read and send messages.",
+    "restore": "Restore your messages"
   },
   "oidc": {
     "finishing": "Finishing sign-in…"
@@ -174,5 +183,85 @@
       "deliveryFailed": "The mail server did not accept the test email. Check the settings and try again.",
       "testRateLimited": "Too many test emails. Wait a minute and try again."
     }
+  },
+  "recovery": {
+    "title": "Write down your recovery phrase",
+    "intro": "These 24 words are the only way to read your messages on a new device if you lose this one. Write them down in order and keep them somewhere safe. Nobody, including your instance's admins, can recover them for you.",
+    "word": "{{number}}. {{word}}",
+    "wroteItDown": "I wrote it down",
+    "checkTitle": "Check your phrase",
+    "checkIntro": "Enter these words from your phrase to make sure you have them right.",
+    "checkWord": "Word {{number}}",
+    "confirm": "Confirm",
+    "showAgain": "Show the phrase again",
+    "mismatch": "Those words don't match your phrase. Check the order and try again."
+  },
+  "restore": {
+    "title": "Restore your messages",
+    "intro": "Your account already has encryption keys. Enter your 24-word recovery phrase to use them on this device.",
+    "phrase": "Recovery phrase",
+    "phraseHint": "The 24 words, separated by spaces",
+    "submit": "Restore",
+    "wrong": "That phrase doesn't open your backup. Check each word and try again.",
+    "logout": "Log out"
+  },
+  "conversations": {
+    "title": "Messages",
+    "back": "Back",
+    "loading": "Loading conversations…",
+    "empty": "No conversations yet. Start one from a friend's name on the Friends screen.",
+    "friends": "Friends",
+    "groupName": "{{first}} and {{count}} others",
+    "groupName_one": "{{first}} and 1 other",
+    "noMessages": "No messages yet",
+    "open": "Open conversation with {{name}}"
+  },
+  "conversation": {
+    "back": "Back",
+    "loading": "Decrypting messages…",
+    "empty": "No messages yet. Messages here are end-to-end encrypted: only the people in this conversation can read them.",
+    "composer": "Message",
+    "composerHint": "Markdown works: **bold**, *italic*, `code`",
+    "send": "Send",
+    "sendFailed": "The message could not be sent. Try again.",
+    "tooLong": "Messages can be up to {{limit}} characters.",
+    "edited": "(edited)",
+    "deleted": "This message was deleted.",
+    "replyingTo": "Replying to {{name}}",
+    "replyTo": "Reply to {{name}}: {{text}}",
+    "missingReply": "Reply to a message that isn't here",
+    "editing": "Editing your message",
+    "cancel": "Cancel",
+    "reply": "Reply",
+    "edit": "Edit",
+    "delete": "Delete",
+    "react": "React with {{emoji}}",
+    "reaction": "{{emoji}} {{count}}",
+    "reactionLabel": "{{emoji}} from {{users}}",
+    "spoiler": "Spoiler, press to show",
+    "messageActions": "Actions for the message from {{name}}",
+    "identityChanged": "Warning: the encryption identity of {{name}} changed. They may have reset their account, or someone may be trying to listen in. Check with them before you trust it.",
+    "acceptIdentity": "Trust the new identity",
+    "attachment": "Attachment: {{name}}"
+  },
+  "friends": {
+    "title": "Friends",
+    "back": "Back",
+    "add": "Add a friend",
+    "username": "Username",
+    "usernameHint": "Their username on this instance",
+    "send": "Send request",
+    "sent": "Request sent to {{name}}.",
+    "sendFailed": "That request could not be sent. Check the username; they may not accept requests.",
+    "incoming": "Requests for you",
+    "outgoing": "Requests you sent",
+    "friends": "Your friends",
+    "none": "No friends yet. Add someone by their username.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel request",
+    "message": "Message",
+    "remove": "Remove",
+    "messageFailed": "A conversation with {{name}} could not be started. Their privacy settings may not allow it."
   }
 }

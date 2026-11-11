@@ -8,12 +8,14 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ConnectionProvider } from "../src/connection/ConnectionContext";
 import { createI18n } from "../src/i18n/i18n";
+import { MessagingProvider } from "../src/messaging/MessagingContext";
 import { GatewayProvider } from "../src/realtime/GatewayContext";
 import { createSecureStorage } from "../src/storage/platformStorage";
 
 /**
  * The root of every screen: gestures, safe areas, theme, translations and
- * the connection to the instance. Screens change with the platform's own
+ * the connection to the instance, its gateway and end-to-end encrypted
+ * messaging. Screens change with the platform's own
  * transitions, which also honour reduced motion.
  */
 export default function RootLayout(): ReactNode {
@@ -26,8 +28,10 @@ export default function RootLayout(): ReactNode {
           <I18nextProvider i18n={i18n}>
             <ConnectionProvider storage={storage}>
               <GatewayProvider>
-                <StatusBar style="auto" />
-                <Stack screenOptions={{ headerShown: false }} />
+                <MessagingProvider>
+                  <StatusBar style="auto" />
+                  <Stack screenOptions={{ headerShown: false }} />
+                </MessagingProvider>
               </GatewayProvider>
             </ConnectionProvider>
           </I18nextProvider>

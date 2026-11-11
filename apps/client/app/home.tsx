@@ -8,6 +8,7 @@ import { useConnection } from "../src/connection/ConnectionContext";
 import { hostOf } from "../src/instance/address";
 import { useGatewayStatus } from "../src/realtime/GatewayContext";
 import { AdminLink } from "../src/screens/home/AdminLink";
+import { MessagingLinks } from "../src/screens/home/MessagingLinks";
 import { CustomStatusEditor } from "../src/screens/home/CustomStatusEditor";
 import { StatusPicker } from "../src/screens/home/StatusPicker";
 import { isolate } from "../src/i18n/bidi";
@@ -35,6 +36,7 @@ export default function Home(): ReactNode {
           {t("home.intro", { instance: hostOf(connection.address ?? "http://localhost") })}
         </Text>
       </Stack>
+      <MessagingLinks />
       <StatusPicker current={user.status} presence={presenceStatus} />
       <CustomStatusEditor />
       <AdminLink admin={user.isInstanceAdmin} />

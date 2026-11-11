@@ -3,41 +3,12 @@ import { act } from "react";
 import { router } from "expo-router";
 
 import Home from "../../app/home";
-import { GatewayClient, type SocketLike } from "../realtime/gatewayClient";
+import { GatewayClient } from "../realtime/gatewayClient";
 import { apply } from "../realtime/useGateway";
 import { fakeServer } from "../testing/fakeServer";
+import { FakeSocket, nth } from "../testing/fakeSocket";
 import { ada, fakeConnection, renderWithApp } from "../testing/renderWithApp";
 import { isolate } from "../i18n/bidi";
-
-/** A socket the test drives: it records what the client sends. */
-class FakeSocket implements SocketLike {
-  sent: { type: string; data: Record<string, unknown> }[] = [];
-  closedWith: number | undefined;
-  onmessage: ((message: { data: unknown }) => void) | null = null;
-  onclose: ((event: { code: number }) => void) | null = null;
-  constructor(readonly url: string) {}
-  send(data: string): void {
-    this.sent.push(JSON.parse(data) as { type: string; data: Record<string, unknown> });
-  }
-  close(code?: number): void {
-    this.closedWith = code;
-  }
-  receive(frame: unknown): void {
-    this.onmessage?.({ data: typeof frame === "string" ? frame : JSON.stringify(frame) });
-  }
-  drop(code: number): void {
-    this.onclose?.({ code });
-  }
-}
-
-/** The socket at `index`; fails the test clearly when there is none. */
-function nth(sockets: FakeSocket[], index: number): FakeSocket {
-  const socket = sockets[index];
-  if (socket === undefined) {
-    throw new Error(`no socket ${String(index)} was opened`);
-  }
-  return socket;
-}
 
 function startClient(overrides: { onSignedOut?: () => void } = {}) {
   const sockets: FakeSocket[] = [];

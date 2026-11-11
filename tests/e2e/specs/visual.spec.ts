@@ -77,6 +77,16 @@ const screens: Screen[] = [
   },
   { name: "home", open: logIn },
   {
+    name: "restore",
+    open: async (page) => {
+      await logIn(page);
+      await page.getByTestId("messaging-next-step").click();
+      await field(page, "Recovery phrase").fill("not the phrase");
+      await page.getByTestId("restore-submit").click();
+      await expect(page.getByText(/doesn't open your backup/)).toBeVisible();
+    },
+  },
+  {
     name: "admin",
     open: async (page) => {
       await logIn(page);

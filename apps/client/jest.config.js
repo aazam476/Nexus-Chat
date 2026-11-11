@@ -22,5 +22,8 @@ module.exports = {
     "!src/testing/**",
     "!app/_layout.tsx",
   ],
+  // Real MLS and Argon2 work runs in several suites at once; on a busy CI
+  // runner even a screen test can take longer than Jest's 5 s default.
+  testTimeout: 30_000,
   coverageThreshold: { global: { lines: 85, statements: 85, functions: 85, branches: 75 } },
 };
