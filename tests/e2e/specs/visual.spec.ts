@@ -47,6 +47,10 @@ async function logIn(page: Page): Promise<void> {
   await field(page, "Password").fill("a long password");
   await page.getByTestId("login-submit").click();
   await expect(page.getByTestId("presence")).toBeVisible();
+  // Encryption setup finishes after the screen appears; wait for its
+  // result and the last control, so the screen has its final layout.
+  await expect(page.getByTestId("messaging-next-step")).toBeVisible();
+  await expect(page.getByTestId("logout")).toBeVisible();
 }
 
 const screens: Screen[] = [

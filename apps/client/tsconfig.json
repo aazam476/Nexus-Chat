@@ -10,5 +10,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["jest"]
   },
-  "include": ["app", "src", "locales", ".expo/types/**/*.ts", "expo-env.d.ts", "app.config.ts"]
+  "include": ["index.ts", "app", "src", "locales", ".expo/types/**/*.ts", "expo-env.d.ts", "app.config.ts"]
 }

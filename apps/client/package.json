@@ -4,7 +4,7 @@
   "private": true,
   "description": "The Nexus Chat app for iOS, Android and the web, built with Expo.",
   "license": "Apache-2.0",
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "web": "expo start --web",
