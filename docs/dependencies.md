@@ -38,7 +38,7 @@ Their own dependencies (`pgpassfile`, `pgservicefile`, `puddle`,
 | Image                               | Pinned version                     | Why                                                               |
 | ----------------------------------- | ---------------------------------- | ----------------------------------------------------------------- |
 | `gcr.io/distroless/static-debian13` | by digest                          | Base of our images ([ADR 0015](adr/0015-container-deployment.md)) |
-| `golang`                            | 1.27.3-trixie, by digest           | Build stage only                                                  |
+| `golang`                            | 1.27.4-trixie, by digest           | Build stage only                                                  |
 | `postgres`                          | 18.6-alpine, by digest             | The database the spec requires                                    |
 | `livekit/livekit-server`            | v1.13.11, by digest                | SFU and built-in TURN (spec §2)                                   |
 | `coturn/coturn`                     | 4.18.0, by digest                  | TURN for P2P mode (`--profile p2p`)                               |

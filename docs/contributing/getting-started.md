@@ -6,7 +6,7 @@ From a fresh clone to passing tests in about 15 minutes.
 
 | Tool                                          | Version                           | Why                                            |
 | --------------------------------------------- | --------------------------------- | ---------------------------------------------- |
-| [Go](https://go.dev/dl/)                      | 1.27.3 (see `apps/server/go.mod`) | Server and push relay                          |
+| [Go](https://go.dev/dl/)                      | 1.27.4 (see `apps/server/go.mod`) | Server and push relay                          |
 | [Node.js](https://nodejs.org/)                | 26.13.0 LTS (see `.node-version`) | Client, packages, tooling                      |
 | [pnpm](https://pnpm.io/installation)          | 12.18.0 (see `package.json`)      | JavaScript package manager                     |
 | [Docker](https://docs.docker.com/get-docker/) | any recent version                | Database tests start PostgreSQL in a container |

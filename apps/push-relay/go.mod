@@ -1,6 +1,6 @@
 module github.com/aazam476/nexus-chat/apps/push-relay
 
-go 1.27.3
+go 1.27.4
 
 require github.com/stretchr/testify v1.12.1
 

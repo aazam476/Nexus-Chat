@@ -12,7 +12,7 @@ at the start of Phase 0 and the few choices the spec leaves open.
 
 | Tool         | Version (pinned at Phase 0)                  | Note                               |
 | ------------ | -------------------------------------------- | ---------------------------------- |
-| Go           | 1.27.3                                       | Server and push relay              |
+| Go           | 1.27.4                                       | Server and push relay              |
 | pgx          | v5.12.0                                      |                                    |
 | sqlc         | v1.31.1                                      |                                    |
 | goose        | v3.29.0                                      | Migrations embedded via `embed.FS` |
