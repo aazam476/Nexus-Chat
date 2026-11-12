@@ -1,4 +1,4 @@
-import { createIdentity } from "@nexus-chat/crypto";
+import { createIdentity, members } from "@nexus-chat/crypto";
 import sodium from "libsodium-wrappers-sumo";
 
 import {
@@ -8,6 +8,7 @@ import {
   type Messenger,
   type MessengerSetup,
 } from "../messaging/messenger";
+import { loadState } from "../messaging/engine/context";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "../testing/fakeDelivery";
 
@@ -92,6 +93,95 @@ describe("the messenger", () => {
     await phone.send("notes", { kind: "text", text: "to self" });
     expect(texts(await phone.messages("notes"))).toEqual(["to self"]);
     expect((await started(phoneSetup)).phrase).toBeUndefined();
+  });
+
+  it("lets a restored device read the history it missed", async () => {
+    const instance = new FakeInstance();
+    const laptopSetup = await setupFor(instance, adaUser, "ada-laptop");
+    const laptop = await started(laptopSetup);
+    const grace = await started(await setupFor(instance, graceUser, "grace-phone"));
+    instance.addConversation("dm");
+    await laptop.messenger.open("dm", [adaUser, graceUser]);
+    await grace.messenger.open("dm", [adaUser, graceUser]);
+    for (const text of ["one", "two", "three"]) {
+      await laptop.messenger.send("dm", { kind: "text", text });
+    }
+    await grace.messenger.sync("dm");
+    await grace.messenger.send("dm", { kind: "text", text: "four" });
+    // A copy nobody can open, and one under an epoch with no key, are skipped.
+    instance.archives
+      .get("dm")
+      ?.push(
+        { messageId: "x", epoch: 1, sealed: new Uint8Array(40), createdAt: "2026-11-12T00:00:00.000Z" },
+        { messageId: "y", epoch: 99, sealed: new Uint8Array(40), createdAt: "2026-11-12T00:00:01.000Z" },
+      );
+
+    const phoneSetup = await setupFor(instance, adaUser, "ada-phone");
+    const phone = await restoreMessenger(phoneSetup, laptop.phrase ?? "");
+    await phone.open("dm", [adaUser, graceUser]);
+    expect(texts(await phone.messages("dm")).sort()).toEqual(["four", "one", "three", "two"]);
+    // Reading the history again adds nothing.
+    await phone.open("dm", [adaUser, graceUser]);
+    expect(await phone.messages("dm")).toHaveLength(4);
+    // Grace's devices back up their history keys in Grace's own backup.
+    expect(instance.backups.get(graceUser.id)?.blobs.has("history.dm")).toBe(true);
+  });
+
+  it("reads no history when the backup's history blob is damaged", async () => {
+    const instance = new FakeInstance();
+    const laptop = await started(await setupFor(instance, adaUser, "ada-laptop"));
+    instance.addConversation("notes");
+    await laptop.messenger.open("notes", [adaUser]);
+    await laptop.messenger.send("notes", { kind: "text", text: "private" });
+    instance.backups.get(adaUser.id)?.blobs.set("history.notes", new Uint8Array(48));
+
+    const phone = await restoreMessenger(await setupFor(instance, adaUser, "ada-phone"), laptop.phrase ?? "");
+    await phone.open("notes", [adaUser]);
+    expect(await phone.messages("notes")).toEqual([]);
+  });
+
+  it("joins once when the other person's group appears mid-open", async () => {
+    const instance = new FakeInstance();
+    const grace = await started(await setupFor(instance, graceUser, "grace-phone"));
+    const adaSetup = await setupFor(instance, adaUser, "ada-laptop");
+    instance.addConversation("dm");
+    // Grace creates the group, adding Ada's device, just after Ada's
+    // device has read the conversation's messages.
+    let raced = false;
+    const messages = adaSetup.api.messages.bind(adaSetup.api);
+    adaSetup.api.messages = async (conversationId, afterId) => {
+      const delivered = await messages(conversationId, afterId);
+      if (!raced) {
+        raced = true;
+        await grace.messenger.open("dm", [adaUser, graceUser]);
+      }
+      return delivered;
+    };
+    const ada = await started(adaSetup);
+    await ada.messenger.open("dm", [adaUser, graceUser]);
+
+    const group = (await loadState(ada.messenger.context, "dm")).group;
+    expect(group === undefined ? 0 : members(group).size).toBe(2);
+    await ada.messenger.send("dm", { kind: "text", text: "once" });
+    await grace.messenger.sync("dm");
+    expect(texts(await grace.messenger.messages("dm"))).toEqual(["once"]);
+  });
+
+  it("uses a Welcome that arrived before the conversation was opened", async () => {
+    const instance = new FakeInstance();
+    const ada = await started(await setupFor(instance, adaUser, "ada-laptop"));
+    const grace = await started(await setupFor(instance, graceUser, "grace-phone"));
+    instance.addConversation("dm");
+    await grace.messenger.open("dm", [adaUser, graceUser]);
+    // A live event syncs before Ada's device knows Grace: the Welcome cannot be checked yet.
+    await ada.messenger.sync("dm");
+    await ada.messenger.open("dm", [adaUser, graceUser]);
+
+    const commits = (instance.messages.get("dm") ?? []).filter((message) => message.kind === "commit");
+    expect(commits).toHaveLength(1);
+    await ada.messenger.send("dm", { kind: "text", text: "joined by Welcome" });
+    await grace.messenger.sync("dm");
+    expect(texts(await grace.messenger.messages("dm"))).toEqual(["joined by Welcome"]);
   });
 
   it("keeps working on a conversation after a failed step", async () => {

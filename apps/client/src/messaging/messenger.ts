@@ -10,6 +10,7 @@ import type { MessagingApi } from "./engine/api";
 import { utf8 } from "./engine/bytes";
 import type { EngineContext } from "./engine/context";
 import { refillKeyPackages, setUpDevice } from "./engine/device";
+import { readMissedHistory } from "./engine/archive";
 import { loadMessages } from "./engine/history";
 import { restoreWithPhrase, setUpIdentity, type StoredIdentity } from "./engine/identity";
 import { sendPayload, startConversation } from "./engine/send";
@@ -89,7 +90,10 @@ export class Messenger {
   open(conversationId: string, members: Person[]): Promise<void> {
     this.learn(members);
     const ids = members.map((member) => member.id);
-    return this.run(conversationId, () => startConversation(this.context, conversationId, ids));
+    return this.run(conversationId, async () => {
+      await startConversation(this.context, conversationId, ids);
+      await readMissedHistory(this.context, conversationId);
+    });
   }
 
   /** Applies what is new in the conversation. */
@@ -129,7 +133,10 @@ async function ready(setup: MessengerSetup, identity: StoredIdentity): Promise<M
     deviceId: where.deviceId,
   });
   await refillKeyPackages(api, database, device);
-  const messenger = new Messenger({ api, database, device, instanceKey: setup.instanceKey }, where.domain);
+  const messenger = new Messenger(
+    { api, database, device, instanceKey: setup.instanceKey, backupKey: identity.backupKey },
+    where.domain,
+  );
   messenger.learn([user]);
   return messenger;
 }

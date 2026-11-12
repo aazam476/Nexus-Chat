@@ -18,6 +18,8 @@ export interface EngineContext {
   check: CredentialCheck;
   /** The instance's public key, which signs membership directives. */
   instanceKey: Uint8Array;
+  /** The user's key backup key, which seals the history keys it holds. */
+  backupKey: Uint8Array;
   /** A member's user ID from the `@name@instance` part of their devices' addresses. */
   userOfAddress: (user: string) => string | undefined;
 }

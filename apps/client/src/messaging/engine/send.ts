@@ -22,6 +22,7 @@ import {
 } from "@nexus-chat/crypto";
 
 import { encodePayload, type Payload } from "../payload";
+import { noteHistoryKey, saveHistoryKeys } from "./archive";
 import { utf8 } from "./bytes";
 import { loadState, saveState, type EngineContext } from "./context";
 import { storeMessages } from "./history";
@@ -73,6 +74,13 @@ async function join(
   return outcome.accepted ? joined.group : undefined;
 }
 
+/** Backs up the history key of the group's current epoch. */
+async function backUpCurrentKey(context: EngineContext, conversationId: string, group: Group): Promise<void> {
+  const keys: Record<string, string> = {};
+  await noteHistoryKey(conversationId, group, keys);
+  await saveHistoryKeys(context, conversationId, keys);
+}
+
 /**
  * Makes this device a member of the conversation's group: catching up on
  * a Welcome, creating the group, or joining it. Tries twice, since another
@@ -84,18 +92,21 @@ export async function startConversation(
   memberIds: string[],
 ): Promise<void> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    // The group state first: a Welcome for this device that came with it is
+    // then always applied by the sync, rather than joining a second time.
+    const server = await context.api.groupState(conversationId);
     await syncConversation(context, conversationId);
     const state = await loadState(context, conversationId);
     if (state.group !== undefined) {
       return;
     }
-    const server = await context.api.groupState(conversationId);
     const group =
       server.groupInfo === undefined
         ? await create(context, conversationId, server.groupId, memberIds)
         : await join(context, conversationId, server.groupInfo);
     if (group !== undefined) {
       await saveState(context, conversationId, { ...state, group });
+      await backUpCurrentKey(context, conversationId, group);
       return;
     }
   }

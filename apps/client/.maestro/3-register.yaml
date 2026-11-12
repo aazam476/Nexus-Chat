@@ -18,10 +18,17 @@ appId: org.nexuschat.app
     id: "register-submit"
 - assertVisible: "Welcome, .*Grace Member.*"
 # Encryption is set up on the device (native WebCrypto under Hermes): the
-# new user is asked to write down their recovery phrase.
+# new user is asked to write down their recovery phrase. The step sits just
+# above the status picker; setting up keys takes a moment, so scroll back up
+# until it shows. If it never does, the screen at the failure is the top of
+# the home screen, with any setup error.
+- scrollUntilVisible:
+    element:
+      text: "Others see you as: Online"
 - scrollUntilVisible:
     element:
       id: "messaging-next-step"
+    direction: UP
     timeout: 60000
 - tapOn:
     id: "messaging-next-step"

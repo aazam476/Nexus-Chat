@@ -25,6 +25,7 @@ import { decodePayload, type Payload } from "../payload";
 import type { DeliveredMessage } from "./api";
 import { fromBase64 } from "./bytes";
 import { loadState, saveState, type EngineContext } from "./context";
+import { noteHistoryKey, saveHistoryKeys } from "./archive";
 import { forgetMember, heldMembers } from "./device";
 import { storeMessages } from "./history";
 
@@ -170,11 +171,18 @@ export async function syncConversation(
 ): Promise<DecryptedMessage[]> {
   const state = await loadState(context, conversationId);
   const out: DecryptedMessage[] = [];
+  const keys: Record<string, string> = {};
   for (const message of await context.api.messages(conversationId, state.cursor)) {
     state.group = await apply({ context, conversationId, out }, state.group, message);
-    state.cursor = message.id;
+    // Outside the group the cursor stays put: a Welcome that could not be
+    // checked yet (its sender not known on this device) is tried again.
+    if (state.group !== undefined) {
+      state.cursor = message.id;
+      await noteHistoryKey(conversationId, state.group, keys);
+    }
   }
   await storeMessages(context, conversationId, out);
   await saveState(context, conversationId, state);
+  await saveHistoryKeys(context, conversationId, keys);
   return out;
 }

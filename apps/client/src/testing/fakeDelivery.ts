@@ -6,7 +6,7 @@
  */
 import { messageEpoch, type PublishedIdentity } from "@nexus-chat/crypto";
 
-import type { DeliveredMessage, MessagingApi, Outcome } from "../messaging/engine/api";
+import type { DeliveredMessage, MessagingApi, Outcome, StoredArchive } from "../messaging/engine/api";
 
 interface Group {
   groupId: Uint8Array;
@@ -30,6 +30,8 @@ export class FakeInstance {
   keyPackages = new Map<string, { deviceId: string; keyPackage: Uint8Array; lastResort: boolean }[]>();
   groups = new Map<string, Group>();
   messages = new Map<string, DeliveredMessage[]>();
+  /** Archive copies per conversation, oldest first. */
+  archives = new Map<string, StoredArchive[]>();
   private nextId = 1;
 
   /** Adds a conversation, as the server does when a DM is opened. */
@@ -86,20 +88,38 @@ export class FakeInstance {
     return { accepted: true };
   }
 
-  private send(conversationId: string, userId: string, message: Uint8Array): Outcome {
+  private send(
+    conversationId: string,
+    userId: string,
+    sent: { message: Uint8Array; archive: { messageId: string; sealed: Uint8Array } },
+  ): Outcome {
     const group = this.groups.get(conversationId);
-    if (group === undefined || epochOf(message) !== group.epoch) {
+    if (group === undefined || epochOf(sent.message) !== group.epoch) {
       return { accepted: false, reason: "stale" };
     }
-    return {
-      accepted: true,
-      id: this.deliver(conversationId, {
-        kind: "application",
-        epoch: group.epoch,
-        senderId: userId,
-        data: message,
-      }),
-    };
+    const id = this.deliver(conversationId, {
+      kind: "application",
+      epoch: group.epoch,
+      senderId: userId,
+      data: sent.message,
+    });
+    const copies = this.archives.get(conversationId) ?? [];
+    copies.push({
+      ...sent.archive,
+      epoch: group.epoch,
+      senderId: userId,
+      createdAt: new Date(id * 1000).toISOString(),
+    });
+    this.archives.set(conversationId, copies);
+    return { accepted: true, id };
+  }
+
+  /** Archive copies before `before`, newest first, two at a time to exercise paging. */
+  private archiveBefore(conversationId: string, before?: string): StoredArchive[] {
+    return (this.archives.get(conversationId) ?? [])
+      .filter((copy) => before === undefined || copy.createdAt < before)
+      .reverse()
+      .slice(0, 2);
   }
 
   private claim(userId: string): { deviceId: string; keyPackage: Uint8Array }[] {
@@ -190,10 +210,11 @@ export class FakeInstance {
       ...this.keyPackageApi(userId, deviceId),
       groupState: (conversationId) => Promise.resolve({ ...this.groupOf(conversationId) }),
       submitCommit: (conversationId, commit) => Promise.resolve(this.commit(conversationId, userId, commit)),
-      sendMessage: (conversationId, message) => Promise.resolve(this.send(conversationId, userId, message)),
+      sendMessage: (conversationId, message, archive) =>
+        Promise.resolve(this.send(conversationId, userId, { message, archive })),
       messages: (conversationId, afterId) =>
         Promise.resolve((this.messages.get(conversationId) ?? []).filter((message) => message.id > afterId)),
-      archive: () => Promise.resolve([]),
+      archive: (conversationId, before) => Promise.resolve(this.archiveBefore(conversationId, before)),
     };
   }
 }

@@ -66,6 +66,7 @@ async function device(
       () => undefined,
     ),
     instanceKey: key,
+    backupKey: identity.backupKey,
     userOfAddress: (user) => users[user],
   };
   return {
