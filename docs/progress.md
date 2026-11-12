@@ -371,8 +371,12 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   X25519, AES-GCM, HKDF and SHA-2. The Android end-to-end flow now checks
   that a new user's device sets up encryption and shows the recovery
   phrase.
-- Still to do in M4: multi-user Playwright DM flows, WebSocket frame fuzzing,
-  and visual snapshots of the conversation screens.
+- WebSocket fuzzing: besides the frame parser, a fuzz target sends an
+  identified gateway connection sequences of arbitrary frames (heartbeats,
+  activity, typing, repeated identify and unknown types) and checks it
+  still answers a heartbeat or closes with a documented code, never an
+  internal error or a hang. CI fuzzes it on every run.
+- Still to do in M4: multi-user Playwright DM flows and visual snapshots of the conversation screens.
 - `packages/crypto` saves and loads group and member state for the
   device database, joins by external commit, and returns a GroupInfo with
   every commit.
