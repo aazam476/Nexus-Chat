@@ -113,7 +113,10 @@ export function useMessagingState(connection: Connection, environment: Messaging
         }
       }
     };
-    begin(latestRef.current.connection, latestRef.current.environment, apply).catch(() => {
+    begin(latestRef.current.connection, latestRef.current.environment, apply).catch((cause: unknown) => {
+      // Says why in the device log (no keys or messages are in an error),
+      // since the screen can only say that it failed.
+      console.warn("encryption setup failed:", describe(cause));
       apply({ status: "failed" });
     });
     return () => {
@@ -129,6 +132,14 @@ export function useMessagingState(connection: Connection, environment: Messaging
       setAttempt((count) => count + 1);
     },
   };
+}
+
+/** An error's type, message and first stack lines, for the device log. */
+function describe(cause: unknown): string {
+  if (!(cause instanceof Error)) {
+    return String(cause);
+  }
+  return [`${cause.name}: ${cause.message}`, ...(cause.stack ?? "").split("\n").slice(1, 6)].join("\n");
 }
 
 /** Restoring and confirming the phrase. */
