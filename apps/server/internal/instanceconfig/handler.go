@@ -47,11 +47,16 @@ func (handler *Handler) GetInstanceInfo(ctx context.Context, _ api.GetInstanceIn
 	if err != nil {
 		return nil, err
 	}
+	previewProxy, err := handler.service.LinkPreviewProxy(ctx)
+	if err != nil {
+		return nil, err
+	}
 	response := api.GetInstanceInfo200JSONResponse{
 		Name:             name,
 		RegistrationMode: api.RegistrationMode(mode),
 		SecureConnection: clientip.FromContext(ctx).SecureContext(),
 		SigningKey:       handler.signingKey,
+		LinkPreviewProxy: previewProxy,
 		Limits: api.InstanceLimits{
 			GroupDmMaxMembers: handler.limits.GroupDMMaxMembers, AttachmentMaxBytes: attachmentLimit,
 		},

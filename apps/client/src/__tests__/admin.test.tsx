@@ -75,6 +75,7 @@ describe("the Admin panel", () => {
         secureConnection: false,
         signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         limits: { groupDmMaxMembers: 25, attachmentMaxBytes: 26214400 },
+        linkPreviewProxy: false,
       },
       setupRequired: false,
       domainFromEnvironment: false,

@@ -574,7 +574,12 @@ type InstanceInfo struct {
 	// Domain The public domain, once one is set.
 	Domain *string        `json:"domain,omitempty"`
 	Limits InstanceLimits `json:"limits"`
-	Name   string         `json:"name"`
+
+	// LinkPreviewProxy True when the admin turned on the link preview proxy, which the
+	// web app uses to show link previews; the app tells users the
+	// instance then sees the links they preview.
+	LinkPreviewProxy bool   `json:"linkPreviewProxy"`
+	Name             string `json:"name"`
 
 	// RegistrationMode Who may create accounts.
 	RegistrationMode RegistrationMode `json:"registrationMode"`
@@ -633,6 +638,13 @@ type KeyPackageUpload struct {
 
 	// LastResort Replaces the device's last-resort key package.
 	LastResort *[]byte `json:"lastResort,omitempty"`
+}
+
+// LinkPreviewPage defines model for LinkPreviewPage.
+type LinkPreviewPage struct {
+	Description string  `json:"description"`
+	ImageUrl    *string `json:"imageUrl,omitempty"`
+	Title       string  `json:"title"`
 }
 
 // LinkedProvider defines model for LinkedProvider.
@@ -773,6 +785,11 @@ type PasswordResetRequest struct {
 
 // PresenceStatus What others see. A user who chose invisible, or has no device connected, is offline.
 type PresenceStatus string
+
+// PreviewSettings defines model for PreviewSettings.
+type PreviewSettings struct {
+	ProxyEnabled bool `json:"proxyEnabled"`
+}
 
 // PrivacySettings defines model for PrivacySettings.
 type PrivacySettings struct {
@@ -1199,6 +1216,16 @@ type ListMlsMessagesParams struct {
 	Limit *int   `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetLinkPreviewParams defines parameters for GetLinkPreview.
+type GetLinkPreviewParams struct {
+	Url string `form:"url" json:"url"`
+}
+
+// GetLinkPreviewImageParams defines parameters for GetLinkPreviewImage.
+type GetLinkPreviewImageParams struct {
+	Url string `form:"url" json:"url"`
+}
+
 // SetAvatarParams defines parameters for SetAvatar.
 type SetAvatarParams struct {
 	CropX    *int `form:"cropX,omitempty" json:"cropX,omitempty"`
@@ -1214,6 +1241,9 @@ type CreateOidcProviderJSONRequestBody = CreateOidcProviderRequest
 
 // UpdateOidcProviderJSONRequestBody defines body for UpdateOidcProvider for application/json ContentType.
 type UpdateOidcProviderJSONRequestBody = UpdateOidcProviderRequest
+
+// UpdatePreviewSettingsJSONRequestBody defines body for UpdatePreviewSettings for application/json ContentType.
+type UpdatePreviewSettingsJSONRequestBody = PreviewSettings
 
 // UpdateSmtpSettingsJSONRequestBody defines body for UpdateSmtpSettings for application/json ContentType.
 type UpdateSmtpSettingsJSONRequestBody = UpdateSmtpSettingsRequest
@@ -1349,6 +1379,12 @@ type ServerInterface interface {
 	// UpdateOidcProvider Change a sign-in provider
 	// (PUT /api/v1/admin/oidc-providers/{providerId})
 	UpdateOidcProvider(w http.ResponseWriter, r *http.Request, providerId ProviderId)
+	// GetPreviewSettings Link preview proxy setting
+	// (GET /api/v1/admin/previews)
+	GetPreviewSettings(w http.ResponseWriter, r *http.Request)
+	// UpdatePreviewSettings Turn the link preview proxy on or off
+	// (PUT /api/v1/admin/previews)
+	UpdatePreviewSettings(w http.ResponseWriter, r *http.Request)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(w http.ResponseWriter, r *http.Request)
@@ -1580,6 +1616,12 @@ type ServerInterface interface {
 	// UploadKeyPackages Store key packages for this device
 	// (POST /api/v1/key-packages)
 	UploadKeyPackages(w http.ResponseWriter, r *http.Request)
+	// GetLinkPreview Fetch a page's preview through the instance
+	// (GET /api/v1/link-previews)
+	GetLinkPreview(w http.ResponseWriter, r *http.Request, params GetLinkPreviewParams)
+	// GetLinkPreviewImage Fetch a preview's image through the instance
+	// (GET /api/v1/link-previews/image)
+	GetLinkPreviewImage(w http.ResponseWriter, r *http.Request, params GetLinkPreviewImageParams)
 	// GetPrivacySettings Who may DM you or send you friend requests
 	// (GET /api/v1/privacy)
 	GetPrivacySettings(w http.ResponseWriter, r *http.Request)
@@ -1761,6 +1803,34 @@ func (siw *ServerInterfaceWrapper) UpdateOidcProvider(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateOidcProvider(w, r, providerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPreviewSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetPreviewSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPreviewSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePreviewSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePreviewSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePreviewSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3372,6 +3442,72 @@ func (siw *ServerInterfaceWrapper) UploadKeyPackages(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetLinkPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetLinkPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLinkPreviewParams
+
+	// ------------- Required query parameter "url" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "url", r.URL.Query(), &params.Url, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "url"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "url", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLinkPreview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLinkPreviewImage operation middleware
+func (siw *ServerInterfaceWrapper) GetLinkPreviewImage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLinkPreviewImageParams
+
+	// ------------- Required query parameter "url" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "url", r.URL.Query(), &params.Url, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "url"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "url", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLinkPreviewImage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPrivacySettings operation middleware
 func (siw *ServerInterfaceWrapper) GetPrivacySettings(w http.ResponseWriter, r *http.Request) {
 
@@ -3797,6 +3933,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.InstallTlsCertificate)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/uploads", wrapper.GetUploadSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/uploads", wrapper.UpdateUploadSettings)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/previews", wrapper.GetPreviewSettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/previews", wrapper.UpdatePreviewSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.GetSmtpSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.UpdateSmtpSettings)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/smtp/test", wrapper.SendTestEmail)
@@ -3874,6 +4012,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/icon", wrapper.SetConversationIcon)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversation-icons/{iconId}", wrapper.GetConversationIcon)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/read", wrapper.MarkConversationRead)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/link-previews", wrapper.GetLinkPreview)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/link-previews/image", wrapper.GetLinkPreviewImage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/read-state", wrapper.ListReadStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive", wrapper.ListArchivedMessages)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
@@ -4379,6 +4519,119 @@ func (response UpdateOidcProvider422JSONResponse) VisitUpdateOidcProviderRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPreviewSettingsRequestObject struct {
+}
+
+type GetPreviewSettingsResponseObject interface {
+	VisitGetPreviewSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetPreviewSettings200JSONResponse PreviewSettings
+
+func (response GetPreviewSettings200JSONResponse) VisitGetPreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPreviewSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetPreviewSettings401JSONResponse) VisitGetPreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPreviewSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetPreviewSettings403JSONResponse) VisitGetPreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePreviewSettingsRequestObject struct {
+	Body *UpdatePreviewSettingsJSONRequestBody
+}
+
+type UpdatePreviewSettingsResponseObject interface {
+	VisitUpdatePreviewSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdatePreviewSettings200JSONResponse PreviewSettings
+
+func (response UpdatePreviewSettings200JSONResponse) VisitUpdatePreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePreviewSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdatePreviewSettings400JSONResponse) VisitUpdatePreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePreviewSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdatePreviewSettings401JSONResponse) VisitUpdatePreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdatePreviewSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdatePreviewSettings403JSONResponse) VisitUpdatePreviewSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -9393,6 +9646,196 @@ func (response UploadKeyPackages422JSONResponse) VisitUploadKeyPackagesResponse(
 	return err
 }
 
+type GetLinkPreviewRequestObject struct {
+	Params GetLinkPreviewParams
+}
+
+type GetLinkPreviewResponseObject interface {
+	VisitGetLinkPreviewResponse(w http.ResponseWriter) error
+}
+
+type GetLinkPreview200JSONResponse LinkPreviewPage
+
+func (response GetLinkPreview200JSONResponse) VisitGetLinkPreviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreview401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetLinkPreview401JSONResponse) VisitGetLinkPreviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreview403JSONResponse Error
+
+func (response GetLinkPreview403JSONResponse) VisitGetLinkPreviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreview422JSONResponse Error
+
+func (response GetLinkPreview422JSONResponse) VisitGetLinkPreviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreview429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response GetLinkPreview429JSONResponse) VisitGetLinkPreviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreview502JSONResponse Error
+
+func (response GetLinkPreview502JSONResponse) VisitGetLinkPreviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreviewImageRequestObject struct {
+	Params GetLinkPreviewImageParams
+}
+
+type GetLinkPreviewImageResponseObject interface {
+	VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error
+}
+
+type GetLinkPreviewImage200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetLinkPreviewImage200ApplicationoctetStreamResponse) VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetLinkPreviewImage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetLinkPreviewImage401JSONResponse) VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreviewImage403JSONResponse Error
+
+func (response GetLinkPreviewImage403JSONResponse) VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreviewImage422JSONResponse Error
+
+func (response GetLinkPreviewImage422JSONResponse) VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreviewImage429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response GetLinkPreviewImage429JSONResponse) VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLinkPreviewImage502JSONResponse Error
+
+func (response GetLinkPreviewImage502JSONResponse) VisitGetLinkPreviewImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetPrivacySettingsRequestObject struct {
 }
 
@@ -10120,6 +10563,12 @@ type StrictServerInterface interface {
 	// UpdateOidcProvider Change a sign-in provider
 	// (PUT /api/v1/admin/oidc-providers/{providerId})
 	UpdateOidcProvider(ctx context.Context, request UpdateOidcProviderRequestObject) (UpdateOidcProviderResponseObject, error)
+	// GetPreviewSettings Link preview proxy setting
+	// (GET /api/v1/admin/previews)
+	GetPreviewSettings(ctx context.Context, request GetPreviewSettingsRequestObject) (GetPreviewSettingsResponseObject, error)
+	// UpdatePreviewSettings Turn the link preview proxy on or off
+	// (PUT /api/v1/admin/previews)
+	UpdatePreviewSettings(ctx context.Context, request UpdatePreviewSettingsRequestObject) (UpdatePreviewSettingsResponseObject, error)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(ctx context.Context, request GetSmtpSettingsRequestObject) (GetSmtpSettingsResponseObject, error)
@@ -10351,6 +10800,12 @@ type StrictServerInterface interface {
 	// UploadKeyPackages Store key packages for this device
 	// (POST /api/v1/key-packages)
 	UploadKeyPackages(ctx context.Context, request UploadKeyPackagesRequestObject) (UploadKeyPackagesResponseObject, error)
+	// GetLinkPreview Fetch a page's preview through the instance
+	// (GET /api/v1/link-previews)
+	GetLinkPreview(ctx context.Context, request GetLinkPreviewRequestObject) (GetLinkPreviewResponseObject, error)
+	// GetLinkPreviewImage Fetch a preview's image through the instance
+	// (GET /api/v1/link-previews/image)
+	GetLinkPreviewImage(ctx context.Context, request GetLinkPreviewImageRequestObject) (GetLinkPreviewImageResponseObject, error)
 	// GetPrivacySettings Who may DM you or send you friend requests
 	// (GET /api/v1/privacy)
 	GetPrivacySettings(ctx context.Context, request GetPrivacySettingsRequestObject) (GetPrivacySettingsResponseObject, error)
@@ -10625,6 +11080,61 @@ func (sh *strictHandler) UpdateOidcProvider(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateOidcProviderResponseObject); ok {
 		if err := validResponse.VisitUpdateOidcProviderResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPreviewSettings operation middleware
+func (sh *strictHandler) GetPreviewSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetPreviewSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPreviewSettings(ctx, request.(GetPreviewSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPreviewSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPreviewSettingsResponseObject); ok {
+		if err := validResponse.VisitGetPreviewSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdatePreviewSettings operation middleware
+func (sh *strictHandler) UpdatePreviewSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdatePreviewSettingsRequestObject
+
+	var body UpdatePreviewSettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdatePreviewSettings(ctx, request.(UpdatePreviewSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdatePreviewSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdatePreviewSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdatePreviewSettingsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -12780,6 +13290,58 @@ func (sh *strictHandler) UploadKeyPackages(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UploadKeyPackagesResponseObject); ok {
 		if err := validResponse.VisitUploadKeyPackagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetLinkPreview operation middleware
+func (sh *strictHandler) GetLinkPreview(w http.ResponseWriter, r *http.Request, params GetLinkPreviewParams) {
+	var request GetLinkPreviewRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetLinkPreview(ctx, request.(GetLinkPreviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetLinkPreview")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetLinkPreviewResponseObject); ok {
+		if err := validResponse.VisitGetLinkPreviewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetLinkPreviewImage operation middleware
+func (sh *strictHandler) GetLinkPreviewImage(w http.ResponseWriter, r *http.Request, params GetLinkPreviewImageParams) {
+	var request GetLinkPreviewImageRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetLinkPreviewImage(ctx, request.(GetLinkPreviewImageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetLinkPreviewImage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetLinkPreviewImageResponseObject); ok {
+		if err := validResponse.VisitGetLinkPreviewImageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -25,6 +25,7 @@ import (
 	keybackupstore "github.com/aazam476/nexus-chat/apps/server/internal/keybackup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	keypackagesstore "github.com/aazam476/nexus-chat/apps/server/internal/keypackages/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/linkpreview"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/filestore"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
@@ -102,6 +103,11 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	leaves.delivery = deliveryService
 	app.typing.conversations = conversationService
 	features.Conversations = conversations.NewHandler(conversationService)
+	features.LinkPreviews = linkpreview.NewHandler(linkpreview.NewService(linkpreview.Options{
+		Switch: instanceconfig.NewService(instanceconfigstore.New(app.pool), system, configuration.Domain),
+		// Previews are limited per user: 30 a minute, bursts of 10.
+		Limiter: ratelimit.New(ratelimit.PerMinute(30, 10), system),
+	}))
 	features.Attachments = attachments.NewHandler(attachments.NewService(attachments.Dependencies{
 		Store: attachmentsstore.New(app.pool), Files: filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
 		Members: conversationService, Limits: instanceconfig.NewService(instanceconfigstore.New(app.pool), system, configuration.Domain),

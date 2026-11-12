@@ -18,4 +18,7 @@ const (
 	// KeyAttachmentMaxBytes is the instance's attachment limit in bytes
 	// (JSON number), set in the Admin panel.
 	KeyAttachmentMaxBytes = "uploads.attachment_max_bytes"
+	// KeyLinkPreviewProxy turns the web app's link preview proxy on
+	// (JSON boolean); off unless the admin turns it on.
+	KeyLinkPreviewProxy = "previews.proxy_enabled"
 )

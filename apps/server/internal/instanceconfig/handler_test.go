@@ -50,7 +50,7 @@ func TestGetInstanceInfoReportsStoreFailures(t *testing.T) {
 	require.ErrorContains(t, err, "down")
 
 	// Later lookups fail too: each one is reported, not skipped.
-	for _, key := range []string{KeyRegistrationMode, KeyInstanceDomain, KeyAttachmentMaxBytes} {
+	for _, key := range []string{KeyRegistrationMode, KeyInstanceDomain, KeyAttachmentMaxBytes, KeyLinkPreviewProxy} {
 		corrupt := &fakeSettingsStore{values: map[string][]byte{key: []byte(`{`)}}
 		_, err := NewHandler(NewService(corrupt, clock.Fixed{}, ""), signingKey, Limits{GroupDMMaxMembers: 25}).GetInstanceInfo(t.Context(), api.GetInstanceInfoRequestObject{})
 		assert.ErrorContains(t, err, "decoding setting "+key)

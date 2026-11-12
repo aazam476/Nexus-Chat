@@ -43,6 +43,7 @@ export const demo: Dataset = {
     secureConnection: true,
     signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     limits: { groupDmMaxMembers: 25, attachmentMaxBytes: 26214400 },
+    linkPreviewProxy: false,
   },
   user: {
     id: "0195f0e0-0000-7000-8000-000000000001",
@@ -90,6 +91,7 @@ export const worstCase: Dataset = {
     secureConnection: false,
     signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     limits: { groupDmMaxMembers: 25, attachmentMaxBytes: 26214400 },
+    linkPreviewProxy: false,
   },
   user: {
     id: "0195f0e0-0000-7000-8000-000000000002",

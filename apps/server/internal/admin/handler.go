@@ -20,18 +20,26 @@ type Certificates interface {
 	Remove() error
 }
 
-// Handler serves the admin TLS, SMTP and upload limit endpoints.
+// Handler serves the admin TLS, SMTP, upload limit and preview proxy endpoints.
 type Handler struct {
 	users        accounts.UserReader
 	certificates Certificates
 	mail         *MailSettings
 	uploads      UploadLimits
+	previews     PreviewProxy
+}
+
+// Settings are the instance settings the Admin panel changes;
+// *instanceconfig.Service implements them.
+type Settings interface {
+	UploadLimits
+	PreviewProxy
 }
 
 // NewHandler returns a Handler. users is used to check that the caller is
 // an instance admin.
-func NewHandler(users accounts.UserReader, certificates Certificates, mailSettings *MailSettings, uploads UploadLimits) *Handler {
-	return &Handler{users: users, certificates: certificates, mail: mailSettings, uploads: uploads}
+func NewHandler(users accounts.UserReader, certificates Certificates, mailSettings *MailSettings, settings Settings) *Handler {
+	return &Handler{users: users, certificates: certificates, mail: mailSettings, uploads: settings, previews: settings}
 }
 
 // requireAdmin returns the caller, or the body of a 403 response if they

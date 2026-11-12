@@ -20,6 +20,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keybackup"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
+	"github.com/aazam476/nexus-chat/apps/server/internal/linkpreview"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
@@ -35,6 +36,7 @@ type Features struct {
 	Conversations *conversations.Handler
 	Delivery      *delivery.Handler
 	Attachments   *attachments.Handler
+	LinkPreviews  *linkpreview.Handler
 	Health        *health.Handler
 	Identities    *identities.Handler
 	Instance      *instanceconfig.Handler
@@ -75,6 +77,7 @@ type (
 	instanceHandler      = instanceconfig.Handler
 	keyBackupHandler     = keybackup.Handler
 	keyPackagesHandler   = keypackages.Handler
+	linkPreviewHandler   = linkpreview.Handler
 	oidcHandler          = oidc.Handler
 	profilesHandler      = profiles.Handler
 	registrationHandler  = registration.Handler
@@ -97,6 +100,7 @@ type handlers struct {
 	*instanceHandler
 	*keyBackupHandler
 	*keyPackagesHandler
+	*linkPreviewHandler
 	*oidcHandler
 	*profilesHandler
 	*registrationHandler
@@ -119,7 +123,7 @@ func NewHandler(features Features, options Options) http.Handler {
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
 			socialHandler: features.Social, conversationsHandler: features.Conversations, deliveryHandler: features.Delivery,
-			attachmentsHandler: features.Attachments,
+			attachmentsHandler: features.Attachments, linkPreviewHandler: features.LinkPreviews,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
 		api.StrictHTTPServerOptions{

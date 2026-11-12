@@ -29,6 +29,8 @@ tags:
     description: Friends, blocks and privacy settings (spec §4.2).
   - name: conversations
     description: DMs and group DMs (spec §4.3). Messages travel encrypted through the encryption endpoints.
+  - name: messaging
+    description: Help with composing messages, such as the web app's optional link preview proxy (spec §4.5).
 paths:
   /api/v1/auth/login:
     post:
@@ -405,6 +407,53 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "422":
           $ref: "#/components/responses/ValidationFailed"
+  /api/v1/admin/previews:
+    get:
+      operationId: getPreviewSettings
+      summary: Link preview proxy setting
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The current setting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updatePreviewSettings
+      summary: Turn the link preview proxy on or off
+      description: |
+        With the proxy on, the web app asks the instance to fetch the pages
+        people preview, so the instance sees those links (spec §4.5).
+        Native and desktop apps fetch previews themselves either way.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewSettings"
+      responses:
+        "200":
+          description: The setting now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/v1/admin/smtp:
     get:
       operationId: getSmtpSettings
@@ -2807,6 +2856,96 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           $ref: "#/components/responses/ValidationFailed"
+  /api/v1/link-previews:
+    get:
+      operationId: getLinkPreview
+      summary: Fetch a page's preview through the instance
+      description: |
+        For the web app, which cannot read other sites. Only while the admin
+        has the proxy on; public http and https links only, never internal
+        addresses. Nothing is stored.
+      tags: [messaging]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The page's title, description and image address.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkPreviewPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: The proxy is off (`preview_proxy_off`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a public http or https link (`invalid_link`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          description: The page could not be fetched or has nothing to preview (`preview_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/link-previews/image:
+    get:
+      operationId: getLinkPreviewImage
+      summary: Fetch a preview's image through the instance
+      description: A PNG, JPEG, GIF or WebP image of at most 5 MiB, for the web app to encrypt and attach.
+      tags: [messaging]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The image.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: The proxy is off (`preview_proxy_off`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a public http or https link (`invalid_link`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          description: The image could not be fetched (`preview_unavailable`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/read-state:
     get:
       operationId: listReadStates
@@ -3960,8 +4099,14 @@ components:
     InstanceInfo:
       type: object
       additionalProperties: false
-      required: [name, registrationMode, secureConnection, signingKey, limits]
+      required: [name, registrationMode, secureConnection, signingKey, limits, linkPreviewProxy]
       properties:
+        linkPreviewProxy:
+          type: boolean
+          description: |
+            True when the admin turned on the link preview proxy, which the
+            web app uses to show link previews; the app tells users the
+            instance then sees the links they preview.
         limits:
           $ref: "#/components/schemas/InstanceLimits"
         signingKey:
@@ -3992,6 +4137,23 @@ components:
         size:
           type: integer
           format: int64
+    PreviewSettings:
+      type: object
+      additionalProperties: false
+      required: [proxyEnabled]
+      properties:
+        proxyEnabled:
+          type: boolean
+    LinkPreviewPage:
+      type: object
+      required: [title, description]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
     UploadSettings:
       type: object
       additionalProperties: false

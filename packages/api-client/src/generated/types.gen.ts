@@ -614,6 +614,13 @@ export type HealthCheck = {
 export type HealthState = 'ok' | 'unavailable';
 
 export type InstanceInfo = {
+    /**
+     * True when the admin turned on the link preview proxy, which the
+     * web app uses to show link previews; the app tells users the
+     * instance then sees the links they preview.
+     *
+     */
+    linkPreviewProxy: boolean;
     limits: InstanceLimits;
     /**
      * The instance's Ed25519 public key (32 bytes). Devices check
@@ -638,6 +645,16 @@ export type InstanceInfo = {
 export type StoredAttachment = {
     id: string;
     size: number;
+};
+
+export type PreviewSettings = {
+    proxyEnabled: boolean;
+};
+
+export type LinkPreviewPage = {
+    title: string;
+    description: string;
+    imageUrl?: string;
 };
 
 export type UploadSettings = {
@@ -1340,6 +1357,68 @@ export type UpdateUploadSettingsResponses = {
 };
 
 export type UpdateUploadSettingsResponse = UpdateUploadSettingsResponses[keyof UpdateUploadSettingsResponses];
+
+export type GetPreviewSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/previews';
+};
+
+export type GetPreviewSettingsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetPreviewSettingsError = GetPreviewSettingsErrors[keyof GetPreviewSettingsErrors];
+
+export type GetPreviewSettingsResponses = {
+    /**
+     * The current setting.
+     */
+    200: PreviewSettings;
+};
+
+export type GetPreviewSettingsResponse = GetPreviewSettingsResponses[keyof GetPreviewSettingsResponses];
+
+export type UpdatePreviewSettingsData = {
+    body: PreviewSettings;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/previews';
+};
+
+export type UpdatePreviewSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type UpdatePreviewSettingsError = UpdatePreviewSettingsErrors[keyof UpdatePreviewSettingsErrors];
+
+export type UpdatePreviewSettingsResponses = {
+    /**
+     * The setting now.
+     */
+    200: PreviewSettings;
+};
+
+export type UpdatePreviewSettingsResponse = UpdatePreviewSettingsResponses[keyof UpdatePreviewSettingsResponses];
 
 export type GetSmtpSettingsData = {
     body?: never;
@@ -4042,6 +4121,92 @@ export type MarkConversationReadResponses = {
 };
 
 export type MarkConversationReadResponse = MarkConversationReadResponses[keyof MarkConversationReadResponses];
+
+export type GetLinkPreviewData = {
+    body?: never;
+    path?: never;
+    query: {
+        url: string;
+    };
+    url: '/api/v1/link-previews';
+};
+
+export type GetLinkPreviewErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The proxy is off (`preview_proxy_off`).
+     */
+    403: Error;
+    /**
+     * Not a public http or https link (`invalid_link`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+    /**
+     * The page could not be fetched or has nothing to preview (`preview_unavailable`).
+     */
+    502: Error;
+};
+
+export type GetLinkPreviewError = GetLinkPreviewErrors[keyof GetLinkPreviewErrors];
+
+export type GetLinkPreviewResponses = {
+    /**
+     * The page's title, description and image address.
+     */
+    200: LinkPreviewPage;
+};
+
+export type GetLinkPreviewResponse = GetLinkPreviewResponses[keyof GetLinkPreviewResponses];
+
+export type GetLinkPreviewImageData = {
+    body?: never;
+    path?: never;
+    query: {
+        url: string;
+    };
+    url: '/api/v1/link-previews/image';
+};
+
+export type GetLinkPreviewImageErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The proxy is off (`preview_proxy_off`).
+     */
+    403: Error;
+    /**
+     * Not a public http or https link (`invalid_link`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+    /**
+     * The image could not be fetched (`preview_unavailable`).
+     */
+    502: Error;
+};
+
+export type GetLinkPreviewImageError = GetLinkPreviewImageErrors[keyof GetLinkPreviewImageErrors];
+
+export type GetLinkPreviewImageResponses = {
+    /**
+     * The image.
+     */
+    200: Blob | File;
+};
+
+export type GetLinkPreviewImageResponse = GetLinkPreviewImageResponses[keyof GetLinkPreviewImageResponses];
 
 export type ListReadStatesData = {
     body?: never;

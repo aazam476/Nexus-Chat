@@ -166,3 +166,14 @@ func TestAttachmentLimit(t *testing.T) {
 	require.ErrorIs(t, service.SetAttachmentMaxBytes(t.Context(), MaximumAttachmentMaxBytes+1), ErrInvalidAttachmentLimit)
 	require.NoError(t, service.SetAttachmentMaxBytes(t.Context(), MaximumAttachmentMaxBytes))
 }
+
+func TestLinkPreviewProxy(t *testing.T) {
+	service := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "")
+	enabled, err := service.LinkPreviewProxy(t.Context())
+	require.NoError(t, err)
+	assert.False(t, enabled, "off until the admin turns it on")
+	require.NoError(t, service.SetLinkPreviewProxy(t.Context(), true))
+	enabled, err = service.LinkPreviewProxy(t.Context())
+	require.NoError(t, err)
+	assert.True(t, enabled)
+}

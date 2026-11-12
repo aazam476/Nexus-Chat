@@ -40,6 +40,8 @@ func everyOperation(ctx context.Context, handler *Handler) []any {
 		call(handler.SendTestEmail(ctx, api.SendTestEmailRequestObject{})),
 		call(handler.GetUploadSettings(ctx, api.GetUploadSettingsRequestObject{})),
 		call(handler.UpdateUploadSettings(ctx, api.UpdateUploadSettingsRequestObject{Body: &api.UploadSettings{}})),
+		call(handler.GetPreviewSettings(ctx, api.GetPreviewSettingsRequestObject{})),
+		call(handler.UpdatePreviewSettings(ctx, api.UpdatePreviewSettingsRequestObject{Body: &api.PreviewSettings{}})),
 	}
 }
 
@@ -52,6 +54,7 @@ func TestEveryOperationRequiresAnInstanceAdmin(t *testing.T) {
 		api.GetTlsStatus403JSONResponse{}, api.InstallTlsCertificate403JSONResponse{}, api.RemoveTlsCertificate403JSONResponse{},
 		api.GetSmtpSettings403JSONResponse{}, api.UpdateSmtpSettings403JSONResponse{}, api.SendTestEmail403JSONResponse{},
 		api.GetUploadSettings403JSONResponse{}, api.UpdateUploadSettings403JSONResponse{},
+		api.GetPreviewSettings403JSONResponse{}, api.UpdatePreviewSettings403JSONResponse{},
 	}
 	require.Len(t, responses, len(want))
 	for index, response := range responses {
@@ -75,6 +78,8 @@ func TestEveryOperationReportsLookupFailures(t *testing.T) {
 		call(handler.SendTestEmail(ctx, api.SendTestEmailRequestObject{})),
 		call(handler.GetUploadSettings(ctx, api.GetUploadSettingsRequestObject{})),
 		call(handler.UpdateUploadSettings(ctx, api.UpdateUploadSettingsRequestObject{Body: &api.UploadSettings{}})),
+		call(handler.GetPreviewSettings(ctx, api.GetPreviewSettingsRequestObject{})),
+		call(handler.UpdatePreviewSettings(ctx, api.UpdatePreviewSettingsRequestObject{Body: &api.PreviewSettings{}})),
 	} {
 		assert.ErrorIs(t, err, errFailure)
 	}

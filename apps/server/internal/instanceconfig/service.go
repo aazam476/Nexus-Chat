@@ -157,3 +157,17 @@ func (service *Service) SetAttachmentMaxBytes(ctx context.Context, limit int64) 
 	}
 	return service.Save(ctx, KeyAttachmentMaxBytes, limit)
 }
+
+// LinkPreviewProxy reports whether the admin turned on the link preview
+// proxy, which lets the web app show previews; it is off by default because
+// the instance then sees the links people preview.
+func (service *Service) LinkPreviewProxy(ctx context.Context) (bool, error) {
+	enabled := false
+	_, err := service.Load(ctx, KeyLinkPreviewProxy, &enabled)
+	return enabled, err
+}
+
+// SetLinkPreviewProxy turns the link preview proxy on or off.
+func (service *Service) SetLinkPreviewProxy(ctx context.Context, enabled bool) error {
+	return service.Save(ctx, KeyLinkPreviewProxy, enabled)
+}

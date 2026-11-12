@@ -12,10 +12,24 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
 )
 
-// fakeUploads keeps the limit in memory, checking it like the real service.
+// fakeUploads keeps the upload limit and preview setting in memory,
+// checking the limit like the real service.
 type fakeUploads struct {
-	limit int64
-	err   error
+	limit    int64
+	previews bool
+	err      error
+}
+
+func (fake *fakeUploads) LinkPreviewProxy(context.Context) (bool, error) {
+	return fake.previews, fake.err
+}
+
+func (fake *fakeUploads) SetLinkPreviewProxy(_ context.Context, enabled bool) error {
+	if fake.err != nil {
+		return fake.err
+	}
+	fake.previews = enabled
+	return nil
 }
 
 func (fake *fakeUploads) AttachmentMaxBytes(context.Context) (int64, error) {
@@ -58,5 +72,24 @@ func TestUploadSettingsReportStoreFailures(t *testing.T) {
 	_, err := fixture.handler.GetUploadSettings(ctx, api.GetUploadSettingsRequestObject{})
 	require.Error(t, err)
 	_, err = fixture.handler.UpdateUploadSettings(ctx, api.UpdateUploadSettingsRequestObject{Body: &api.UploadSettings{AttachmentMaxBytes: 2 << 20}})
+	require.Error(t, err)
+}
+
+func TestPreviewSettingsRoundTrip(t *testing.T) {
+	fixture := newHandlerFixture(t, fakeUsers{admin: true})
+	ctx := adminContext(t)
+
+	got, err := fixture.handler.GetPreviewSettings(ctx, api.GetPreviewSettingsRequestObject{})
+	require.NoError(t, err)
+	assert.Equal(t, api.GetPreviewSettings200JSONResponse{ProxyEnabled: false}, got)
+	updated, err := fixture.handler.UpdatePreviewSettings(ctx, api.UpdatePreviewSettingsRequestObject{Body: &api.PreviewSettings{ProxyEnabled: true}})
+	require.NoError(t, err)
+	assert.Equal(t, api.UpdatePreviewSettings200JSONResponse{ProxyEnabled: true}, updated)
+	assert.True(t, fixture.uploads.previews)
+
+	fixture.uploads.err = errors.New("down")
+	_, err = fixture.handler.GetPreviewSettings(ctx, api.GetPreviewSettingsRequestObject{})
+	require.Error(t, err)
+	_, err = fixture.handler.UpdatePreviewSettings(ctx, api.UpdatePreviewSettingsRequestObject{Body: &api.PreviewSettings{}})
 	require.Error(t, err)
 }

@@ -20,6 +20,7 @@ Dependabot proposes updates weekly.
 | `github.com/coder/websocket` | v1.8.15 | ISC | The WebSocket gateway ([ADR 0012](adr/0012-websocket-and-realtime-state.md)); `context`-based, no dependencies |
 | `golang.org/x/image` | v0.47.0 | BSD-3-Clause | WebP decoding and high-quality resizing of profile pictures, from the Go project |
 | `golang.org/x/sync` | v0.24.0 | BSD-3-Clause | A weighted semaphore that bounds how many uploaded pictures are decoded at once |
+| `golang.org/x/net` | v0.61.0 | BSD-3-Clause | The HTML tokenizer (`html`) that reads a page's title and Open Graph tags for the link preview proxy, from the Go project |
 | `github.com/pquerna/otp` | v1.5.0 | Apache-2.0 | TOTP (RFC 6238) enrollment URIs and code checks for two-factor login |
 | `github.com/go-webauthn/webauthn` | v0.18.2 | BSD-3-Clause | WebAuthn ceremonies for passkeys and security keys; the maintained Go implementation, verifies attestation and assertions |
 
