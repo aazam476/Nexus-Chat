@@ -42,34 +42,70 @@ func TestHealthEndpointsMatchTheContract(t *testing.T) {
 	}
 }
 
+func TestAServerThatCannotBindIsReportedNotStarted(t *testing.T) {
+	taken, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = taken.Close() })
+	port := taken.Addr().(*net.TCPAddr).Port
+	environment := []string{
+		"ADMIN_EMAIL=admin@example.com", "DATABASE_URL=" + databasetest.NewDatabaseURL(t), "DATA_DIR=" + t.TempDir(),
+		"HTTP_PORT=" + strconv.Itoa(port), "HTTPS_PORT=" + strconv.Itoa(freePort(t)),
+	}
+
+	_, started := launch(t, buildServer(t), environment, "http://127.0.0.1:1")
+
+	require.False(t, started)
+}
+
 func startServer(t *testing.T) runningServer {
 	t.Helper()
 	binary := buildServer(t)
-	port := freePort(t)
-	// Not t.Context(): that is cancelled before cleanups run, which would
-	// kill the server instead of letting it shut down gracefully.
-	command := exec.CommandContext(context.WithoutCancel(t.Context()), binary)
-	command.Env = []string{
+	// The database comes first: its container takes host ports of its own,
+	// which must not be the ones picked for the server.
+	environment := []string{
 		"ADMIN_EMAIL=admin@example.com",
 		"DATABASE_URL=" + databasetest.NewDatabaseURL(t),
 		"DATA_DIR=" + t.TempDir(),
-		"HTTP_PORT=" + strconv.Itoa(port),
-		"HTTPS_PORT=" + strconv.Itoa(freePort(t)),
 	}
+	// A port picked as free can still be taken before the server binds it;
+	// the server then exits, and a fresh pair of ports is tried.
+	for attempt := 1; ; attempt++ {
+		port := freePort(t)
+		ports := []string{"HTTP_PORT=" + strconv.Itoa(port), "HTTPS_PORT=" + strconv.Itoa(freePort(t))}
+		baseURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+		if output, ok := launch(t, binary, append(ports, environment...), baseURL); ok {
+			return runningServer{baseURL: baseURL, router: loadContract(t), output: output}
+		}
+		if attempt == 3 {
+			t.Fatalf("the server did not start in %d attempts", attempt)
+		}
+	}
+}
+
+// launch runs the server and waits until it answers at baseURL. It reports
+// false if the process exits first.
+func launch(t *testing.T, binary string, environment []string, baseURL string) (*lockedBuffer, bool) {
+	t.Helper()
+	// Not t.Context(): that is cancelled before cleanups run, which would
+	// kill the server instead of letting it shut down gracefully.
+	command := exec.CommandContext(context.WithoutCancel(t.Context()), binary)
+	command.Env = environment
 	output := &lockedBuffer{}
 	command.Stdout, command.Stderr = output, output
 	require.NoError(t, command.Start())
+	exited := make(chan struct{})
+	go func() {
+		_ = command.Wait()
+		close(exited)
+	}()
 	t.Cleanup(func() {
 		_ = command.Process.Signal(os.Interrupt)
-		_ = command.Wait()
+		<-exited
 		if t.Failed() {
 			t.Logf("server output:\n%s", output.String())
 		}
 	})
-
-	baseURL := fmt.Sprintf("http://127.0.0.1:%d", port)
-	waitUntilListening(t, baseURL)
-	return runningServer{baseURL: baseURL, router: loadContract(t), output: output}
+	return output, waitUntilListening(t, baseURL, exited)
 }
 
 func buildServer(t *testing.T) string {
@@ -181,7 +217,9 @@ func freePort(t *testing.T) int {
 	return port
 }
 
-func waitUntilListening(t *testing.T, baseURL string) {
+// waitUntilListening reports whether the server answers at baseURL before
+// it exits; it fails the test if it does neither within 30 seconds.
+func waitUntilListening(t *testing.T, baseURL string, exited <-chan struct{}) bool {
 	t.Helper()
 	client := http.Client{Timeout: time.Second}
 	deadline := time.Now().Add(30 * time.Second)
@@ -191,11 +229,16 @@ func waitUntilListening(t *testing.T, baseURL string) {
 		response, err := client.Do(request)
 		if err == nil {
 			_ = response.Body.Close()
-			return
+			return true
 		}
-		time.Sleep(100 * time.Millisecond)
+		select {
+		case <-exited:
+			return false
+		case <-time.After(100 * time.Millisecond):
+		}
 	}
 	t.Fatalf("server at %s never started", baseURL)
+	return false
 }
 
 // lockedBuffer collects the server's output; the process writes from its
