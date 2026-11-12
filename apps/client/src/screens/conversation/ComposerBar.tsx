@@ -1,21 +1,25 @@
 import { Button, spacing, Text, TextField } from "@nexus-chat/ui";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
 import { payloadLimits, type Payload } from "../../messaging/payload";
+import type { ConversationAttachments } from "../../messaging/useAttachments";
 import { ActionButton } from "./ActionButton";
+import { AttachmentPicker } from "./AttachmentPicker";
 import type { NameOf } from "./MessageItem";
 import type { Composer } from "./useComposer";
+import { useSubmit } from "./useSubmit";
 
 /** Props of {@link ComposerBar}. */
 export interface ComposerBarProps {
   composer: Composer;
   nameOf: NameOf;
   send: (payload: Payload) => Promise<unknown>;
+  attachments: ConversationAttachments;
 }
 
-function ModeLine({ composer, nameOf }: Omit<ComposerBarProps, "send">): ReactNode {
+function ModeLine({ composer, nameOf }: Pick<ComposerBarProps, "composer" | "nameOf">): ReactNode {
   const { t } = useTranslation();
   const { mode } = composer;
   if (mode.kind === "new") {
@@ -33,40 +37,14 @@ function ModeLine({ composer, nameOf }: Omit<ComposerBarProps, "send">): ReactNo
   );
 }
 
-/** Sends the composer's payload, once at a time. */
-function useSubmit(
-  composer: Composer,
-  send: ComposerBarProps["send"],
-): { submit: () => void; busy: boolean; failed: boolean } {
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const submit = (): void => {
-    const payload = composer.payload();
-    if (payload === undefined || busy) {
-      return;
-    }
-    setBusy(true);
-    setFailed(false);
-    send(payload)
-      .then(composer.sent, () => {
-        setFailed(true);
-      })
-      .finally(() => {
-        setBusy(false);
-      });
-  };
-  return { submit, busy, failed };
-}
-
 /** The message field, its send button and what the next send replies to or edits. */
-export function ComposerBar({ composer, nameOf, send }: ComposerBarProps): ReactNode {
+export function ComposerBar({ composer, nameOf, send, attachments }: ComposerBarProps): ReactNode {
   const { t } = useTranslation();
-  const { submit, busy, failed } = useSubmit(composer, send);
+  const submitting = useSubmit(composer, send, attachments);
+  const { submit, busy } = submitting;
   const error = composer.tooLong
     ? t("conversation.tooLong", { limit: payloadLimits.textLength })
-    : failed
-      ? t("conversation.sendFailed")
-      : undefined;
+    : submitting.error;
   return (
     <View style={styles.bar}>
       <ModeLine composer={composer} nameOf={nameOf} />
@@ -79,6 +57,7 @@ export function ComposerBar({ composer, nameOf, send }: ComposerBarProps): React
         lines={2}
         testID="composer"
       />
+      <AttachmentPicker composer={composer} disabled={busy} />
       <Button
         label={t("conversation.send")}
         onPress={submit}

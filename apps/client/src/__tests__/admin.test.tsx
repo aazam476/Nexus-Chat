@@ -23,6 +23,7 @@ function adminServer(tls: object = { active: false }, smtp: object = unconfigure
   const server = fakeServer();
   server.answer("GET /api/v1/admin/tls", { status: 200, body: tls });
   server.answer("GET /api/v1/admin/smtp", { status: 200, body: smtp });
+  server.answer("GET /api/v1/admin/uploads", { status: 200, body: { attachmentMaxBytes: 25 << 20 } });
   return server;
 }
 
@@ -276,5 +277,39 @@ describe("removing a certificate that the server refuses to remove", () => {
 
     expect(await screen.findByText("Something went wrong. Try again in a moment.")).toBeOnTheScreen();
     expect(screen.getByTestId("tls-remove")).toBeOnTheScreen();
+  });
+});
+
+describe("the uploads section", () => {
+  it("shows the attachment limit and saves a new one in MB", async () => {
+    const server = adminServer();
+    server.answer("PUT /api/v1/admin/uploads", { status: 200, body: { attachmentMaxBytes: 100 << 20 } });
+    await openAdmin(server);
+    expect(await screen.findByText("Files can be up to 25 MB.")).toBeOnTheScreen();
+
+    await fireEvent.changeText(screen.getByTestId("upload-limit-field"), "lots");
+    await fireEvent.press(screen.getByTestId("upload-limit-save"));
+    expect(await screen.findByText(/whole number of MB/)).toBeOnTheScreen();
+    expect(server.requests.filter((request) => request.method === "PUT")).toHaveLength(0);
+
+    await fireEvent.changeText(screen.getByTestId("upload-limit-field"), " 100 ");
+    await fireEvent.press(screen.getByTestId("upload-limit-save"));
+    expect(await screen.findByText("Files can be up to 100 MB.")).toBeOnTheScreen();
+    expect(screen.getByTestId("upload-notice")).toHaveTextContent(/next upload/);
+    expect(server.requests.find((request) => request.method === "PUT")?.body).toEqual({
+      attachmentMaxBytes: 100 << 20,
+    });
+  });
+
+  it("explains a refused change", async () => {
+    const server = adminServer();
+    server.answer("PUT /api/v1/admin/uploads", { status: 403, body: { code: "forbidden", message: "no" } });
+    await openAdmin(server);
+    await fireEvent.changeText(screen.getByTestId("upload-limit-field"), "50");
+    await fireEvent.press(screen.getByTestId("upload-limit-save"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("upload-notice")).toBeNull();
+    });
+    expect(screen.getByText("Files can be up to 25 MB.")).toBeOnTheScreen();
   });
 });

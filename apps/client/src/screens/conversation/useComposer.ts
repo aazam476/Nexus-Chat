@@ -4,7 +4,8 @@
  */
 import { useState } from "react";
 
-import { payloadLimits, type Payload } from "../../messaging/payload";
+import type { PickedFile } from "../../messaging/attachmentTransfer";
+import { payloadLimits, type AttachmentReference, type Payload } from "../../messaging/payload";
 import type { TimelineItem } from "../../messaging/timeline";
 
 /** What the next send does. */
@@ -20,18 +21,51 @@ export interface Composer {
   edit: (item: TimelineItem) => void;
   cancel: () => void;
   tooLong: boolean;
-  /** The payload to send, or undefined when there is nothing to send. */
-  payload: () => Payload | undefined;
+  /** Files to send with the next message, not uploaded yet. */
+  files: PickedFile[];
+  attach: (file: PickedFile) => void;
+  detach: (index: number) => void;
+  /**
+   * The payload to send, with the uploaded files' references, or
+   * undefined when there is nothing to send.
+   */
+  payload: (attachments?: AttachmentReference[]) => Payload | undefined;
   /** Clears the composer after a send went out. */
   sent: () => void;
 }
 
-/** Keeps the draft and mode of a conversation's composer. */
+/** The payload for the composer's state, or undefined when there is nothing to send. */
+function payloadOf(
+  state: { text: string; mode: ComposerMode; files: PickedFile[] },
+  attachments: AttachmentReference[],
+): Payload | undefined {
+  const { text, mode, files } = state;
+  if (mode.kind === "edit") {
+    return text === "" ? undefined : { kind: "edit", target: mode.item.id, text };
+  }
+  if (text === "" && files.length === 0) {
+    return undefined;
+  }
+  return {
+    kind: "text",
+    text,
+    ...(mode.kind === "reply" ? { replyTo: mode.item.id } : {}),
+    ...(attachments.length === 0 ? {} : { attachments }),
+  };
+}
+
+/** Keeps the draft, mode and pending files of a conversation's composer. */
 export function useComposer(): Composer {
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<ComposerMode>({ kind: "new" });
+  const [files, setFiles] = useState<PickedFile[]>([]);
   const text = draft.trim();
   const tooLong = draft.length > payloadLimits.textLength;
+  const reset = (): void => {
+    setMode({ kind: "new" });
+    setDraft("");
+    setFiles([]);
+  };
   return {
     draft,
     setDraft,
@@ -42,24 +76,18 @@ export function useComposer(): Composer {
     edit: (item) => {
       setMode({ kind: "edit", item });
       setDraft(item.text);
+      setFiles([]);
     },
-    cancel: () => {
-      setMode({ kind: "new" });
-      setDraft("");
-    },
+    cancel: reset,
     tooLong,
-    payload: () => {
-      if (text === "" || tooLong) {
-        return undefined;
-      }
-      if (mode.kind === "edit") {
-        return { kind: "edit", target: mode.item.id, text };
-      }
-      return mode.kind === "reply" ? { kind: "text", text, replyTo: mode.item.id } : { kind: "text", text };
+    files,
+    attach: (file) => {
+      setFiles((current) => (current.length < payloadLimits.attachments ? [...current, file] : current));
     },
-    sent: () => {
-      setMode({ kind: "new" });
-      setDraft("");
+    detach: (index) => {
+      setFiles((current) => current.filter((_, at) => at !== index));
     },
+    payload: (attachments = []) => (tooLong ? undefined : payloadOf({ text, mode, files }, attachments)),
+    sent: reset,
   };
 }

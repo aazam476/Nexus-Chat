@@ -5,6 +5,7 @@ import { View } from "react-native";
 
 import type { Payload } from "../../messaging/payload";
 import type { TimelineItem } from "../../messaging/timeline";
+import type { ConversationAttachments } from "../../messaging/useAttachments";
 import type { OpenConversation } from "../../messaging/useConversation";
 import { useTypingReporter, useTypists } from "../../messaging/useTyping";
 import { ComposerBar } from "./ComposerBar";
@@ -15,7 +16,11 @@ export interface ConversationFooterProps {
   conversationId: string;
   open: OpenConversation;
   timeline: TimelineItem[] | undefined;
-  compose: { composer: Composer; send: (payload: Payload) => Promise<unknown> };
+  compose: {
+    composer: Composer;
+    send: (payload: Payload) => Promise<unknown>;
+    attachments: ConversationAttachments;
+  };
 }
 
 /** Who is typing, in words: one or two names, or "several people". */
@@ -58,7 +63,7 @@ export function ConversationFooter({
     latest === undefined ? undefined : { id: latest.id, senderId: open.userIdOf(latest.sender) },
   );
   const report = useTypingReporter(conversationId);
-  const { composer, send } = compose;
+  const { composer, send, attachments } = compose;
   const typingComposer: Composer = {
     ...composer,
     setDraft: (text) => {
@@ -70,7 +75,7 @@ export function ConversationFooter({
   return (
     <View>
       <TypingLine names={names} />
-      <ComposerBar composer={typingComposer} nameOf={open.nameOf} send={send} />
+      <ComposerBar composer={typingComposer} nameOf={open.nameOf} send={send} attachments={attachments} />
     </View>
   );
 }

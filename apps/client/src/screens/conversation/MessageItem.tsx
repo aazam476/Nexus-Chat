@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import type { TimelineItem } from "../../messaging/timeline";
 import { ActionButton } from "./ActionButton";
+import { AttachmentList } from "./AttachmentList";
 import { MessageBody } from "./MessageBody";
 import { Reactions } from "./Reactions";
 
@@ -135,7 +136,10 @@ export function MessageItem({ item, replied, context, on }: MessageItemProps): R
         {item.deleted ? (
           <Text tone="muted">{t("conversation.deleted")}</Text>
         ) : (
-          <MessageBody text={item.text} />
+          <>
+            {item.text === "" ? null : <MessageBody text={item.text} />}
+            <AttachmentList files={item.attachments} />
+          </>
         )}
         {item.edited && !item.deleted ? (
           <Text variant="small" tone="muted">

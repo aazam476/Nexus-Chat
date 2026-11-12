@@ -343,7 +343,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   group, set or remove its icon (the system photo picker,
   `expo-image-picker`), add friends while there is room, and leave after
   a second press.
-- Still to do in M4: attachments (upload endpoints, thumbnails), link previews and the web
+- Attachments: devices encrypt each file (AES-256-GCM up to 64 MiB, the
+  libsodium secretstream above) and upload only ciphertext to
+  `POST /api/v1/conversations/{id}/attachments`, which checks the
+  declared size against the instance limit before reading, streams to
+  disk, and refuses a file of any other length. The key, hash, name, size,
+  dimensions and an encrypted 320-pixel thumbnail (made on the sender's
+  device) travel in the MLS message. The Admin panel sets the limit (1 MiB
+  to 4 GiB, 25 MiB by default). The composer attaches photos, videos and
+  any file; messages show image thumbnails and open files through the
+  share sheet on phones or a download in browsers. Optional lossy
+  compression (ADR 0014) is still to come.
+- Still to do in M4: link previews and the web
   preview proxy toggle, the native crypto
   stack (Hermes has no WebCrypto, so Android shows that encryption could
   not be set up), multi-user Playwright DM flows, WebSocket frame fuzzing,

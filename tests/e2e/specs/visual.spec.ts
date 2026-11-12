@@ -96,6 +96,7 @@ const screens: Screen[] = [
       await logIn(page);
       await page.getByTestId("go-admin").click();
       await expect(page.getByTestId("smtp-host")).toBeVisible();
+      await expect(page.getByTestId("upload-limit")).toBeVisible();
     },
   },
 ];

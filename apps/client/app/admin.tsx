@@ -7,6 +7,7 @@ import { HttpsWarning } from "../src/components/HttpsWarning";
 import { useConnection } from "../src/connection/ConnectionContext";
 import { CertificateSection } from "../src/screens/admin/CertificateSection";
 import { SmtpSection } from "../src/screens/admin/SmtpSection";
+import { UploadSection } from "../src/screens/admin/UploadSection";
 
 /**
  * The Admin panel. The HTTPS warning leads every admin page while the
@@ -42,6 +43,7 @@ export default function Admin(): ReactNode {
       </Stack>
       <CertificateSection />
       <SmtpSection />
+      <UploadSection />
     </Screen>
   );
 }

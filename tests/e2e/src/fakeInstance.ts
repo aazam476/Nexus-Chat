@@ -18,6 +18,15 @@ function setupErrors(dataset: Dataset): Dataset["fieldErrors"] {
   return dataset.fieldErrors.map((error) => ({ ...error, field: `admin.${error.field}` }));
 }
 
+/** The Admin panel's settings. */
+function adminAnswers(dataset: Dataset): Record<string, [number, unknown]> {
+  return {
+    "GET /api/v1/admin/tls": [200, dataset.tls],
+    "GET /api/v1/admin/smtp": [200, dataset.smtp],
+    "GET /api/v1/admin/uploads": [200, { attachmentMaxBytes: 25 << 20 }],
+  };
+}
+
 function answers(dataset: Dataset, options: FakeInstanceOptions): Record<string, [number, unknown]> {
   const validation = (fields: Dataset["fieldErrors"]): [number, unknown] => [
     422,
@@ -56,8 +65,7 @@ function answers(dataset: Dataset, options: FakeInstanceOptions): Record<string,
     // that must restore it: the screens show that step.
     "GET /api/v1/auth/sessions": [200, [session]],
     [`GET /api/v1/users/${dataset.user.id}/identity`]: [200, identity],
-    "GET /api/v1/admin/tls": [200, dataset.tls],
-    "GET /api/v1/admin/smtp": [200, dataset.smtp],
+    ...adminAnswers(dataset),
   };
 }
 

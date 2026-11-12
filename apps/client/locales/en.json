@@ -182,6 +182,16 @@
       "notConfigured": "Save the email settings before sending a test email.",
       "deliveryFailed": "The mail server did not accept the test email. Check the settings and try again.",
       "testRateLimited": "Too many test emails. Wait a minute and try again."
+    },
+    "uploads": {
+      "title": "Uploads",
+      "intro": "Attachments are encrypted on people's devices, so this server only stores them; it cannot look inside. The limit applies to each file, before encryption.",
+      "current": "Files can be up to {{limit}}.",
+      "field": "Largest attachment, in MB",
+      "fieldHint": "1 to 4096 MB. The default is 25 MB.",
+      "save": "Save limit",
+      "saved": "The new limit applies to the next upload.",
+      "invalid": "Enter a whole number of MB from 1 to 4096."
     }
   },
   "recovery": {
@@ -251,7 +261,21 @@
     "typingMany": "Several people are typing…",
     "newMessages": "New messages",
     "jumpToUnread": "Jump to first unread",
-    "groupSettings": "Group settings"
+    "groupSettings": "Group settings",
+    "attachFile": "Attach a file",
+    "attachMedia": "Photo or video",
+    "removeAttachment": "Remove {{name}}",
+    "attachmentTooLarge": "Files can be up to {{limit}} on this instance.",
+    "attachmentFailed": "A file could not be sent. Try again.",
+    "openAttachment": "Open {{name}}",
+    "attachmentChip": "{{name}} · {{size}}",
+    "attachmentUnavailable": "This file could not be opened.",
+    "imageDescription": "Image: {{name}}",
+    "bytes": "{{count}} bytes",
+    "kilobytes": "{{count}} KB",
+    "megabytes": "{{count}} MB",
+    "gigabytes": "{{count}} GB",
+    "bytes_one": "{{count}} byte"
   },
   "friends": {
     "title": "Friends",
