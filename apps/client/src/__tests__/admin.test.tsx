@@ -73,6 +73,7 @@ describe("the Admin panel", () => {
         registrationMode: "open",
         secureConnection: false,
         signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        limits: { groupDmMaxMembers: 25 },
       },
       setupRequired: false,
       domainFromEnvironment: false,

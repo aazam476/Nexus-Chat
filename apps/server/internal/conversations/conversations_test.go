@@ -183,8 +183,8 @@ func TestGroupLimitsAndDirectMessageRestrictions(t *testing.T) {
 	tooLong := string(make([]rune, 101))
 	require.ErrorIs(t, f.service.Rename(t.Context(), ada, dm.ID, &tooLong), ErrInvalidName)
 
-	members := make([]uuid.UUID, 0, MaximumGroupMembers)
-	for index := range MaximumGroupMembers - 1 {
+	members := make([]uuid.UUID, 0, DefaultMaximumGroupMembers)
+	for index := range DefaultMaximumGroupMembers - 1 {
 		members = append(members, f.user(t, "member"+string(rune('a'+index))))
 	}
 	full, err := f.service.CreateGroup(t.Context(), ada, nil, members)
@@ -194,4 +194,19 @@ func TestGroupLimitsAndDirectMessageRestrictions(t *testing.T) {
 	require.ErrorIs(t, err, ErrGroupSize)
 	_, err = f.service.Lookup(t.Context(), uuid.New())
 	require.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestTheInstanceSetsTheGroupLimit(t *testing.T) {
+	f := newFixture(t)
+	small := NewService(Dependencies{
+		Store: f.service.dependencies.Store, Policy: f.social, Notifier: f.events, Members: f.events,
+		Clock: clock.Fixed{Time: now}, MaximumGroupMembers: 3,
+	})
+	ada, grace, alan, linus := f.user(t, "ada"), f.user(t, "grace"), f.user(t, "alan"), f.user(t, "linus")
+
+	_, err := small.CreateGroup(t.Context(), ada, nil, []uuid.UUID{grace, alan, linus})
+	require.ErrorIs(t, err, ErrGroupSize)
+	group, err := small.CreateGroup(t.Context(), ada, nil, []uuid.UUID{grace, alan})
+	require.NoError(t, err)
+	require.ErrorIs(t, small.AddMember(t.Context(), ada, group.ID, linus), ErrGroupSize)
 }

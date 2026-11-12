@@ -569,8 +569,9 @@ type InstallTlsCertificateRequest struct {
 // InstanceInfo defines model for InstanceInfo.
 type InstanceInfo struct {
 	// Domain The public domain, once one is set.
-	Domain *string `json:"domain,omitempty"`
-	Name   string  `json:"name"`
+	Domain *string        `json:"domain,omitempty"`
+	Limits InstanceLimits `json:"limits"`
+	Name   string         `json:"name"`
 
 	// RegistrationMode Who may create accounts.
 	RegistrationMode RegistrationMode `json:"registrationMode"`
@@ -582,6 +583,12 @@ type InstanceInfo struct {
 	// SigningKey The instance's Ed25519 public key (32 bytes). Devices check
 	// membership directives against it (docs/e2ee-design.md §3.2).
 	SigningKey []byte `json:"signingKey"`
+}
+
+// InstanceLimits defines model for InstanceLimits.
+type InstanceLimits struct {
+	// GroupDmMaxMembers The largest group DM, counting its creator (GROUP_DM_MAX_MEMBERS).
+	GroupDmMaxMembers int `json:"groupDmMaxMembers"`
 }
 
 // Invite defines model for Invite.

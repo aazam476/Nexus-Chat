@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/mail"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -18,6 +19,12 @@ const (
 	DefaultPostgresPort     = 5432
 	DefaultPostgresUser     = "nexuschat"
 	DefaultPostgresDatabase = "nexuschat"
+	// DefaultGroupDMMaxMembers is the largest group DM (spec §4.3).
+	DefaultGroupDMMaxMembers = 25
+	// MaximumGroupDMMembers bounds GROUP_DM_MAX_MEMBERS: every member's
+	// devices join one MLS group, and the delivery service sends each
+	// message to all of them.
+	MaximumGroupDMMembers = 100
 )
 
 // Config holds every setting the server needs before it can reach the
@@ -43,6 +50,8 @@ type Config struct {
 	TrustedProxies TrustedProxies
 	// LogLevel controls log verbosity.
 	LogLevel slog.Level
+	// GroupDMMaxMembers is the largest group DM, counting its creator.
+	GroupDMMaxMembers int
 }
 
 // Getenv looks up an environment variable. os.Getenv satisfies it; tests
@@ -76,6 +85,8 @@ func Load(getenv Getenv) (Config, error) {
 	collect(err)
 	config.LogLevel, err = parseLogLevel(getenv("LOG_LEVEL"))
 	collect(err)
+	config.GroupDMMaxMembers, err = parseGroupSize(getenv("GROUP_DM_MAX_MEMBERS"))
+	collect(err)
 	config.DatabaseURL, err = databaseURL(getenv)
 	collect(err)
 	collect(ValidateDomain(config.Domain))
@@ -97,6 +108,20 @@ func parseAdminEmail(value string) (string, error) {
 		return "", fmt.Errorf("ADMIN_EMAIL %q is not a valid email address", value)
 	}
 	return value, nil
+}
+
+// parseGroupSize reads GROUP_DM_MAX_MEMBERS: 3 (the smallest group DM) to
+// MaximumGroupDMMembers, or the default when unset.
+func parseGroupSize(value string) (int, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return DefaultGroupDMMaxMembers, nil
+	}
+	size, err := strconv.Atoi(value)
+	if err != nil || size < 3 || size > MaximumGroupDMMembers {
+		return 0, fmt.Errorf("GROUP_DM_MAX_MEMBERS %q must be a number between 3 and %d", value, MaximumGroupDMMembers)
+	}
+	return size, nil
 }
 
 func parseLogLevel(value string) (slog.Level, error) {

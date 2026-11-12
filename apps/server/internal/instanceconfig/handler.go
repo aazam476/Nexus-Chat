@@ -12,13 +12,20 @@ import (
 type Handler struct {
 	service    *Service
 	signingKey ed25519.PublicKey
+	limits     Limits
+}
+
+// Limits are instance settings from .env that clients need to know.
+type Limits struct {
+	// GroupDMMaxMembers is the largest group DM (GROUP_DM_MAX_MEMBERS).
+	GroupDMMaxMembers int
 }
 
 // NewHandler returns a Handler reading settings from service.
 // signingKey is the instance's public key, which members' devices use to
 // check membership directives (docs/e2ee-design.md §3.2).
-func NewHandler(service *Service, signingKey ed25519.PublicKey) *Handler {
-	return &Handler{service: service, signingKey: signingKey}
+func NewHandler(service *Service, signingKey ed25519.PublicKey, limits Limits) *Handler {
+	return &Handler{service: service, signingKey: signingKey, limits: limits}
 }
 
 // GetInstanceInfo answers GET /api/v1/instance. secureConnection is what
@@ -41,6 +48,7 @@ func (handler *Handler) GetInstanceInfo(ctx context.Context, _ api.GetInstanceIn
 		RegistrationMode: api.RegistrationMode(mode),
 		SecureConnection: clientip.FromContext(ctx).SecureContext(),
 		SigningKey:       handler.signingKey,
+		Limits:           api.InstanceLimits{GroupDmMaxMembers: handler.limits.GroupDMMaxMembers},
 	}
 	if domain != "" {
 		response.Domain = &domain

@@ -52,7 +52,7 @@ func (service *Service) CreateGroup(ctx context.Context, me uuid.UUID, name *str
 			members = append(members, id)
 		}
 	}
-	if len(members) < MinimumGroupMembers || len(members) > MaximumGroupMembers {
+	if len(members) < MinimumGroupMembers || len(members) > service.dependencies.MaximumGroupMembers {
 		return Conversation{}, ErrGroupSize
 	}
 	for _, id := range members[1:] {

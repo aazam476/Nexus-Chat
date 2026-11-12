@@ -110,7 +110,7 @@ func (service *Service) AddMember(ctx context.Context, me uuid.UUID, id uuid.UUI
 	if err != nil {
 		return err
 	}
-	if count >= MaximumGroupMembers {
+	if count >= int64(service.dependencies.MaximumGroupMembers) {
 		return ErrGroupSize
 	}
 	if err := service.allow(ctx, me, userID); err != nil {

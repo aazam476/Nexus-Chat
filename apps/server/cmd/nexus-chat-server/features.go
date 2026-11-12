@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/admin"
+	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/conversations"
 	conversationsstore "github.com/aazam476/nexus-chat/apps/server/internal/conversations/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/delivery"
@@ -14,12 +16,14 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/httpserver"
 	"github.com/aazam476/nexus-chat/apps/server/internal/identities"
 	identitiesstore "github.com/aazam476/nexus-chat/apps/server/internal/identities/store"
+	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keybackup"
 	keybackupstore "github.com/aazam476/nexus-chat/apps/server/internal/keybackup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	keypackagesstore "github.com/aazam476/nexus-chat/apps/server/internal/keypackages/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
 	"github.com/aazam476/nexus-chat/apps/server/internal/social"
 	socialstore "github.com/aazam476/nexus-chat/apps/server/internal/social/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/webclient"
@@ -66,7 +70,7 @@ func (app *application) addEncryptionFeatures(features *httpserver.Features) {
 // and the MLS delivery service. Friend requests are limited per sender (30
 // a minute, bursts of 10). Changes reach users' devices through the
 // realtime hub, so it must exist already.
-func (app *application) addSocialFeatures(features *httpserver.Features) {
+func (app *application) addSocialFeatures(features *httpserver.Features, configuration config.Config) {
 	system := clock.System{}
 	socialService := social.NewService(social.Dependencies{
 		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: social.NoServers{},
@@ -79,6 +83,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features) {
 	leaves := &leaveForwarder{}
 	conversationService := conversations.NewService(conversations.Dependencies{
 		Store: conversationsstore.NewWriter(app.pool), Policy: socialService, Notifier: app.hub, Members: leaves, Clock: system,
+		MaximumGroupMembers: configuration.GroupDMMaxMembers,
 	})
 	deliveryService := delivery.NewService(delivery.Dependencies{
 		Store: deliverystore.NewWriter(app.pool), Members: conversationService, Notifier: app.hub,
@@ -114,4 +119,13 @@ func (forwarder *typingForwarder) TypingRecipients(ctx context.Context, conversa
 		return nil, nil
 	}
 	return recipients, err
+}
+
+// newMailSettings manages SMTP settings; the limit on test emails stops a
+// script from flooding the mail server.
+func newMailSettings(settings *instanceconfig.Service, box *secretbox.Box) *admin.MailSettings {
+	return admin.NewMailSettings(admin.MailDependencies{
+		Settings: settings, Box: box, NewSender: newMailer,
+		TestLimiter: ratelimit.New(ratelimit.PerMinute(3, 3), clock.System{}),
+	})
 }

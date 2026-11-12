@@ -3680,8 +3680,10 @@ components:
     InstanceInfo:
       type: object
       additionalProperties: false
-      required: [name, registrationMode, secureConnection, signingKey]
+      required: [name, registrationMode, secureConnection, signingKey, limits]
       properties:
+        limits:
+          $ref: "#/components/schemas/InstanceLimits"
         signingKey:
           type: string
           format: byte
@@ -3700,6 +3702,16 @@ components:
           description: |
             True when this request arrived over HTTPS (directly or via a
             trusted proxy) or is addressed to localhost.
+    InstanceLimits:
+      type: object
+      additionalProperties: false
+      required: [groupDmMaxMembers]
+      properties:
+        groupDmMaxMembers:
+          type: integer
+          minimum: 3
+          maximum: 100
+          description: The largest group DM, counting its creator (GROUP_DM_MAX_MEMBERS).
     TlsStatus:
       type: object
       additionalProperties: false

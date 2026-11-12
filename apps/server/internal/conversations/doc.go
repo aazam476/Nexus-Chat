@@ -4,6 +4,7 @@
 //
 // Starting a DM or adding someone to a group DM asks the social feature
 // whether they accept DMs from the caller. A pair of users has one DM.
-// Group DMs have 3 to MaximumGroupMembers members. Start reading at
+// Group DMs have 3 members up to the instance's limit
+// (GROUP_DM_MAX_MEMBERS). Start reading at
 // service.go.
 package conversations

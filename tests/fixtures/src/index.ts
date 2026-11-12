@@ -42,6 +42,7 @@ export const demo: Dataset = {
     registrationMode: "open",
     secureConnection: true,
     signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    limits: { groupDmMaxMembers: 25 },
   },
   user: {
     id: "0195f0e0-0000-7000-8000-000000000001",
@@ -88,6 +89,7 @@ export const worstCase: Dataset = {
     // Plain HTTP, so every screen also carries the HTTPS warning.
     secureConnection: false,
     signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    limits: { groupDmMaxMembers: 25 },
   },
   user: {
     id: "0195f0e0-0000-7000-8000-000000000002",

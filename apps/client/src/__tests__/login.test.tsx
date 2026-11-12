@@ -253,6 +253,7 @@ describe("the login screen", () => {
         registrationMode: "closed",
         secureConnection: true,
         signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        limits: { groupDmMaxMembers: 25 },
       },
       setupRequired: false,
       domainFromEnvironment: false,

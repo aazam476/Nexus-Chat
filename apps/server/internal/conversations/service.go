@@ -18,10 +18,11 @@ const (
 	KindGroup         = "group"
 )
 
-// Group DM size (spec §4.3: 3 to 25 members, counting the creator).
+// Group DM size (spec §4.3): at least 3 members, counting the creator, and
+// at most the instance's limit (GROUP_DM_MAX_MEMBERS), 25 unless set.
 const (
-	MinimumGroupMembers = 3
-	MaximumGroupMembers = 25
+	MinimumGroupMembers        = 3
+	DefaultMaximumGroupMembers = 25
 )
 
 // Errors returned to the caller.
@@ -30,7 +31,7 @@ var (
 	ErrUserNotFound  = errors.New("there is no such user")
 	ErrSelf          = errors.New("you cannot start a DM with yourself")
 	ErrNotAllowed    = errors.New("this user does not accept DMs from you")
-	ErrGroupSize     = errors.New("a group DM has 3 to 25 members")
+	ErrGroupSize     = errors.New("a group DM has at least 3 members and at most the instance's limit")
 	ErrNotAGroup     = errors.New("only group DMs can be renamed, added to or left")
 	ErrInvalidName   = errors.New("a group DM name is 1 to 100 characters")
 	ErrAlreadyMember = errors.New("this user is already in the conversation")
@@ -93,6 +94,8 @@ type Dependencies struct {
 	Notifier Notifier
 	Members  MembershipListener
 	Clock    clock.Clock
+	// MaximumGroupMembers is the instance's limit; 0 means the default.
+	MaximumGroupMembers int
 }
 
 // Service manages conversations.
@@ -102,6 +105,9 @@ type Service struct {
 
 // NewService returns a Service.
 func NewService(dependencies Dependencies) *Service {
+	if dependencies.MaximumGroupMembers == 0 {
+		dependencies.MaximumGroupMembers = DefaultMaximumGroupMembers
+	}
 	return &Service{dependencies: dependencies}
 }
 

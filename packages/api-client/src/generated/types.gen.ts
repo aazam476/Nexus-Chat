@@ -610,6 +610,7 @@ export type HealthCheck = {
 export type HealthState = 'ok' | 'unavailable';
 
 export type InstanceInfo = {
+    limits: InstanceLimits;
     /**
      * The instance's Ed25519 public key (32 bytes). Devices check
      * membership directives against it (docs/e2ee-design.md §3.2).
@@ -628,6 +629,13 @@ export type InstanceInfo = {
      *
      */
     secureConnection: boolean;
+};
+
+export type InstanceLimits = {
+    /**
+     * The largest group DM, counting its creator (GROUP_DM_MAX_MEMBERS).
+     */
+    groupDmMaxMembers: number;
 };
 
 export type TlsStatus = {

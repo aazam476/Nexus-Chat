@@ -112,7 +112,7 @@ func newApplication(ctx context.Context, configuration config.Config, logger *sl
 	}
 	features.Profiles = app.buildRealtimeAndProfiles(configuration)
 	app.addEncryptionFeatures(&features)
-	app.addSocialFeatures(&features)
+	app.addSocialFeatures(&features, configuration)
 	handler := httpserver.NewHandler(features, httpserver.Options{
 		Logger: logger, TrustedProxies: configuration.TrustedProxies, Authenticator: app.sessions, Gateway: app.gateway,
 		WebClient: webClient(configuration.WebDirectory),
@@ -184,6 +184,7 @@ func (app *application) buildFeatures(ctx context.Context, configuration config.
 	authFeatures := app.buildAuthFeatures(authInputs{
 		hasher: hasher, validator: validator, domain: configuration.Domain, adminEmail: configuration.AdminEmail,
 		secondFactors: secondFactors, settingsBox: settingsBox,
+		limits: instanceconfig.Limits{GroupDMMaxMembers: configuration.GroupDMMaxMembers},
 	})
 	authFeatures.Health = health.NewHandler(healthService)
 	authFeatures.Setup = setup.NewHandler(setupService)
@@ -198,6 +199,7 @@ type authInputs struct {
 	adminEmail    string
 	secondFactors *mfa.Service
 	settingsBox   *secretbox.Box
+	limits        instanceconfig.Limits
 }
 
 // buildAuthFeatures creates login, registration, verification and
@@ -229,8 +231,9 @@ func (app *application) buildAuthFeatures(inputs authInputs) httpserver.Features
 		Accounts: accounts.NewHandler(accountQueries),
 		Admin:    admin.NewHandler(accountQueries, app.certificates, mailSettings),
 		// An Ed25519 private key holds its public key in its last 32 bytes.
-		Instance: instanceconfig.NewHandler(settings, ed25519.PublicKey(app.secrets.FederationKey[ed25519.SeedSize:])),
-		OIDC:     app.newOIDCHandler(settings, logins, accountQueries, inputs.settingsBox),
+		Instance: instanceconfig.NewHandler(settings, ed25519.PublicKey(app.secrets.FederationKey[ed25519.SeedSize:]),
+			inputs.limits),
+		OIDC: app.newOIDCHandler(settings, logins, accountQueries, inputs.settingsBox),
 		Auth: auth.NewHandler(auth.HandlerDependencies{
 			Logins: logins, Sessions: app.sessions, Resets: resets,
 			Verifier: emails.NewVerifier(accountTokens, accountQueries, system), Emails: accountEmails, Users: accountQueries,
@@ -260,15 +263,6 @@ func (app *application) buildRealtimeAndProfiles(configuration config.Config) *p
 		Listener: app.hub, AvatarLimiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Clock: system, Logger: app.logger,
 	})
 	return profiles.NewHandler(service, app.hub)
-}
-
-// newMailSettings manages SMTP settings; the limit on test emails stops a
-// script from flooding the mail server.
-func newMailSettings(settings *instanceconfig.Service, box *secretbox.Box) *admin.MailSettings {
-	return admin.NewMailSettings(admin.MailDependencies{
-		Settings: settings, Box: box, NewSender: newMailer,
-		TestLimiter: ratelimit.New(ratelimit.PerMinute(3, 3), clock.System{}),
-	})
 }
 
 // newOIDCHandler wires provider sign-in (ADR 0016).

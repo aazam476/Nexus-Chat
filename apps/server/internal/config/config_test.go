@@ -32,26 +32,29 @@ func TestLoadUsesDefaultsForOptionalVariables(t *testing.T) {
 	assert.Equal(t, DefaultHTTPSPort, config.HTTPSPort)
 	assert.Equal(t, DefaultDataDirectory, config.DataDirectory)
 	assert.Equal(t, slog.LevelInfo, config.LogLevel)
+	assert.Equal(t, DefaultGroupDMMaxMembers, config.GroupDMMaxMembers)
 	assert.Empty(t, config.TrustedProxies)
 	assert.Equal(t, "postgres://nexuschat:change-me@postgres:5432/nexuschat?sslmode=disable", config.DatabaseURL)
 }
 
 func TestLoadReadsEveryOptionalVariable(t *testing.T) {
 	config, err := Load(environment(map[string]string{
-		"DOMAIN":            "chat.example.com",
-		"HTTP_PORT":         "9000",
-		"HTTPS_PORT":        "9443",
-		"DATA_DIR":          "/srv/nexus",
-		"TRUSTED_PROXIES":   "172.16.0.0/12",
-		"LOG_LEVEL":         "debug",
-		"POSTGRES_HOST":     "db.internal",
-		"POSTGRES_PORT":     "6543",
-		"POSTGRES_USER":     "chat",
-		"POSTGRES_DB":       "chatdb",
-		"POSTGRES_PASSWORD": "p@ss word",
+		"DOMAIN":               "chat.example.com",
+		"HTTP_PORT":            "9000",
+		"HTTPS_PORT":           "9443",
+		"DATA_DIR":             "/srv/nexus",
+		"TRUSTED_PROXIES":      "172.16.0.0/12",
+		"LOG_LEVEL":            "debug",
+		"POSTGRES_HOST":        "db.internal",
+		"POSTGRES_PORT":        "6543",
+		"POSTGRES_USER":        "chat",
+		"POSTGRES_DB":          "chatdb",
+		"POSTGRES_PASSWORD":    "p@ss word",
+		"GROUP_DM_MAX_MEMBERS": "40",
 	}))
 
 	require.NoError(t, err)
+	assert.Equal(t, 40, config.GroupDMMaxMembers)
 	assert.Equal(t, "chat.example.com", config.Domain)
 	assert.Equal(t, 9000, config.HTTPPort)
 	assert.Equal(t, 9443, config.HTTPSPort)
@@ -92,6 +95,9 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		{"domain without dot", map[string]string{"DOMAIN": "localhost"}, "DOMAIN"},
 		{"bad trusted proxy", map[string]string{"TRUSTED_PROXIES": "10.0.0.0/8, nope"}, "TRUSTED_PROXIES"},
 		{"bad log level", map[string]string{"LOG_LEVEL": "loud"}, "LOG_LEVEL"},
+		{"group DMs too small", map[string]string{"GROUP_DM_MAX_MEMBERS": "2"}, "GROUP_DM_MAX_MEMBERS"},
+		{"group DMs too large", map[string]string{"GROUP_DM_MAX_MEMBERS": "101"}, "GROUP_DM_MAX_MEMBERS"},
+		{"group DM size not a number", map[string]string{"GROUP_DM_MAX_MEMBERS": "many"}, "GROUP_DM_MAX_MEMBERS"},
 		{"database url wrong scheme", map[string]string{"DATABASE_URL": "mysql://u:p@host/db"}, "DATABASE_URL"},
 		{"database url without host", map[string]string{"DATABASE_URL": "postgres:///db"}, "DATABASE_URL"},
 		{"database url unparsable", map[string]string{"DATABASE_URL": "postgres://u:p@[::1/db"}, "DATABASE_URL"},
