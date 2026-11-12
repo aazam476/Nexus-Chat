@@ -37,8 +37,10 @@ export async function fetchPreviewResource(
   }
   try {
     const response = await fetcher(url, { redirect: "follow", signal: AbortSignal.timeout(8000) });
-    const contentType =
-      (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+    const contentType = (response.headers.get("content-type") ?? "")
+      .replace(/;.*$/s, "")
+      .trim()
+      .toLowerCase();
     if (!response.ok || !accepted(kind, contentType)) {
       return undefined;
     }

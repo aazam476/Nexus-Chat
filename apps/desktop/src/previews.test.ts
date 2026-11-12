@@ -54,6 +54,9 @@ describe("fetching for link previews", () => {
       await fetchPreviewResource(respond("x", "image/svg+xml"), "https://example.com", "image"),
     ).toBeUndefined();
     expect(
+      await fetchPreviewResource(() => Promise.resolve(new Response(null)), "https://example.com", "page"),
+    ).toBeUndefined();
+    expect(
       await fetchPreviewResource(respond("gone", "text/html", 404), "https://example.com", "page"),
     ).toBeUndefined();
     expect(
