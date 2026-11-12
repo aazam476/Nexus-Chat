@@ -22,6 +22,8 @@ export interface TimelineItem {
   replyTo?: string;
   attachments: AttachmentReference[];
   preview?: LinkPreview;
+  /** The live copy's ID on the delivery service, for read state; missing on old messages. */
+  deliveryId?: number;
   /** Each emoji with the users who reacted with it, in the order they did. */
   reactions: { emoji: string; users: string[] }[];
 }
@@ -80,6 +82,7 @@ export function buildTimeline(messages: DecryptedMessage[]): TimelineItem[] {
         ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
         attachments: payload.attachments ?? [],
         ...(payload.preview === undefined ? {} : { preview: payload.preview }),
+        ...(message.deliveryId === undefined ? {} : { deliveryId: message.deliveryId }),
         reactions: [],
       });
     } else {
@@ -87,4 +90,21 @@ export function buildTimeline(messages: DecryptedMessage[]): TimelineItem[] {
     }
   }
   return [...items.values()];
+}
+
+/** The highest delivery ID among the messages, edits and reactions included; 0 without any. */
+export function newestDeliveryId(messages: DecryptedMessage[]): number {
+  return messages.reduce((newest, message) => Math.max(newest, message.deliveryId ?? 0), 0);
+}
+
+/**
+ * The first message from someone else after `lastReadId`: where "new
+ * messages" starts. Undefined when everything was read.
+ */
+export function firstUnread(
+  timeline: TimelineItem[],
+  lastReadId: number,
+  self: string,
+): TimelineItem | undefined {
+  return timeline.find((item) => item.sender !== self && (item.deliveryId ?? 0) > lastReadId);
 }

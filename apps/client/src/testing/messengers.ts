@@ -3,11 +3,13 @@
  * renderWithApp) and Grace, on one in-memory instance, sharing a DM.
  */
 import type { Conversation } from "@nexus-chat/api-client";
+import type { ReactElement } from "react";
 
 import { startMessenger, type Messenger } from "../messaging/messenger";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "./fakeDelivery";
-import { ada } from "./renderWithApp";
+import { fakeServer, type FakeServer } from "./fakeServer";
+import { ada, fakeConnection, fakeMessaging, renderWithApp } from "./renderWithApp";
 
 /** Ada's friend Grace, as the server shows her. */
 export const grace = { id: "0195f0e0-0000-7000-8000-000000000002", username: "grace", displayName: "Grace" };
@@ -48,4 +50,25 @@ export async function messengersInDm(): Promise<{ ada: Messenger; grace: Messeng
   await adaMessenger.open(dm.id, dm.members);
   await graceMessenger.open(dm.id, dm.members);
   return { ada: adaMessenger, grace: graceMessenger };
+}
+
+/** A fake server that lists `conversations` and answers for the DM. */
+export function serverWith(conversations: unknown[]): FakeServer {
+  const server = fakeServer();
+  server.answer("GET /api/v1/conversations", { status: 200, body: conversations });
+  server.answer("GET /api/v1/conversations/dm", { status: 200, body: dm });
+  return server;
+}
+
+/** Renders `ui` signed in as Ada with her ready messenger. */
+export async function renderAs(
+  ui: ReactElement,
+  messenger: Messenger,
+  server = serverWith([dm]),
+): Promise<void> {
+  await renderWithApp(
+    ui,
+    fakeConnection(server, { user: ada }),
+    fakeMessaging({ status: "ready", messenger }),
+  );
 }

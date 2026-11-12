@@ -1,6 +1,6 @@
 import type { DecryptedMessage } from "../messaging/engine/sync";
 import type { Payload } from "../messaging/payload";
-import { buildTimeline } from "../messaging/timeline";
+import { buildTimeline, firstUnread, newestDeliveryId } from "../messaging/timeline";
 
 let clock = 0;
 const id = (n: number): string => `0195f0a2-1111-7000-8000-${String(n).padStart(12, "0")}`;
@@ -98,5 +98,29 @@ describe("the conversation timeline", () => {
 
     expect(timeline.map((item) => item.text)).toEqual(["once", "who"]);
     expect(timeline[1]?.sender).toBe("odd");
+  });
+
+  it("finds where unread messages from others begin, by delivery ID", () => {
+    const delivered = (message: DecryptedMessage, deliveryId: number): DecryptedMessage => ({
+      ...message,
+      deliveryId,
+    });
+    const messages = [
+      delivered(from(ada, 21, { kind: "text", text: "mine" }), 5),
+      delivered(from(grace, 22, { kind: "text", text: "old" }), 6),
+      delivered(from(ada, 23, { kind: "text", text: "mine again" }), 7),
+      delivered(from(grace, 24, { kind: "text", text: "new" }), 8),
+      delivered(from(grace, 25, { kind: "reaction", target: id(24), emoji: "👍", added: true }), 9),
+      from(grace, 26, { kind: "text", text: "saved before delivery IDs" }),
+    ];
+    const timeline = buildTimeline(messages);
+
+    expect(timeline[0]?.deliveryId).toBe(5);
+    expect(timeline.at(-1)?.deliveryId).toBeUndefined();
+    expect(newestDeliveryId(messages)).toBe(9);
+    expect(newestDeliveryId([])).toBe(0);
+    expect(firstUnread(timeline, 6, "@ada@test")?.text).toBe("new");
+    expect(firstUnread(timeline, 0, "@ada@test")?.text).toBe("old");
+    expect(firstUnread(timeline, 9, "@ada@test")).toBeUndefined();
   });
 });

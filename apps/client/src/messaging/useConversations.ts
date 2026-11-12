@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConnection } from "../connection/ConnectionContext";
 import { useGatewayEvents } from "../realtime/GatewayContext";
 import { messengerOf, useMessaging } from "./MessagingContext";
-import { buildTimeline, type TimelineItem } from "./timeline";
+import { buildTimeline, newestDeliveryId, type TimelineItem } from "./timeline";
 
 /** The conversations, or undefined while they load (or could not be). */
 export function useConversations(): { conversations: Conversation[] | undefined; reload: () => void } {
@@ -46,10 +46,16 @@ export function useConversations(): { conversations: Conversation[] | undefined;
   return { conversations, reload };
 }
 
+/** What a conversation shows, and how far its messages go, for read state. */
+export interface TimelineView {
+  items: TimelineItem[];
+  newestDeliveryId: number;
+}
+
 /** What a conversation shows, updated as messages arrive. */
-export function useTimeline(conversationId: string): TimelineItem[] | undefined {
+export function useTimeline(conversationId: string): TimelineView | undefined {
   const messenger = messengerOf(useMessaging());
-  const [timeline, setTimeline] = useState<TimelineItem[]>();
+  const [timeline, setTimeline] = useState<TimelineView>();
   useEffect(() => {
     if (messenger === undefined) {
       return;
@@ -58,7 +64,7 @@ export function useTimeline(conversationId: string): TimelineItem[] | undefined 
     const load = (): void => {
       void messenger.messages(conversationId).then((messages) => {
         if (current) {
-          setTimeline(buildTimeline(messages));
+          setTimeline({ items: buildTimeline(messages), newestDeliveryId: newestDeliveryId(messages) });
         }
       });
     };

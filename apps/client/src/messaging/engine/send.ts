@@ -125,7 +125,10 @@ export async function sendPayload(
     if (outcome.accepted) {
       await saveState(context, conversationId, { ...state, group: encrypted.group });
       const sentAt = new Date().toISOString();
-      await storeMessages(context, conversationId, [{ id, sender: context.device.address, payload, sentAt }]);
+      const own = { id, sender: context.device.address, payload, sentAt };
+      await storeMessages(context, conversationId, [
+        outcome.id === undefined ? own : { ...own, deliveryId: outcome.id },
+      ]);
       return id;
     }
     await syncConversation(context, conversationId);

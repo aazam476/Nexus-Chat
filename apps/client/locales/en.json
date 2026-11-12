@@ -214,7 +214,9 @@
     "groupName": "{{first}} and {{count}} others",
     "groupName_one": "{{first}} and 1 other",
     "noMessages": "No messages yet",
-    "open": "Open conversation with {{name}}"
+    "open": "Open conversation with {{name}}",
+    "unread": "{{count}} unread messages",
+    "unread_one": "1 unread message"
   },
   "conversation": {
     "back": "Back",
@@ -245,7 +247,9 @@
     "attachment": "Attachment: {{name}}",
     "typingOne": "{{name}} is typing…",
     "typingTwo": "{{first}} and {{second}} are typing…",
-    "typingMany": "Several people are typing…"
+    "typingMany": "Several people are typing…",
+    "newMessages": "New messages",
+    "jumpToUnread": "Jump to first unread"
   },
   "friends": {
     "title": "Friends",

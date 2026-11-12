@@ -16,7 +16,8 @@ export interface MessageItemProps {
   item: TimelineItem;
   /** The message it replies to, when this device has it. */
   replied: TimelineItem | undefined;
-  context: { self: string; nameOf: NameOf; selected: boolean };
+  /** `firstUnread` marks where new messages begin. */
+  context: { self: string; nameOf: NameOf; selected: boolean; firstUnread?: boolean };
   on: {
     select: () => void;
     reply: () => void;
@@ -85,14 +86,40 @@ function Actions({
   );
 }
 
+/** Who sent the message, and when. */
+function Byline({ name, sentAt }: { name: string; sentAt: string }): ReactNode {
+  const time = new Date(sentAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return (
+    <Text variant="label">
+      {name}{" "}
+      <Text variant="small" tone="muted">
+        {time}
+      </Text>
+    </Text>
+  );
+}
+
+/** The line above the first unread message. */
+function NewMessages(): ReactNode {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.divider, { borderColor: colors.danger }]} testID="new-messages">
+      <Text variant="small" tone="danger">
+        {t("conversation.newMessages")}
+      </Text>
+    </View>
+  );
+}
+
 /** One message: who sent it, what it replies to, its text, reactions and actions. */
 export function MessageItem({ item, replied, context, on }: MessageItemProps): ReactNode {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const name = context.nameOf(item.sender);
-  const time = new Date(item.sentAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   return (
     <View style={styles.item}>
+      {context.firstUnread === true ? <NewMessages /> : null}
       <Pressable
         onPress={item.deleted ? undefined : on.select}
         accessibilityLabel={t("conversation.messageActions", { name })}
@@ -103,12 +130,7 @@ export function MessageItem({ item, replied, context, on }: MessageItemProps): R
         ]}
         testID={`message-${item.id}`}
       >
-        <Text variant="label">
-          {name}{" "}
-          <Text variant="small" tone="muted">
-            {time}
-          </Text>
-        </Text>
+        <Byline name={name} sentAt={item.sentAt} />
         <ReplyPreview item={item} replied={replied} nameOf={context.nameOf} />
         {item.deleted ? (
           <Text tone="muted">{t("conversation.deleted")}</Text>
@@ -129,6 +151,7 @@ export function MessageItem({ item, replied, context, on }: MessageItemProps): R
 
 const styles = StyleSheet.create({
   item: { gap: spacing.xs },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.xs, alignItems: "flex-end" },
   press: { padding: spacing.sm, borderRadius: 8, gap: spacing.xs },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingHorizontal: spacing.sm },
 });

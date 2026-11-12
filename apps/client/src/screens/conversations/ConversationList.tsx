@@ -3,6 +3,7 @@ import { Stack, Text } from "@nexus-chat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useReadStates } from "../../messaging/useReadState";
 import { ConversationRow } from "./ConversationRow";
 
 /** Props of {@link ConversationList}. */
@@ -14,6 +15,7 @@ export interface ConversationListProps {
 /** The conversations, or why there are none to show. */
 export function ConversationList({ conversations, selfId }: ConversationListProps): ReactNode {
   const { t } = useTranslation();
+  const readStates = useReadStates();
   if (conversations === undefined) {
     return <Text tone="muted">{t("conversations.loading")}</Text>;
   }
@@ -23,7 +25,12 @@ export function ConversationList({ conversations, selfId }: ConversationListProp
   return (
     <Stack gap="xs">
       {conversations.map((conversation) => (
-        <ConversationRow key={conversation.id} conversation={conversation} selfId={selfId} />
+        <ConversationRow
+          key={conversation.id}
+          conversation={conversation}
+          selfId={selfId}
+          unread={readStates?.get(conversation.id)?.unreadCount ?? 0}
+        />
       ))}
     </Stack>
   );

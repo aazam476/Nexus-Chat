@@ -62,6 +62,11 @@ describe("the messenger", () => {
     await grace.messenger.sync("dm");
 
     expect(texts(await grace.messenger.messages("dm"))).toEqual(["hello"]);
+    // Both sides know the message's delivery ID, which read state counts by.
+    const [received] = await grace.messenger.messages("dm");
+    const [sent] = await ada.messenger.messages("dm");
+    expect(received?.deliveryId).toEqual(expect.any(Number));
+    expect(sent?.deliveryId).toBe(received?.deliveryId);
     expect(await ada.messenger.messages("dm")).toMatchObject([
       { sender: "@ada@test/ada-laptop", payload: { kind: "text", text: "hello" } },
     ]);

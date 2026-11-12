@@ -35,6 +35,8 @@ export interface DecryptedMessage {
   sender: string;
   payload: Payload;
   sentAt: string;
+  /** The live copy's ID on the delivery service, which read state counts by; missing in messages saved before it was kept. */
+  deliveryId?: number;
 }
 
 async function tryWelcome(context: EngineContext, welcome: Uint8Array): Promise<Group | undefined> {
@@ -59,7 +61,13 @@ async function decrypt(group: Group, message: DeliveredMessage, out: DecryptedMe
   const sender =
     received.sender === undefined ? undefined : decodeDeviceCredential(received.sender)?.identity;
   if (envelope !== undefined && sender !== undefined) {
-    out.push({ id: envelope.id, sender, payload: envelope.payload, sentAt: message.createdAt });
+    out.push({
+      id: envelope.id,
+      sender,
+      payload: envelope.payload,
+      sentAt: message.createdAt,
+      deliveryId: message.id,
+    });
   }
   return received.group;
 }

@@ -331,8 +331,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   per connection and conversation, as `typing_start` to the other members,
   and only from someone who may send there. The conversation shows "Grace
   is typing…" for 6 seconds, or until her message arrives.
-- Still to do in M4: read state and jump to unread,
-  attachments (upload endpoints, thumbnails), link previews and the web
+- Read state: the server keeps each member's read position (the
+  delivery ID of the last message they saw) and counts the messages from
+  others after it, so every device agrees. The list shows unread counts;
+  a conversation marks where new messages begin, offers "Jump to first
+  unread", and marks everything shown as read. Mention badge counts wait
+  for mentions in the composer.
+- Still to do in M4: attachments (upload endpoints, thumbnails), link previews and the web
   preview proxy toggle, group DM creation and icons, the native crypto
   stack (Hermes has no WebCrypto, so Android shows that encryption could
   not be set up), multi-user Playwright DM flows, WebSocket frame fuzzing,

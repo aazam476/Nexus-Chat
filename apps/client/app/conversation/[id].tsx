@@ -6,6 +6,7 @@ import { messengerOf, useMessaging } from "../../src/messaging/MessagingContext"
 import type { Payload } from "../../src/messaging/payload";
 import { useConversation } from "../../src/messaging/useConversation";
 import { useTimeline } from "../../src/messaging/useConversations";
+import { useReadTracking } from "../../src/messaging/useReadTracking";
 import { ConversationFooter } from "../../src/screens/conversation/ConversationFooter";
 import { ConversationHeader } from "../../src/screens/conversation/ConversationHeader";
 import { MessageList } from "../../src/screens/conversation/MessageList";
@@ -16,7 +17,9 @@ export default function ConversationScreen(): ReactNode {
   const { id } = useLocalSearchParams<{ id: string }>();
   const messenger = messengerOf(useMessaging());
   const open = useConversation(id);
-  const timeline = useTimeline(id);
+  const view = useTimeline(id);
+  const timeline = view?.items;
+  const firstUnreadId = useReadTracking(id, view, open.self);
   const composer = useComposer();
   const send = (payload: Payload): Promise<unknown> =>
     messenger === undefined
@@ -39,6 +42,7 @@ export default function ConversationScreen(): ReactNode {
         people={{ self: open.self, nameOf: open.nameOf }}
         composer={composer}
         send={send}
+        firstUnreadId={firstUnreadId}
       />
     </ConversationLayout>
   );
