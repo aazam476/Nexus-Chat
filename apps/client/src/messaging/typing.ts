@@ -5,9 +5,9 @@
  */
 
 /** How long a member shows as typing after their last typing_start. */
-export const typingShownMs = 8000;
+export const typingShownMs = 6000;
 /** How often this device repeats typing while the user keeps typing. */
-export const typingRepeatMs = 5000;
+export const typingRepeatMs = 3000;
 
 /** Each typing member's user ID and when they stop showing, in ms. */
 export type Typists = ReadonlyMap<string, number>;

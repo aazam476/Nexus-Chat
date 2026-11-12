@@ -15,8 +15,10 @@ describe("typing state", () => {
     typists = startedTyping(typists, "alan", 2000);
     expect(stillTyping(typists, 1000 + typingShownMs - 1)).toEqual(["grace", "alan"]);
     expect(stillTyping(typists, 1000 + typingShownMs)).toEqual(["alan"]);
-    typists = startedTyping(typists, "grace", 9000);
-    expect(stillTyping(typists, 9500)).toEqual(["grace", "alan"]);
+    // Grace types again before Alan's indicator runs out.
+    const again = 1000 + typingShownMs;
+    typists = startedTyping(typists, "grace", again);
+    expect(stillTyping(typists, again + 500)).toEqual(["grace", "alan"]);
   });
 
   it("stops a member at once, and leaves the rest alone", () => {

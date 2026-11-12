@@ -103,18 +103,18 @@ nothing that matters.
 | `resume`    | `{ "token", "gatewaySessionId", "lastSequence" }` | Continues a dropped session (§3)                                                 |
 | `heartbeat` | `{ "lastSequence": 41 }`                          | `lastSequence` is informational; 0 before any event                              |
 | `activity`  | `{ "idle": true }`                                | The device's user has been inactive for 10 minutes (`true`) or is back (`false`) |
-| `typing`    | `{ "conversationId": "0195…" }`                   | The user is typing there; sent about every 5 s while they type (§4.1)            |
+| `typing`    | `{ "conversationId": "0195…" }`                   | The user is typing there; sent at most every 3 s while they type (§4.1)          |
 
 ### 4.1 Typing
 
 A device sends `typing` when its user starts typing in a conversation,
-and again about every 5 seconds while they keep typing; it sends nothing
-when they stop. The server relays at most one `typing` per connection and
-conversation every 3 seconds, and only from a user who may send there (a
+and again at most every 3 seconds while they keep typing; it sends
+nothing when they stop. The server relays at most one `typing` per
+connection and conversation every 2.5 seconds, and only from a user who may send there (a
 member, and in a DM not blocked); otherwise it relays nothing and says
 nothing, so typing reveals no conversation to a non-member. An invalid
 `conversationId` gets an `error` with code `invalid_conversation`. The
-server keeps no typing state: devices show "typing" for 8 seconds after
+server keeps no typing state: devices show "typing" for 6 seconds after
 the last `typing_start`, and hide it at once when a message from that user
 arrives.
 

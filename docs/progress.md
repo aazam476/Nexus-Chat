@@ -327,10 +327,10 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   a member's identity changed), and friends (requests both ways, removing,
   starting a DM). Home leads to them, or to the recovery step first.
 - Typing indicators: a device sends `typing` while its user types (at
-  most every 5 seconds); the gateway relays it, at most every 3 seconds
+  most every 3 seconds); the gateway relays it, at most every 2.5 seconds
   per connection and conversation, as `typing_start` to the other members,
   and only from someone who may send there. The conversation shows "Grace
-  is typing…" for 8 seconds, or until her message arrives.
+  is typing…" for 6 seconds, or until her message arrives.
 - Still to do in M4: read state and jump to unread,
   attachments (upload endpoints, thumbnails), link previews and the web
   preview proxy toggle, group DM creation and icons, the native crypto

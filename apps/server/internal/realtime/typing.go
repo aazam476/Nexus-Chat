@@ -19,8 +19,9 @@ const TypeTypingStart = "typing_start"
 
 const (
 	// typingRepeat is how often one connection may announce typing in the
-	// same conversation; devices repeat it about every 5 seconds.
-	typingRepeat = 3 * time.Second
+	// same conversation. Devices repeat it every 3 seconds; the slack
+	// keeps a punctual repeat from being dropped.
+	typingRepeat = 2500 * time.Millisecond
 	// typingRemembered bounds the conversations a connection's throttle
 	// keeps before forgetting old ones.
 	typingRemembered = 64
