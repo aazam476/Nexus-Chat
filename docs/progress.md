@@ -275,8 +275,9 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   and neither blocked the other (an existing DM stays readable after a
   block, but nobody can send); group DMs of 3 to 25 members with a name,
   adding members, leaving and renaming. Each conversation is one MLS group
-  whose ID the server picks. Group DM icons and an instance setting for
-  the 25-member cap are still to come.
+  whose ID the server picks. GROUP_DM_MAX_MEMBERS (3 to 100, default 25)
+  sets the largest group DM; group icons are processed like profile
+  pictures and served at random, cacheable addresses.
 - The MLS delivery service (`internal/delivery`, migration 00015): one
   commit per epoch (first wins, others get `wrong_epoch` or
   `epoch_conflict`), with the GroupInfo kept for external joins; welcomes;
@@ -337,8 +338,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   a conversation marks where new messages begin, offers "Jump to first
   unread", and marks everything shown as read. Mention badge counts wait
   for mentions in the composer.
+- Group DMs in the app: "New group" picks two or more friends (up to the
+  instance's limit) and an optional name; group settings rename the
+  group, set or remove its icon (the system photo picker,
+  `expo-image-picker`), add friends while there is room, and leave after
+  a second press.
 - Still to do in M4: attachments (upload endpoints, thumbnails), link previews and the web
-  preview proxy toggle, group DM creation and icons, the native crypto
+  preview proxy toggle, the native crypto
   stack (Hermes has no WebCrypto, so Android shows that encryption could
   not be set up), multi-user Playwright DM flows, WebSocket frame fuzzing,
   and visual snapshots of the conversation screens.

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
 import { hostOf } from "../instance/address";
+import { useGatewayEvents } from "../realtime/GatewayContext";
 import { isolate } from "../i18n/bidi";
 import { messengerOf, useMessaging } from "./MessagingContext";
 
@@ -22,26 +23,39 @@ export interface OpenConversation {
   nameOfId: (userId: string) => string | undefined;
 }
 
+/** Counts conversation_update events for the conversation, to reload it. */
+function useChangeCount(conversationId: string): number {
+  const [version, setVersion] = useState(0);
+  useGatewayEvents((event) => {
+    const changed = (event.data as { conversationId?: unknown } | null)?.conversationId;
+    if (event.type === "conversation_update" && changed === conversationId) {
+      setVersion((count) => count + 1);
+    }
+  });
+  return version;
+}
+
 /** Loads the conversation and makes sure this device is in it. */
 export function useConversation(conversationId: string): OpenConversation {
   const { client, user, instance, address } = useConnection();
   const messenger = messengerOf(useMessaging());
   const [conversation, setConversation] = useState<Conversation>();
+  const version = useChangeCount(conversationId);
   useEffect(() => {
-    if (client === undefined || messenger === undefined) {
+    if (client === undefined) {
       return;
     }
     let current = true;
     void getConversation({ client, path: { conversationId } }).then((result) => {
       if (current && result.data !== undefined) {
         setConversation(result.data);
-        messenger.open(conversationId, result.data.members).catch(() => undefined);
+        messenger?.open(conversationId, result.data.members).catch(() => undefined);
       }
     });
     return () => {
       current = false;
     };
-  }, [client, messenger, conversationId]);
+  }, [client, messenger, conversationId, version]);
   const domain = instance?.info.domain ?? hostOf(address ?? "http://localhost");
   const names = useMemo(
     () =>

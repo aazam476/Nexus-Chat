@@ -20,6 +20,18 @@ export interface FakeServer {
   fetch: typeof fetch;
 }
 
+/** A request body as JSON, or as the raw text for uploads that are not JSON. */
+function parsedBody(text: string): unknown {
+  if (text === "") {
+    return undefined;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
 /** Creates a fake server; unknown routes answer 404. */
 export function fakeServer(token?: () => string | undefined): FakeServer {
   const routes = new Map<string, FakeAnswer>();
@@ -31,7 +43,7 @@ export function fakeServer(token?: () => string | undefined): FakeServer {
     requests.push({
       method: request.method,
       path,
-      body: text === "" ? undefined : JSON.parse(text),
+      body: parsedBody(text),
       authorization: request.headers.get("Authorization"),
     });
     const answer = routes.get(`${request.method} ${path}`) ?? {

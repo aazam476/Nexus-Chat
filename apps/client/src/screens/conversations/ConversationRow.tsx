@@ -23,7 +23,8 @@ export function ConversationRow({ conversation, selfId, unread }: ConversationRo
   const { address } = useConnection();
   const timeline = useTimeline(conversation.id);
   const name = conversationName(conversation, selfId, t);
-  const avatar = othersIn(conversation, selfId)[0]?.avatarUrl;
+  const avatar =
+    conversation.kind === "group" ? conversation.iconUrl : othersIn(conversation, selfId)[0]?.avatarUrl;
   const last = timeline?.items.at(-1);
   return (
     <ListRow

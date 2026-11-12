@@ -34,6 +34,15 @@ export function ConversationHeader({ open, messenger }: ConversationHeaderProps)
       <Heading>
         {conversation === undefined || user === undefined ? "" : conversationName(conversation, user.id, t)}
       </Heading>
+      {conversation?.kind === "group" ? (
+        <Link
+          label={t("conversation.groupSettings")}
+          onPress={() => {
+            router.push({ pathname: "/group/[id]", params: { id: conversation.id } });
+          }}
+          testID="open-group-settings"
+        />
+      ) : null}
       {messenger === undefined || conversation === undefined ? null : (
         <IdentityWarning messenger={messenger} members={conversation.members} />
       )}

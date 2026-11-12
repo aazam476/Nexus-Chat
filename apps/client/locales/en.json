@@ -216,7 +216,8 @@
     "noMessages": "No messages yet",
     "open": "Open conversation with {{name}}",
     "unread": "{{count}} unread messages",
-    "unread_one": "1 unread message"
+    "unread_one": "1 unread message",
+    "newGroup": "New group"
   },
   "conversation": {
     "back": "Back",
@@ -249,7 +250,8 @@
     "typingTwo": "{{first}} and {{second}} are typing…",
     "typingMany": "Several people are typing…",
     "newMessages": "New messages",
-    "jumpToUnread": "Jump to first unread"
+    "jumpToUnread": "Jump to first unread",
+    "groupSettings": "Group settings"
   },
   "friends": {
     "title": "Friends",
@@ -270,5 +272,39 @@
     "message": "Message",
     "remove": "Remove",
     "messageFailed": "A conversation with {{name}} could not be started. Their privacy settings may not allow it."
+  },
+  "groups": {
+    "newTitle": "New group",
+    "back": "Back",
+    "intro": "Pick at least two friends. Everyone in the group can rename it, change its icon and add others.",
+    "name": "Group name (optional)",
+    "nameHint": "Up to 100 characters",
+    "selected": "{{count}} of {{maximum}} selected",
+    "noFriends": "Add friends first: you can start a group with your friends.",
+    "create": "Create group",
+    "member": "{{name}}, {{state}}",
+    "chosen": "selected",
+    "notChosen": "not selected",
+    "settingsTitle": "Group settings",
+    "rename": "Save name",
+    "icon": "Icon",
+    "chooseIcon": "Choose an icon",
+    "removeIcon": "Remove icon",
+    "members": "Members",
+    "add": "Add a friend",
+    "addMember": "Add {{name}}",
+    "leave": "Leave group",
+    "leaveConfirm": "You will stop getting this group's messages. Leave?",
+    "full": "The group is full.",
+    "failed": "That didn't work. Try again.",
+    "errors": {
+      "dm_not_allowed": "One of them doesn't accept group messages from you.",
+      "invalid_group_size": "A group has at least 3 people, you included, and at most {{maximum}}.",
+      "invalid_name": "A group name is 1 to 100 characters.",
+      "unsupported_image": "That file isn't an image we can use. Try a PNG, JPEG, WebP or GIF.",
+      "image_too_large": "That image is too large. Pick one under 8 MB.",
+      "rate_limited": "Too many changes. Wait a minute and try again."
+    },
+    "checkMark": "✓"
   }
 }
