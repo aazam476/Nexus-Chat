@@ -376,13 +376,30 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   activity, typing, repeated identify and unknown types) and checks it
   still answers a heartbeat or closes with a documented code, never an
   internal error or a hang. CI fuzzes it on every run.
-- Still to do in M4: multi-user Playwright DM flows and visual snapshots of the conversation screens.
+- History on a user's new device (ADR 0003, case 1): every device keeps
+  the history key of each epoch it passes through and adds it to the key
+  backup, one sealed blob per conversation (`history.<id>`). A device
+  restored from the recovery phrase reads the archive copies it missed with
+  those keys the first time it opens each conversation, checking each
+  sender as for live messages.
+- Two bugs the browser flow found and fixed: the Content Security Policy
+  blocked libsodium's WebAssembly (now `'wasm-unsafe-eval'`, which allows
+  WebAssembly but not JavaScript eval), so encryption could not be set up
+  in browsers or the desktop app; and a device that synced a conversation
+  before it knew its members dropped the Welcome and joined a second time,
+  leaving a duplicate leaf that blocked every later join.
+- The release gate now has two people sign up, write down their recovery
+  phrases, become friends and message each other live (with typing), and
+  a second device of one of them restores from the phrase and reads the
+  conversation.
+- Still to do in M4: visual snapshots of the conversation screens.
 - `packages/crypto` saves and loads group and member state for the
   device database, joins by external commit, and returns a GroupInfo with
   every commit.
-- Two M3 items move here, since they need the key-setup screens and the
-  native crypto stack: the E2E "signup → recovery phrase → second device
-  verifies", and running the RFC 9420 vectors on Hermes.
+- Two M3 items moved here, since they need the key-setup screens and the
+  native crypto stack. The E2E "signup → recovery phrase → second device"
+  now runs in the release gate (above). Running the RFC 9420 vectors on
+  Hermes is still to do.
 
 ## Known issues
 

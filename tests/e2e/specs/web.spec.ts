@@ -1,11 +1,19 @@
 /**
  * The release gate's smoke test (spec §7.4) in a real browser: setup
  * wizard → admin → second user, with several people and devices at once.
- * Messages and voice join are added with milestones M4 and M9.
+ * Two people then message each other, end-to-end encrypted; voice join
+ * comes with milestone M9.
  */
 import { expect, test } from "@playwright/test";
 
 import { expectAccessible } from "../src/accessibility.js";
+import {
+  becomeFriends,
+  restoreWithPhrase,
+  sendMessage,
+  shown,
+  signUpForMessaging,
+} from "../src/messaging.js";
 import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
 import { accounts, settings } from "../src/settings.js";
 
@@ -53,6 +61,46 @@ test("a second user signs up", async ({ page }) => {
   await page.getByTestId("register-submit").click();
 
   await expectHome(page, accounts.member);
+});
+
+test("two people message each other, end to end encrypted", async ({ browser }) => {
+  const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
+  const [lin, omar] = await Promise.all(contexts.map((context) => context.newPage()));
+  if (lin === undefined || omar === undefined) {
+    throw new Error("could not open the devices");
+  }
+  const linPhrase = await signUpForMessaging(lin, accounts.lin);
+  await signUpForMessaging(omar, accounts.omar);
+  await becomeFriends({ page: lin, account: accounts.lin }, { page: omar, account: accounts.omar });
+
+  await sendMessage(lin, "Hello from the release gate");
+  await expect(omar.getByText("Hello from the release gate").filter({ visible: true })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  // Typing shows on the other side while the reply is written.
+  await shown(omar, "composer").pressSequentially("Hi");
+  await expect(shown(lin, "typing")).toBeVisible({ timeout: 10_000 });
+  await sendMessage(omar, "Hi Lin, it works");
+  await expect(lin.getByText("Hi Lin, it works").filter({ visible: true })).toBeVisible({ timeout: 30_000 });
+  await expectAccessible(lin);
+
+  // A second device restores with the phrase and reads the conversation.
+  const tabletContext = await browser.newContext();
+  const tablet = await tabletContext.newPage();
+  await tablet.goto("/");
+  await logIn(tablet, accounts.lin);
+  await restoreWithPhrase(tablet, linPhrase);
+  await shown(tablet, "open-messages").click();
+  await tablet
+    .getByLabel(/^Open conversation with/)
+    .filter({ visible: true })
+    .first()
+    .click();
+  await expect(tablet.getByText("Hi Lin, it works").filter({ visible: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await Promise.all([...contexts, tabletContext].map((context) => context.close()));
 });
 
 test("status changes reach the user's other devices at once", async ({ browser }) => {

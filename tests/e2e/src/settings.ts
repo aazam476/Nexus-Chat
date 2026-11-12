@@ -56,4 +56,18 @@ export const accounts = {
     email: "grace@example.com",
     password: "second user password",
   },
+  // Two people who sign up just to message each other, so each one's
+  // first device is the one that sets up their encryption.
+  lin: {
+    username: "lin",
+    displayName: "Lin Writer",
+    email: "lin@example.com",
+    password: "lin messaging password",
+  },
+  omar: {
+    username: "omar",
+    displayName: "Omar Reader",
+    email: "omar@example.com",
+    password: "omar messaging password",
+  },
 };

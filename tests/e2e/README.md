@@ -10,6 +10,10 @@ What they cover today:
 
 - the setup wizard creates the admin, and a second user signs up;
 - the admin opens the Admin panel;
+- two people sign up, write down their recovery phrases, become friends and
+  message each other end-to-end encrypted, live, with typing shown; a
+  second device of one of them restores from the phrase and reads the
+  conversation's history;
 - a status change on one device reaches the user's other devices live;
 - the session survives a reload and ends at logout; failed logins are
   explained;
