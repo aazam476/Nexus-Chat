@@ -2488,6 +2488,129 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/icon:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: setConversationIcon
+      summary: Set a group DM's icon
+      description: |
+        Any member may set it. A PNG, JPEG, WebP or GIF image of at most
+        8 MB; the server takes the centered square, resizes it to 512×512
+        and removes all metadata. Members' devices get conversation_update.
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: The group DM with its new icon.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: The file is over 8 MB or the image over 8192 pixels on a side (`image_too_large`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a group DM (`not_a_group`), or not a supported or readable image (`unsupported_image`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: removeConversationIcon
+      summary: Remove a group DM's icon
+      tags: [conversations]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The group DM without an icon.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a group DM (`not_a_group`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/conversation-icons/{iconId}:
+    get:
+      operationId: getConversationIcon
+      summary: A group DM's icon
+      description: |
+        Public, so it works in an image tag; icon IDs are random and change
+        with each upload, so responses can be cached forever.
+      tags: [conversations]
+      parameters:
+        - name: iconId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The 512×512 picture.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: There is no such icon (`icon_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/conversations/{conversationId}/read:
     parameters:
       - name: conversationId
@@ -3344,6 +3467,9 @@ components:
         name:
           type: string
           description: Group DMs only, when named.
+        iconUrl:
+          type: string
+          description: Group DMs only, when they have an icon; the path of the 512×512 picture.
         mlsGroupId:
           type: string
           format: byte

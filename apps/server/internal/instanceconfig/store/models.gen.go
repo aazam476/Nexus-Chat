@@ -47,6 +47,8 @@ type Conversation struct {
 	MlsGroupID []byte
 	CreatedBy  *uuid.UUID
 	CreatedAt  time.Time
+	IconID     *uuid.UUID
+	IconFormat *string
 }
 
 type ConversationMember struct {

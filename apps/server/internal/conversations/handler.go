@@ -49,6 +49,7 @@ func response(conversation Conversation) api.Conversation {
 	return api.Conversation{
 		Id: conversation.ID, Kind: api.ConversationKind(conversation.Kind), Name: conversation.Name,
 		MlsGroupId: conversation.MLSGroupID, CreatedAt: conversation.CreatedAt, Members: members,
+		IconUrl: iconPath(conversation.IconID),
 	}
 }
 

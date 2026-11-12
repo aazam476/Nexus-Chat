@@ -36,6 +36,7 @@ var publicOperations = map[string]bool{ //nolint:gochecknoglobals // constant lo
 	"ProviderCallback":       true,
 	"CompleteProviderSignIn": true,
 	"GetAvatar":              true,
+	"GetConversationIcon":    true,
 }
 
 // Authenticator checks session tokens; *session.Service satisfies it.

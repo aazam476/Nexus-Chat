@@ -53,6 +53,8 @@ type Conversation struct {
 	MLSGroupID []byte
 	CreatedAt  time.Time
 	Members    []Member
+	// IconID is the group DM's current icon, if it has one.
+	IconID *uuid.UUID
 }
 
 type conversationStore interface {
@@ -68,6 +70,7 @@ type conversationStore interface {
 	ListConversations(ctx context.Context, userID uuid.UUID) ([]store.Conversation, error)
 	RenameConversation(ctx context.Context, params store.RenameConversationParams) error
 	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
+	iconStore
 }
 
 // DirectMessagePolicy is the social feature's answer to who may DM whom.
@@ -96,6 +99,7 @@ type Dependencies struct {
 	Clock    clock.Clock
 	// MaximumGroupMembers is the instance's limit; 0 means the default.
 	MaximumGroupMembers int
+	Icons               Icons
 }
 
 // Service manages conversations.

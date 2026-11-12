@@ -16,6 +16,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/database"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/databasetest"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/filestore"
 	"github.com/aazam476/nexus-chat/apps/server/internal/social"
 	socialstore "github.com/aazam476/nexus-chat/apps/server/internal/social/store"
 )
@@ -58,7 +59,10 @@ func newFixture(t *testing.T) fixture {
 	socialService := social.NewService(social.Dependencies{
 		Store: socialstore.New(pool), Notifier: discard{}, Servers: social.NoServers{}, Limiter: allowAll{}, Clock: clock.Fixed{Time: now},
 	})
-	service := NewService(Dependencies{Store: store.NewWriter(pool), Policy: socialService, Notifier: events, Members: events, Clock: clock.Fixed{Time: now}})
+	service := NewService(Dependencies{
+		Store: store.NewWriter(pool), Policy: socialService, Notifier: events, Members: events, Clock: clock.Fixed{Time: now},
+		Icons: Icons{Files: filestore.NewLocal(t.TempDir()), Limiter: allowAll{}, Logger: slog.New(slog.DiscardHandler)},
+	})
 	return fixture{service: service, social: socialService, events: events, accounts: accountsstore.New(pool)}
 }
 

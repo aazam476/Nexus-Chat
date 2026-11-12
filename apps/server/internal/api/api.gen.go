@@ -408,10 +408,13 @@ type Contact struct {
 
 // Conversation defines model for Conversation.
 type Conversation struct {
-	CreatedAt time.Time          `json:"createdAt"`
-	Id        openapi_types.UUID `json:"id"`
-	Kind      ConversationKind   `json:"kind"`
-	Members   []UserSummary      `json:"members"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// IconUrl Group DMs only, when they have an icon; the path of the 512×512 picture.
+	IconUrl *string            `json:"iconUrl,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+	Kind    ConversationKind   `json:"kind"`
+	Members []UserSummary      `json:"members"`
 
 	// MlsGroupId The MLS group that encrypts this conversation (16 bytes).
 	MlsGroupId []byte `json:"mlsGroupId"`
@@ -1449,6 +1452,9 @@ type ServerInterface interface {
 	// BlockUser Block a user
 	// (PUT /api/v1/blocks/{userId})
 	BlockUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// GetConversationIcon A group DM's icon
+	// (GET /api/v1/conversation-icons/{iconId})
+	GetConversationIcon(w http.ResponseWriter, r *http.Request, iconId openapi_types.UUID)
 	// ListConversations Your DMs and group DMs, newest first
 	// (GET /api/v1/conversations)
 	ListConversations(w http.ResponseWriter, r *http.Request)
@@ -1467,6 +1473,12 @@ type ServerInterface interface {
 	// ListArchivedMessages Archive copies, newest first, for scrolling back and search
 	// (GET /api/v1/conversations/{conversationId}/archive)
 	ListArchivedMessages(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params ListArchivedMessagesParams)
+	// RemoveConversationIcon Remove a group DM's icon
+	// (DELETE /api/v1/conversations/{conversationId}/icon)
+	RemoveConversationIcon(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
+	// SetConversationIcon Set a group DM's icon
+	// (PUT /api/v1/conversations/{conversationId}/icon)
+	SetConversationIcon(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
 	// AddConversationMember Add someone to a group DM
 	// (POST /api/v1/conversations/{conversationId}/members)
 	AddConversationMember(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
@@ -2476,6 +2488,32 @@ func (siw *ServerInterfaceWrapper) BlockUser(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// GetConversationIcon operation middleware
+func (siw *ServerInterfaceWrapper) GetConversationIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "iconId" -------------
+	var iconId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "iconId", r.PathValue("iconId"), &iconId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "iconId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConversationIcon(w, r, iconId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListConversations operation middleware
 func (siw *ServerInterfaceWrapper) ListConversations(w http.ResponseWriter, r *http.Request) {
 
@@ -2616,6 +2654,58 @@ func (siw *ServerInterfaceWrapper) ListArchivedMessages(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListArchivedMessages(w, r, conversationId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveConversationIcon operation middleware
+func (siw *ServerInterfaceWrapper) RemoveConversationIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "conversationId" -------------
+	var conversationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "conversationId", r.PathValue("conversationId"), &conversationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversationId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveConversationIcon(w, r, conversationId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetConversationIcon operation middleware
+func (siw *ServerInterfaceWrapper) SetConversationIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "conversationId" -------------
+	var conversationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "conversationId", r.PathValue("conversationId"), &conversationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversationId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetConversationIcon(w, r, conversationId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3636,6 +3726,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/commits", wrapper.SubmitMlsCommit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/messages", wrapper.ListMlsMessages)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/messages", wrapper.SendMlsMessage)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/icon", wrapper.RemoveConversationIcon)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/icon", wrapper.SetConversationIcon)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversation-icons/{iconId}", wrapper.GetConversationIcon)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/read", wrapper.MarkConversationRead)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/read-state", wrapper.ListReadStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive", wrapper.ListArchivedMessages)
@@ -6663,6 +6756,98 @@ func (response BlockUser422JSONResponse) VisitBlockUserResponse(w http.ResponseW
 	return err
 }
 
+type GetConversationIconRequestObject struct {
+	IconId openapi_types.UUID `json:"iconId"`
+}
+
+type GetConversationIconResponseObject interface {
+	VisitGetConversationIconResponse(w http.ResponseWriter) error
+}
+
+type GetConversationIcon200ResponseHeaders struct {
+	CacheControl string
+}
+
+type GetConversationIcon200ImagegifResponse struct {
+	Body          io.Reader
+	Headers       GetConversationIcon200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetConversationIcon200ImagegifResponse) VisitGetConversationIconResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/gif")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetConversationIcon200ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetConversationIcon200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetConversationIcon200ImagejpegResponse) VisitGetConversationIconResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetConversationIcon200ImagepngResponse struct {
+	Body          io.Reader
+	Headers       GetConversationIcon200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetConversationIcon200ImagepngResponse) VisitGetConversationIconResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetConversationIcon404JSONResponse Error
+
+func (response GetConversationIcon404JSONResponse) VisitGetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListConversationsRequestObject struct {
 }
 
@@ -7094,6 +7279,163 @@ func (response ListArchivedMessages404JSONResponse) VisitListArchivedMessagesRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveConversationIconRequestObject struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+}
+
+type RemoveConversationIconResponseObject interface {
+	VisitRemoveConversationIconResponse(w http.ResponseWriter) error
+}
+
+type RemoveConversationIcon200JSONResponse Conversation
+
+func (response RemoveConversationIcon200JSONResponse) VisitRemoveConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveConversationIcon401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveConversationIcon401JSONResponse) VisitRemoveConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveConversationIcon404JSONResponse Error
+
+func (response RemoveConversationIcon404JSONResponse) VisitRemoveConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveConversationIcon422JSONResponse Error
+
+func (response RemoveConversationIcon422JSONResponse) VisitRemoveConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetConversationIconRequestObject struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+	Body           io.Reader
+}
+
+type SetConversationIconResponseObject interface {
+	VisitSetConversationIconResponse(w http.ResponseWriter) error
+}
+
+type SetConversationIcon200JSONResponse Conversation
+
+func (response SetConversationIcon200JSONResponse) VisitSetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetConversationIcon401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetConversationIcon401JSONResponse) VisitSetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetConversationIcon404JSONResponse Error
+
+func (response SetConversationIcon404JSONResponse) VisitSetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetConversationIcon413JSONResponse Error
+
+func (response SetConversationIcon413JSONResponse) VisitSetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetConversationIcon422JSONResponse Error
+
+func (response SetConversationIcon422JSONResponse) VisitSetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetConversationIcon429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SetConversationIcon429JSONResponse) VisitSetConversationIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -9462,6 +9804,9 @@ type StrictServerInterface interface {
 	// BlockUser Block a user
 	// (PUT /api/v1/blocks/{userId})
 	BlockUser(ctx context.Context, request BlockUserRequestObject) (BlockUserResponseObject, error)
+	// GetConversationIcon A group DM's icon
+	// (GET /api/v1/conversation-icons/{iconId})
+	GetConversationIcon(ctx context.Context, request GetConversationIconRequestObject) (GetConversationIconResponseObject, error)
 	// ListConversations Your DMs and group DMs, newest first
 	// (GET /api/v1/conversations)
 	ListConversations(ctx context.Context, request ListConversationsRequestObject) (ListConversationsResponseObject, error)
@@ -9480,6 +9825,12 @@ type StrictServerInterface interface {
 	// ListArchivedMessages Archive copies, newest first, for scrolling back and search
 	// (GET /api/v1/conversations/{conversationId}/archive)
 	ListArchivedMessages(ctx context.Context, request ListArchivedMessagesRequestObject) (ListArchivedMessagesResponseObject, error)
+	// RemoveConversationIcon Remove a group DM's icon
+	// (DELETE /api/v1/conversations/{conversationId}/icon)
+	RemoveConversationIcon(ctx context.Context, request RemoveConversationIconRequestObject) (RemoveConversationIconResponseObject, error)
+	// SetConversationIcon Set a group DM's icon
+	// (PUT /api/v1/conversations/{conversationId}/icon)
+	SetConversationIcon(ctx context.Context, request SetConversationIconRequestObject) (SetConversationIconResponseObject, error)
 	// AddConversationMember Add someone to a group DM
 	// (POST /api/v1/conversations/{conversationId}/members)
 	AddConversationMember(ctx context.Context, request AddConversationMemberRequestObject) (AddConversationMemberResponseObject, error)
@@ -10997,6 +11348,32 @@ func (sh *strictHandler) BlockUser(w http.ResponseWriter, r *http.Request, userI
 	}
 }
 
+// GetConversationIcon operation middleware
+func (sh *strictHandler) GetConversationIcon(w http.ResponseWriter, r *http.Request, iconId openapi_types.UUID) {
+	var request GetConversationIconRequestObject
+
+	request.IconId = iconId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConversationIcon(ctx, request.(GetConversationIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConversationIcon")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetConversationIconResponseObject); ok {
+		if err := validResponse.VisitGetConversationIconResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListConversations operation middleware
 func (sh *strictHandler) ListConversations(w http.ResponseWriter, r *http.Request) {
 	var request ListConversationsRequestObject
@@ -11162,6 +11539,60 @@ func (sh *strictHandler) ListArchivedMessages(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListArchivedMessagesResponseObject); ok {
 		if err := validResponse.VisitListArchivedMessagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveConversationIcon operation middleware
+func (sh *strictHandler) RemoveConversationIcon(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID) {
+	var request RemoveConversationIconRequestObject
+
+	request.ConversationId = conversationId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveConversationIcon(ctx, request.(RemoveConversationIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveConversationIcon")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveConversationIconResponseObject); ok {
+		if err := validResponse.VisitRemoveConversationIconResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetConversationIcon operation middleware
+func (sh *strictHandler) SetConversationIcon(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID) {
+	var request SetConversationIconRequestObject
+
+	request.ConversationId = conversationId
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetConversationIcon(ctx, request.(SetConversationIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetConversationIcon")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetConversationIconResponseObject); ok {
+		if err := validResponse.VisitSetConversationIconResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -388,6 +388,10 @@ export type Conversation = {
      */
     name?: string;
     /**
+     * Group DMs only, when they have an icon; the path of the 512×512 picture.
+     */
+    iconUrl?: string;
+    /**
      * The MLS group that encrypts this conversation (16 bytes).
      */
     mlsGroupId: string;
@@ -3731,6 +3735,111 @@ export type SendMlsMessageResponses = {
 };
 
 export type SendMlsMessageResponse = SendMlsMessageResponses[keyof SendMlsMessageResponses];
+
+export type RemoveConversationIconData = {
+    body?: never;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/icon';
+};
+
+export type RemoveConversationIconErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * Not a group DM (`not_a_group`).
+     */
+    422: Error;
+};
+
+export type RemoveConversationIconError = RemoveConversationIconErrors[keyof RemoveConversationIconErrors];
+
+export type RemoveConversationIconResponses = {
+    /**
+     * The group DM without an icon.
+     */
+    200: Conversation;
+};
+
+export type RemoveConversationIconResponse = RemoveConversationIconResponses[keyof RemoveConversationIconResponses];
+
+export type SetConversationIconData = {
+    body: Blob | File;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/icon';
+};
+
+export type SetConversationIconErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * The file is over 8 MB or the image over 8192 pixels on a side (`image_too_large`).
+     */
+    413: Error;
+    /**
+     * Not a group DM (`not_a_group`), or not a supported or readable image (`unsupported_image`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type SetConversationIconError = SetConversationIconErrors[keyof SetConversationIconErrors];
+
+export type SetConversationIconResponses = {
+    /**
+     * The group DM with its new icon.
+     */
+    200: Conversation;
+};
+
+export type SetConversationIconResponse = SetConversationIconResponses[keyof SetConversationIconResponses];
+
+export type GetConversationIconData = {
+    body?: never;
+    path: {
+        iconId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversation-icons/{iconId}';
+};
+
+export type GetConversationIconErrors = {
+    /**
+     * There is no such icon (`icon_not_found`).
+     */
+    404: Error;
+};
+
+export type GetConversationIconError = GetConversationIconErrors[keyof GetConversationIconErrors];
+
+export type GetConversationIconResponses = {
+    /**
+     * The 512×512 picture.
+     */
+    200: Blob | File;
+};
+
+export type GetConversationIconResponse = GetConversationIconResponses[keyof GetConversationIconResponses];
 
 export type MarkConversationReadData = {
     body: ReadMark;

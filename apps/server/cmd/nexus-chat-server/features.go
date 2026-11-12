@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"path/filepath"
 
 	"github.com/google/uuid"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
 	keypackagesstore "github.com/aazam476/nexus-chat/apps/server/internal/keypackages/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clock"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/filestore"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
 	"github.com/aazam476/nexus-chat/apps/server/internal/social"
@@ -84,6 +86,11 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	conversationService := conversations.NewService(conversations.Dependencies{
 		Store: conversationsstore.NewWriter(app.pool), Policy: socialService, Notifier: app.hub, Members: leaves, Clock: system,
 		MaximumGroupMembers: configuration.GroupDMMaxMembers,
+		// Icon changes are limited per user, like profile pictures.
+		Icons: conversations.Icons{
+			Files:   filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
+			Limiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Logger: app.logger,
+		},
 	})
 	deliveryService := delivery.NewService(delivery.Dependencies{
 		Store: deliverystore.NewWriter(app.pool), Members: conversationService, Notifier: app.hub,

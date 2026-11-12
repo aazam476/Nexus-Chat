@@ -89,6 +89,7 @@ func (service *Service) withMembers(ctx context.Context, rows []store.Conversati
 	for _, row := range rows {
 		conversations = append(conversations, Conversation{
 			ID: row.ID, Kind: row.Kind, Name: row.Name, MLSGroupID: row.MlsGroupID, CreatedAt: row.CreatedAt, Members: byConversation[row.ID],
+			IconID: row.IconID,
 		})
 	}
 	return conversations, nil

@@ -41,3 +41,10 @@ UPDATE conversations SET name = $2 WHERE id = $1;
 
 -- name: UserExists :one
 SELECT EXISTS (SELECT 1 FROM users WHERE id = $1);
+
+-- name: SetIcon :exec
+UPDATE conversations SET icon_id = sqlc.narg(icon_id), icon_format = sqlc.narg(icon_format) WHERE id = sqlc.arg(id);
+
+-- name: GetIconFormat :one
+-- A row with an icon ID always has its format (a table CHECK).
+SELECT COALESCE(icon_format, '')::text FROM conversations WHERE icon_id = sqlc.arg(icon_id)::uuid;

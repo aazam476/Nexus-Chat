@@ -51,7 +51,7 @@ func (q *Queries) FindDirectMessage(ctx context.Context, dmPair *string) (uuid.U
 }
 
 const getConversation = `-- name: GetConversation :one
-SELECT id, kind, name, dm_pair, mls_group_id, created_by, created_at FROM conversations WHERE id = $1
+SELECT id, kind, name, dm_pair, mls_group_id, created_by, created_at, icon_id, icon_format FROM conversations WHERE id = $1
 `
 
 func (q *Queries) GetConversation(ctx context.Context, id uuid.UUID) (Conversation, error) {
@@ -65,8 +65,22 @@ func (q *Queries) GetConversation(ctx context.Context, id uuid.UUID) (Conversati
 		&i.MlsGroupID,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.IconID,
+		&i.IconFormat,
 	)
 	return i, err
+}
+
+const getIconFormat = `-- name: GetIconFormat :one
+SELECT COALESCE(icon_format, '')::text FROM conversations WHERE icon_id = $1::uuid
+`
+
+// A row with an icon ID always has its format (a table CHECK).
+func (q *Queries) GetIconFormat(ctx context.Context, iconID uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getIconFormat, iconID)
+	var column_1 string
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const insertConversation = `-- name: InsertConversation :exec
@@ -114,7 +128,7 @@ func (q *Queries) IsMember(ctx context.Context, arg IsMemberParams) (bool, error
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT c.id, c.kind, c.name, c.dm_pair, c.mls_group_id, c.created_by, c.created_at FROM conversations c
+SELECT c.id, c.kind, c.name, c.dm_pair, c.mls_group_id, c.created_by, c.created_at, c.icon_id, c.icon_format FROM conversations c
 JOIN conversation_members m ON m.conversation_id = c.id
 WHERE m.user_id = $1
 ORDER BY c.created_at DESC, c.id
@@ -137,6 +151,8 @@ func (q *Queries) ListConversations(ctx context.Context, userID uuid.UUID) ([]Co
 			&i.MlsGroupID,
 			&i.CreatedBy,
 			&i.CreatedAt,
+			&i.IconID,
+			&i.IconFormat,
 		); err != nil {
 			return nil, err
 		}
@@ -241,6 +257,21 @@ type RenameConversationParams struct {
 
 func (q *Queries) RenameConversation(ctx context.Context, arg RenameConversationParams) error {
 	_, err := q.db.Exec(ctx, renameConversation, arg.ID, arg.Name)
+	return err
+}
+
+const setIcon = `-- name: SetIcon :exec
+UPDATE conversations SET icon_id = $1, icon_format = $2 WHERE id = $3
+`
+
+type SetIconParams struct {
+	IconID     *uuid.UUID
+	IconFormat *string
+	ID         uuid.UUID
+}
+
+func (q *Queries) SetIcon(ctx context.Context, arg SetIconParams) error {
+	_, err := q.db.Exec(ctx, setIcon, arg.IconID, arg.IconFormat, arg.ID)
 	return err
 }
 
