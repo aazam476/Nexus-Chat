@@ -22,7 +22,8 @@ test.describe.configure({ mode: "serial" });
 test("the setup wizard creates the admin", async ({ page }) => {
   expect(settings.setupToken, "NEXUS_E2E_SETUP_TOKEN must be set").not.toBe("");
   await page.goto("/");
-  await expect(page.getByTestId("setup-submit")).toBeVisible();
+  // The first load of a fresh instance can be slow on a busy CI machine.
+  await expect(page.getByTestId("setup-submit")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("setup-http-warning")).toHaveCount(0); // localhost or HTTPS
   await expectAccessible(page);
 

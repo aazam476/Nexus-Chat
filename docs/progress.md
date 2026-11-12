@@ -368,7 +368,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
 - Native crypto on iOS and Android: Hermes has no WebCrypto, so the app's
   entry installs `react-native-quick-crypto` (OpenSSL) as `crypto` before
   anything else loads, giving MLS, HPKE and attachments native Ed25519,
-  X25519, AES-GCM, HKDF and SHA-2. The Android end-to-end flow now checks
+  X25519, AES-GCM, HKDF and SHA-2. Hermes also has no WebAssembly, so on
+  iOS and Android Metro resolves libsodium to its CommonJS build, which
+  carries libsodium's plain JavaScript fallback (the ES module build is
+  WebAssembly only); browsers and the desktop app keep WebAssembly. The
+  Android end-to-end flow now checks
   that a new user's device sets up encryption and shows the recovery
   phrase.
 - WebSocket fuzzing: besides the frame parser, a fuzz target sends an
