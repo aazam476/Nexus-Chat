@@ -4,7 +4,7 @@
  * and account changes made on other devices.
  */
 import type { CurrentUser } from "@nexus-chat/api-client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
 import { GatewayClient, type GatewayEvent } from "./gatewayClient";
@@ -12,6 +12,8 @@ import { GatewayClient, type GatewayEvent } from "./gatewayClient";
 /** The user's own presence, as the gateway reports it. */
 export interface OwnPresence {
   status: string | undefined;
+  /** Sends a typing frame for the conversation while connected. */
+  reportTyping: (conversationId: string) => void;
 }
 
 /**
@@ -22,6 +24,7 @@ export function useGateway(token: string | undefined, onEvent?: (event: GatewayE
   const connection = useConnection();
   const [status, setStatus] = useState<string | undefined>(undefined);
   const listenerRef = useRef(onEvent);
+  const clientRef = useRef<GatewayClient | undefined>(undefined);
   useEffect(() => {
     listenerRef.current = onEvent;
   });
@@ -40,11 +43,16 @@ export function useGateway(token: string | undefined, onEvent?: (event: GatewayE
       onSignedOut: () => void signOut(),
     });
     client.start();
+    clientRef.current = client;
     return () => {
       client.stop();
+      clientRef.current = undefined;
     };
   }, [address, token, setUser, signOut]);
-  return { status };
+  const reportTyping = useCallback((conversationId: string) => {
+    clientRef.current?.reportTyping(conversationId);
+  }, []);
+  return { status, reportTyping };
 }
 
 interface Appliers {

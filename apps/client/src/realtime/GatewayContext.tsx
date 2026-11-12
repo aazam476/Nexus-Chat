@@ -15,6 +15,7 @@ interface Gateway {
   /** The user's presence as others see it, once the gateway reported it. */
   status: string | undefined;
   subscribe: (listener: Listener) => () => void;
+  reportTyping: (conversationId: string) => void;
 }
 
 const GatewayContext = createContext<Gateway | undefined>(undefined);
@@ -33,9 +34,11 @@ export function GatewayProvider({ children }: GatewayProviderProps): ReactNode {
       listener(event);
     }
   });
+  const { reportTyping } = presence;
   const value = useMemo<Gateway>(
     () => ({
       status: presence.status,
+      reportTyping,
       subscribe: (listener) => {
         listenersRef.current.add(listener);
         return () => {
@@ -43,7 +46,7 @@ export function GatewayProvider({ children }: GatewayProviderProps): ReactNode {
         };
       },
     }),
-    [presence.status],
+    [presence.status, reportTyping],
   );
   return <GatewayContext value={value}>{children}</GatewayContext>;
 }
@@ -75,4 +78,9 @@ export function useGatewayEvents(handler: Listener): void {
       }),
     [subscribe],
   );
+}
+
+/** Tells a conversation's other members that the user is typing. */
+export function useReportTyping(): (conversationId: string) => void {
+  return useGatewayContext().reportTyping;
 }

@@ -326,7 +326,12 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   reactions, edits, deletes, a warning with "trust the new identity" when
   a member's identity changed), and friends (requests both ways, removing,
   starting a DM). Home leads to them, or to the recovery step first.
-- Still to do in M4: typing indicators, read state and jump to unread,
+- Typing indicators: a device sends `typing` while its user types (at
+  most every 5 seconds); the gateway relays it, at most every 3 seconds
+  per connection and conversation, as `typing_start` to the other members,
+  and only from someone who may send there. The conversation shows "Grace
+  is typing…" for 8 seconds, or until her message arrives.
+- Still to do in M4: read state and jump to unread,
   attachments (upload endpoints, thumbnails), link previews and the web
   preview proxy toggle, group DM creation and icons, the native crypto
   stack (Hermes has no WebCrypto, so Android shows that encryption could

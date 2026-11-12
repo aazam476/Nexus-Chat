@@ -242,7 +242,10 @@
     "messageActions": "Actions for the message from {{name}}",
     "identityChanged": "Warning: the encryption identity of {{name}} changed. They may have reset their account, or someone may be trying to listen in. Check with them before you trust it.",
     "acceptIdentity": "Trust the new identity",
-    "attachment": "Attachment: {{name}}"
+    "attachment": "Attachment: {{name}}",
+    "typingOne": "{{name}} is typing…",
+    "typingTwo": "{{first}} and {{second}} are typing…",
+    "typingMany": "Several people are typing…"
   },
   "friends": {
     "title": "Friends",

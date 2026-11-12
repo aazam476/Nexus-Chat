@@ -76,6 +76,11 @@ export class GatewayClient {
     this.send({ type: "activity", data: { idle } });
   }
 
+  /** Tells the conversation's other members that the user is typing (protocol §4.1). */
+  reportTyping(conversationId: string): void {
+    this.send({ type: "typing", data: { conversationId } });
+  }
+
   private open(): void {
     const url = `${this.options.address.replace(/^http/, "ws")}/api/v1/gateway`;
     const socket = (this.options.openSocket ?? openWebSocket)(url);

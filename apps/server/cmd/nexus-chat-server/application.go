@@ -75,6 +75,8 @@ type application struct {
 	sessions     *session.Service
 	hub          *realtime.Hub
 	gateway      *realtime.Gateway
+	// typing reaches the conversations feature, built after the gateway.
+	typing *typingForwarder
 }
 
 // newApplication prepares everything the server needs before it accepts
@@ -249,8 +251,9 @@ func (app *application) buildRealtimeAndProfiles(configuration config.Config) *p
 	system := clock.System{}
 	accountQueries := accountsstore.New(app.pool)
 	app.hub = realtime.NewHub(system)
+	app.typing = &typingForwarder{}
 	app.gateway = realtime.NewGateway(realtime.GatewayOptions{
-		Hub: app.hub, Sessions: app.sessions, Users: accountQueries, Logger: app.logger,
+		Hub: app.hub, Sessions: app.sessions, Users: accountQueries, Logger: app.logger, Typing: app.typing,
 	})
 	service := profiles.NewService(profiles.Dependencies{
 		Store: accountQueries, Files: filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),

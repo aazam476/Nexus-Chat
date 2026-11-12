@@ -58,3 +58,28 @@ func (service *Service) MaySend(ctx context.Context, id uuid.UUID, userID uuid.U
 	}
 	return !blocked, nil
 }
+
+// TypingRecipients returns the members other than userID, who hear that
+// userID is typing in the conversation. It returns ErrNotFound when userID
+// may not send there, so typing never reaches a blocked user or reveals a
+// conversation to a non-member.
+func (service *Service) TypingRecipients(ctx context.Context, id uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
+	allowed, err := service.MaySend(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, ErrNotFound
+	}
+	members, err := service.dependencies.Store.MemberIDs(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	others := make([]uuid.UUID, 0, len(members))
+	for _, member := range members {
+		if member != userID {
+			others = append(others, member)
+		}
+	}
+	return others, nil
+}

@@ -49,8 +49,10 @@ describe("GatewayClient", () => {
     socket.receive({ type: "heartbeat_ack", data: {} });
     jest.advanceTimersByTime(1000);
     client.reportActivity(true);
+    client.reportTyping("dm");
 
-    expect(socket.sent.map((frame) => frame.type)).toEqual(["identify", "heartbeat", "activity"]);
+    expect(socket.sent.map((frame) => frame.type)).toEqual(["identify", "heartbeat", "activity", "typing"]);
+    expect(socket.sent[3]?.data).toEqual({ conversationId: "dm" });
     expect(socket.sent[0]?.data).toEqual({ token: "nxs_t" });
     expect(socket.sent[1]?.data).toEqual({ lastSequence: 2 });
     expect(events).toEqual([

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -84,6 +85,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features) {
 		DirectiveKey: app.secrets.FederationKey, Clock: system,
 	})
 	leaves.delivery = deliveryService
+	app.typing.conversations = conversationService
 	features.Conversations = conversations.NewHandler(conversationService)
 	features.Delivery = delivery.NewHandler(deliveryService)
 }
@@ -96,4 +98,20 @@ type leaveForwarder struct {
 // MemberLeft implements conversations.MembershipListener.
 func (forwarder *leaveForwarder) MemberLeft(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) error {
 	return forwarder.delivery.MemberLeft(ctx, conversationID, userID)
+}
+
+// typingForwarder answers the gateway's typing questions from the
+// conversations feature. Someone who may not send in a conversation is
+// told nothing went wrong, and nobody hears them.
+type typingForwarder struct {
+	conversations *conversations.Service
+}
+
+// TypingRecipients implements realtime.TypingRelay.
+func (forwarder *typingForwarder) TypingRecipients(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
+	recipients, err := forwarder.conversations.TypingRecipients(ctx, conversationID, userID)
+	if errors.Is(err, conversations.ErrNotFound) {
+		return nil, nil
+	}
+	return recipients, err
 }

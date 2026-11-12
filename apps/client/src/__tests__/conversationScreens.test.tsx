@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 
 import ConversationScreen from "../../app/conversation/[id]";
@@ -9,6 +9,7 @@ import type { Messenger } from "../messaging/messenger";
 import { lastLine } from "../screens/conversation/lastLine";
 import { MessageBody } from "../screens/conversation/MessageBody";
 import { fakeServer, type FakeServer } from "../testing/fakeServer";
+import { fakeSockets, nth } from "../testing/fakeSocket";
 import { dm, grace, messengersInDm } from "../testing/messengers";
 import { ada, fakeConnection, fakeMessaging, renderWithApp } from "../testing/renderWithApp";
 
@@ -138,6 +139,104 @@ describe("a conversation", () => {
     expect(await screen.findByText(/encryption identity of/)).toBeOnTheScreen();
     await fireEvent.press(screen.getByText("Trust the new identity"));
     expect(accept).toHaveBeenCalledWith(grace.id);
+  });
+});
+
+describe("typing in a conversation", () => {
+  beforeEach(() => {
+    (globalThis as { mockSearchParams?: object }).mockSearchParams = { id: "dm" };
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("shows who is typing, tells the others, and stops when their message arrives", async () => {
+    const sockets = fakeSockets();
+    let now = Date.UTC(2026, 10, 12, 12, 0, 0);
+    jest.spyOn(Date, "now").mockImplementation(() => now);
+    const { ada: adaMessenger, grace: graceMessenger } = await messengersInDm();
+    await renderWithApp(
+      <ConversationScreen />,
+      fakeConnection(serverWith([dm]), { user: ada, sessionToken: "nxs_t" }),
+      fakeMessaging({ status: "ready", messenger: adaMessenger }),
+    );
+    await screen.findByText(/Messages here are end-to-end encrypted/);
+    const socket = nth(sockets, 0);
+    const typing = (userId: string, conversationId = "dm") => {
+      socket.receive({ type: "typing_start", seq: 1, data: { conversationId, userId } });
+    };
+
+    await act(async () => {
+      typing(grace.id);
+      typing(grace.id, "elsewhere");
+      typing(ada.id);
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("typing")).toHaveTextContent(`${isolate("Grace")} is typing…`);
+
+    await fireEvent.changeText(screen.getByTestId("composer"), "h");
+    await fireEvent.changeText(screen.getByTestId("composer"), "hi");
+    expect(socket.sent.filter((frame) => frame.type === "typing")).toEqual([
+      { type: "typing", data: { conversationId: "dm" } },
+    ]);
+
+    await graceMessenger.send("dm", { kind: "text", text: "done typing" });
+    await act(async () => {
+      await adaMessenger.sync("dm");
+    });
+    expect(await screen.findByText("done typing")).toBeOnTheScreen();
+    await waitFor(() => {
+      expect(screen.getByTestId("typing")).toHaveTextContent("");
+    });
+
+    await act(async () => {
+      typing(grace.id);
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("typing")).toHaveTextContent(/is typing/);
+    now += 9000;
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("typing")).toHaveTextContent("");
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("names two typists, then says several", async () => {
+    const { ada: adaMessenger } = await messengersInDm();
+    const sockets = fakeSockets();
+    const group = {
+      ...dm,
+      members: [
+        ...dm.members,
+        { id: "alan", username: "alan", displayName: "Alan" },
+        { id: "edsger", username: "edsger", displayName: "Edsger" },
+      ],
+    };
+    const server = serverWith([group]);
+    server.answer("GET /api/v1/conversations/dm", { status: 200, body: group });
+    await renderWithApp(
+      <ConversationScreen />,
+      fakeConnection(server, { user: ada, sessionToken: "nxs_t" }),
+      fakeMessaging({ status: "ready", messenger: adaMessenger }),
+    );
+    await screen.findByText(/Messages here are end-to-end encrypted/);
+    const socket = nth(sockets, 0);
+    await act(async () => {
+      socket.receive({ type: "typing_start", seq: 1, data: { conversationId: "dm", userId: grace.id } });
+      socket.receive({ type: "typing_start", seq: 2, data: { conversationId: "dm", userId: "alan" } });
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("typing")).toHaveTextContent(
+      `${isolate("Grace")} and ${isolate("Alan")} are typing…`,
+    );
+    await act(async () => {
+      socket.receive({ type: "typing_start", seq: 3, data: { conversationId: "dm", userId: "edsger" } });
+      socket.receive({ type: "typing_start", seq: 4, data: null });
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("typing")).toHaveTextContent("Several people are typing…");
   });
 });
 

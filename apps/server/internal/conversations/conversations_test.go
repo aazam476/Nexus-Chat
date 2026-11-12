@@ -123,6 +123,10 @@ func TestDirectMessagesFollowPrivacyAndBlocks(t *testing.T) {
 	maySend, err = f.service.MaySend(t.Context(), dm.ID, grace)
 	require.NoError(t, err)
 	assert.False(t, maySend, "not a member")
+	_, err = f.service.TypingRecipients(t.Context(), dm.ID, ada)
+	require.ErrorIs(t, err, ErrNotFound, "blocked")
+	_, err = f.service.TypingRecipients(t.Context(), dm.ID, grace)
+	require.ErrorIs(t, err, ErrNotFound, "not a member")
 }
 
 func TestGroupDirectMessages(t *testing.T) {
@@ -146,6 +150,9 @@ func TestGroupDirectMessages(t *testing.T) {
 	maySend, err := f.service.MaySend(t.Context(), group.ID, grace)
 	require.NoError(t, err)
 	assert.True(t, maySend)
+	recipients, err := f.service.TypingRecipients(t.Context(), group.ID, grace)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []uuid.UUID{ada, alan}, recipients)
 
 	require.NoError(t, f.service.AddMember(t.Context(), grace, group.ID, linus))
 	require.ErrorIs(t, f.service.AddMember(t.Context(), grace, group.ID, linus), ErrAlreadyMember)

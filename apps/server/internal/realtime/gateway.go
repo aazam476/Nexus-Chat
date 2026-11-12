@@ -39,10 +39,13 @@ type userLoader interface {
 // GatewayOptions configure NewGateway. Zero durations use the protocol's
 // defaults; tests shorten them.
 type GatewayOptions struct {
-	Hub               *Hub
-	Sessions          authenticator
-	Users             userLoader
-	Logger            *slog.Logger
+	Hub      *Hub
+	Sessions authenticator
+	Users    userLoader
+	Logger   *slog.Logger
+	// Typing relays typing indicators; without it, typing frames get an
+	// unknown_type error.
+	Typing            TypingRelay
 	HeartbeatInterval time.Duration
 	IdentifyTimeout   time.Duration
 }

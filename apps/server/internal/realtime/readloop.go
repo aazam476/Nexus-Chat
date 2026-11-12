@@ -9,6 +9,7 @@ import (
 // readLoop handles frames after the handshake.
 func (connection *connection) readLoop(ctx context.Context, session *gatewaySession, token string) *closeReason {
 	limiter := newFrameLimiter()
+	throttle := &typingThrottle{}
 	interval := connection.gateway.options.HeartbeatInterval
 	timedOut := &closeReason{closeTimedOut, "no heartbeat in time"}
 	for {
@@ -18,6 +19,12 @@ func (connection *connection) readLoop(ctx context.Context, session *gatewaySess
 		}
 		if !limiter.Allow() {
 			return &closeReason{closeRateLimited, "too many frames"}
+		}
+		if frame.Type == typeTyping && connection.gateway.options.Typing != nil {
+			if reason := connection.typing(ctx, session, frame, throttle); reason != nil {
+				return reason
+			}
+			continue
 		}
 		if reason := connection.handle(ctx, session, token, frame); reason != nil {
 			return reason
