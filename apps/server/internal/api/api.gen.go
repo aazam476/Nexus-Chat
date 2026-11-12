@@ -798,6 +798,21 @@ type PublishedIdentity struct {
 	SelfSigningSignature []byte `json:"selfSigningSignature"`
 }
 
+// ReadMark defines model for ReadMark.
+type ReadMark struct {
+	// LastReadId The ID of the last live MLS message the user has seen; negative IDs get 422.
+	LastReadId int64 `json:"lastReadId"`
+}
+
+// ReadState defines model for ReadState.
+type ReadState struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+	LastReadId     int64              `json:"lastReadId"`
+
+	// UnreadCount Application messages from others after `lastReadId`, counted up to 1000.
+	UnreadCount int64 `json:"unreadCount"`
+}
+
 // ReauthenticateRequest defines model for ReauthenticateRequest.
 type ReauthenticateRequest struct {
 	Password string `json:"password"`
@@ -1248,6 +1263,9 @@ type SubmitMlsCommitJSONRequestBody = MlsCommit
 // SendMlsMessageJSONRequestBody defines body for SendMlsMessage for application/json ContentType.
 type SendMlsMessageJSONRequestBody = MlsSend
 
+// MarkConversationReadJSONRequestBody defines body for MarkConversationRead for application/json ContentType.
+type MarkConversationReadJSONRequestBody = ReadMark
+
 // SendFriendRequestJSONRequestBody defines body for SendFriendRequest for application/json ContentType.
 type SendFriendRequestJSONRequestBody = FriendRequestTarget
 
@@ -1460,6 +1478,9 @@ type ServerInterface interface {
 	// SendMlsMessage Send an application message for the current epoch
 	// (POST /api/v1/conversations/{conversationId}/mls/messages)
 	SendMlsMessage(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
+	// MarkConversationRead Mark the conversation read up to a delivered message
+	// (PUT /api/v1/conversations/{conversationId}/read)
+	MarkConversationRead(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
 	// ListFriends This user's friends and pending friend requests
 	// (GET /api/v1/friends)
 	ListFriends(w http.ResponseWriter, r *http.Request)
@@ -1511,6 +1532,9 @@ type ServerInterface interface {
 	// UpdatePrivacySettings Change who may DM you or send you friend requests
 	// (PUT /api/v1/privacy)
 	UpdatePrivacySettings(w http.ResponseWriter, r *http.Request)
+	// ListReadStates Read position and unread count of each of the caller's conversations
+	// (GET /api/v1/read-state)
+	ListReadStates(w http.ResponseWriter, r *http.Request)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(w http.ResponseWriter, r *http.Request)
@@ -2779,6 +2803,32 @@ func (siw *ServerInterfaceWrapper) SendMlsMessage(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// MarkConversationRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkConversationRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "conversationId" -------------
+	var conversationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "conversationId", r.PathValue("conversationId"), &conversationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversationId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkConversationRead(w, r, conversationId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListFriends operation middleware
 func (siw *ServerInterfaceWrapper) ListFriends(w http.ResponseWriter, r *http.Request) {
 
@@ -3104,6 +3154,20 @@ func (siw *ServerInterfaceWrapper) UpdatePrivacySettings(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdatePrivacySettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReadStates operation middleware
+func (siw *ServerInterfaceWrapper) ListReadStates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReadStates(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3565,6 +3629,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/commits", wrapper.SubmitMlsCommit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/messages", wrapper.ListMlsMessages)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/messages", wrapper.SendMlsMessage)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/read", wrapper.MarkConversationRead)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/read-state", wrapper.ListReadStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive", wrapper.ListArchivedMessages)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
@@ -7541,6 +7607,85 @@ func (response SendMlsMessage422JSONResponse) VisitSendMlsMessageResponse(w http
 	return err
 }
 
+type MarkConversationReadRequestObject struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+	Body           *MarkConversationReadJSONRequestBody
+}
+
+type MarkConversationReadResponseObject interface {
+	VisitMarkConversationReadResponse(w http.ResponseWriter) error
+}
+
+type MarkConversationRead200JSONResponse ReadState
+
+func (response MarkConversationRead200JSONResponse) VisitMarkConversationReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkConversationRead400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response MarkConversationRead400JSONResponse) VisitMarkConversationReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkConversationRead401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response MarkConversationRead401JSONResponse) VisitMarkConversationReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkConversationRead404JSONResponse Error
+
+func (response MarkConversationRead404JSONResponse) VisitMarkConversationReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkConversationRead422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response MarkConversationRead422JSONResponse) VisitMarkConversationReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListFriendsRequestObject struct {
 }
 
@@ -8536,6 +8681,41 @@ func (response UpdatePrivacySettings401JSONResponse) VisitUpdatePrivacySettingsR
 	return err
 }
 
+type ListReadStatesRequestObject struct {
+}
+
+type ListReadStatesResponseObject interface {
+	VisitListReadStatesResponse(w http.ResponseWriter) error
+}
+
+type ListReadStates200JSONResponse []ReadState
+
+func (response ListReadStates200JSONResponse) VisitListReadStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListReadStates401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListReadStates401JSONResponse) VisitListReadStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetSetupStatusRequestObject struct {
 }
 
@@ -9311,6 +9491,9 @@ type StrictServerInterface interface {
 	// SendMlsMessage Send an application message for the current epoch
 	// (POST /api/v1/conversations/{conversationId}/mls/messages)
 	SendMlsMessage(ctx context.Context, request SendMlsMessageRequestObject) (SendMlsMessageResponseObject, error)
+	// MarkConversationRead Mark the conversation read up to a delivered message
+	// (PUT /api/v1/conversations/{conversationId}/read)
+	MarkConversationRead(ctx context.Context, request MarkConversationReadRequestObject) (MarkConversationReadResponseObject, error)
 	// ListFriends This user's friends and pending friend requests
 	// (GET /api/v1/friends)
 	ListFriends(ctx context.Context, request ListFriendsRequestObject) (ListFriendsResponseObject, error)
@@ -9362,6 +9545,9 @@ type StrictServerInterface interface {
 	// UpdatePrivacySettings Change who may DM you or send you friend requests
 	// (PUT /api/v1/privacy)
 	UpdatePrivacySettings(ctx context.Context, request UpdatePrivacySettingsRequestObject) (UpdatePrivacySettingsResponseObject, error)
+	// ListReadStates Read position and unread count of each of the caller's conversations
+	// (GET /api/v1/read-state)
+	ListReadStates(ctx context.Context, request ListReadStatesRequestObject) (ListReadStatesResponseObject, error)
 	// GetSetupStatus Setup status
 	// (GET /api/v1/setup)
 	GetSetupStatus(ctx context.Context, request GetSetupStatusRequestObject) (GetSetupStatusResponseObject, error)
@@ -11154,6 +11340,39 @@ func (sh *strictHandler) SendMlsMessage(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// MarkConversationRead operation middleware
+func (sh *strictHandler) MarkConversationRead(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID) {
+	var request MarkConversationReadRequestObject
+
+	request.ConversationId = conversationId
+
+	var body MarkConversationReadJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkConversationRead(ctx, request.(MarkConversationReadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkConversationRead")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkConversationReadResponseObject); ok {
+		if err := validResponse.VisitMarkConversationReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListFriends operation middleware
 func (sh *strictHandler) ListFriends(w http.ResponseWriter, r *http.Request) {
 	var request ListFriendsRequestObject
@@ -11613,6 +11832,30 @@ func (sh *strictHandler) UpdatePrivacySettings(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdatePrivacySettingsResponseObject); ok {
 		if err := validResponse.VisitUpdatePrivacySettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListReadStates operation middleware
+func (sh *strictHandler) ListReadStates(w http.ResponseWriter, r *http.Request) {
+	var request ListReadStatesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListReadStates(ctx, request.(ListReadStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListReadStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListReadStatesResponseObject); ok {
+		if err := validResponse.VisitListReadStatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

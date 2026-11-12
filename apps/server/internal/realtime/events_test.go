@@ -25,3 +25,17 @@ func TestRelationshipChangesReachTheUsersDevices(t *testing.T) {
 	assert.Equal(t, relationshipData{UserID: other, Relationship: "incoming"}, data)
 	assert.Positive(t, frame.Seq, "an event, so it is replayed on resume")
 }
+
+func TestReadChangesReachTheUsersOwnDevices(t *testing.T) {
+	fixture := newGatewayFixture(t, time.Second)
+	laptop := fixture.dial(t)
+	laptop.identify(aliceToken)
+	conversation := uuid.New()
+
+	fixture.hub.ReadChanged(t.Context(), fixture.user.ID, conversation, 42)
+
+	frame := laptop.receiveType(TypeReadUpdate)
+	var data readData
+	require.NoError(t, json.Unmarshal(frame.Data, &data))
+	assert.Equal(t, readData{ConversationID: conversation, LastReadID: 42}, data)
+}

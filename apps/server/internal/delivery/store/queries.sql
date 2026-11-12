@@ -35,3 +35,38 @@ ORDER BY created_at DESC, message_id LIMIT sqlc.arg(row_limit);
 -- name: DeleteExpiredMessages :execrows
 -- Live copies older than the cut-off; archive copies stay.
 DELETE FROM mls_messages WHERE created_at < $1;
+
+-- name: MarkRead :one
+-- Moves the member's read position forward, never back and never past the
+-- conversation's newest message, and returns where it now is.
+INSERT INTO conversation_reads AS reads (conversation_id, user_id, last_read_id, updated_at)
+VALUES (
+    sqlc.arg(conversation_id), sqlc.arg(user_id),
+    LEAST(sqlc.arg(last_read_id)::bigint, (SELECT COALESCE(MAX(id), 0) FROM mls_messages WHERE conversation_id = sqlc.arg(conversation_id))),
+    sqlc.arg(now)
+)
+ON CONFLICT (conversation_id, user_id) DO UPDATE
+SET last_read_id = GREATEST(reads.last_read_id, EXCLUDED.last_read_id), updated_at = EXCLUDED.updated_at
+RETURNING last_read_id;
+
+-- name: ReadStates :many
+-- For each of the user's conversations: how far they read, and how many
+-- application messages from others came after, counting up to 1000.
+SELECT
+    members.conversation_id,
+    COALESCE(reads.last_read_id, 0)::bigint AS last_read_id,
+    (
+        SELECT count(*) FROM (
+            SELECT 1 FROM mls_messages AS messages
+            WHERE messages.conversation_id = members.conversation_id
+              AND messages.kind = 'application'
+              AND messages.id > COALESCE(reads.last_read_id, 0)
+              AND messages.sender_id IS DISTINCT FROM members.user_id
+            LIMIT 1000
+        ) AS unread
+    )::bigint AS unread_count
+FROM conversation_members AS members
+LEFT JOIN conversation_reads AS reads
+    ON reads.conversation_id = members.conversation_id AND reads.user_id = members.user_id
+WHERE members.user_id = sqlc.arg(user_id)
+ORDER BY members.conversation_id;

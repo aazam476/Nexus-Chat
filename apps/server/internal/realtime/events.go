@@ -50,3 +50,14 @@ func (hub *Hub) ConversationChanged(_ context.Context, userIDs []uuid.UUID, conv
 func (hub *Hub) MessagesArrived(_ context.Context, userIDs []uuid.UUID, conversationID uuid.UUID, lastID int64) {
 	hub.SendToUsers(userIDs, TypeMlsMessages, messagesData{ConversationID: conversationID, LastID: lastID})
 }
+
+type readData struct {
+	ConversationID uuid.UUID `json:"conversationId"`
+	LastReadID     int64     `json:"lastReadId"`
+}
+
+// ReadChanged tells the user's devices how far they have now read the
+// conversation, so every device clears the same unread markers.
+func (hub *Hub) ReadChanged(_ context.Context, userID uuid.UUID, conversationID uuid.UUID, lastReadID int64) {
+	hub.SendToUsers([]uuid.UUID{userID}, TypeReadUpdate, readData{ConversationID: conversationID, LastReadID: lastReadID})
+}

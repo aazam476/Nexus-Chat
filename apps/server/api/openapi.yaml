@@ -2488,6 +2488,66 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/read:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: markConversationRead
+      summary: Mark the conversation read up to a delivered message
+      description: >-
+        Moves the caller's read position forward (never back, and never past
+        the newest message). Every device of the caller gets `read_update`.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadMark"
+      responses:
+        "200":
+          description: The read position now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation, or you are not in it (`conversation_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+  /api/v1/read-state:
+    get:
+      operationId: listReadStates
+      summary: Read position and unread count of each of the caller's conversations
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: One entry per conversation the caller is in.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReadState"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/v1/conversations/{conversationId}/archive:
     parameters:
       - name: conversationId
@@ -3386,6 +3446,32 @@ components:
         id:
           type: integer
           format: int64
+    ReadMark:
+      type: object
+      additionalProperties: false
+      required: [lastReadId]
+      properties:
+        lastReadId:
+          description: The ID of the last live MLS message the user has seen; negative IDs get 422.
+          type: integer
+          format: int64
+    ReadState:
+      type: object
+      required: [conversationId, lastReadId, unreadCount]
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        lastReadId:
+          type: integer
+          format: int64
+          minimum: 0
+        unreadCount:
+          description: Application messages from others after `lastReadId`, counted up to 1000.
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 1000
     MlsMessage:
       type: object
       required: [id, kind, epoch, data, createdAt]

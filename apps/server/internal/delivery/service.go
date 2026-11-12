@@ -60,11 +60,14 @@ type deliveryStore interface {
 	InsertMessage(ctx context.Context, params store.InsertMessageParams) (int64, error)
 	MessagesAfter(ctx context.Context, params store.MessagesAfterParams) ([]store.MessagesAfterRow, error)
 	ArchiveBefore(ctx context.Context, params store.ArchiveBeforeParams) ([]store.ArchiveBeforeRow, error)
+	readStore
 }
 
-// Notifier tells member devices that a conversation has new MLS messages.
+// Notifier tells member devices that a conversation has new MLS messages,
+// and a user's devices that their read position moved.
 type Notifier interface {
 	MessagesArrived(ctx context.Context, userIDs []uuid.UUID, conversationID uuid.UUID, lastID int64)
+	ReadNotifier
 }
 
 // Dependencies are what the service needs. DirectiveKey signs membership

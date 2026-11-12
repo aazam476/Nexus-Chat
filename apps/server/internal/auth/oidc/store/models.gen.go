@@ -55,6 +55,13 @@ type ConversationMember struct {
 	JoinedAt       time.Time
 }
 
+type ConversationRead struct {
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+	LastReadID     int64
+	UpdatedAt      time.Time
+}
+
 type FriendRequest struct {
 	SenderID    uuid.UUID
 	RecipientID uuid.UUID

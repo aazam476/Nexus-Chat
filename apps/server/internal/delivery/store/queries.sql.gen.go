@@ -179,6 +179,39 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (i
 	return id, err
 }
 
+const markRead = `-- name: MarkRead :one
+INSERT INTO conversation_reads AS reads (conversation_id, user_id, last_read_id, updated_at)
+VALUES (
+    $1, $2,
+    LEAST($3::bigint, (SELECT COALESCE(MAX(id), 0) FROM mls_messages WHERE conversation_id = $1)),
+    $4
+)
+ON CONFLICT (conversation_id, user_id) DO UPDATE
+SET last_read_id = GREATEST(reads.last_read_id, EXCLUDED.last_read_id), updated_at = EXCLUDED.updated_at
+RETURNING last_read_id
+`
+
+type MarkReadParams struct {
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+	LastReadID     int64
+	Now            time.Time
+}
+
+// Moves the member's read position forward, never back and never past the
+// conversation's newest message, and returns where it now is.
+func (q *Queries) MarkRead(ctx context.Context, arg MarkReadParams) (int64, error) {
+	row := q.db.QueryRow(ctx, markRead,
+		arg.ConversationID,
+		arg.UserID,
+		arg.LastReadID,
+		arg.Now,
+	)
+	var last_read_id int64
+	err := row.Scan(&last_read_id)
+	return last_read_id, err
+}
+
 const messagesAfter = `-- name: MessagesAfter :many
 SELECT id, kind, epoch, sender_id, data, created_at FROM mls_messages
 WHERE conversation_id = $1 AND id > $2
@@ -217,6 +250,55 @@ func (q *Queries) MessagesAfter(ctx context.Context, arg MessagesAfterParams) ([
 			&i.Data,
 			&i.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const readStates = `-- name: ReadStates :many
+SELECT
+    members.conversation_id,
+    COALESCE(reads.last_read_id, 0)::bigint AS last_read_id,
+    (
+        SELECT count(*) FROM (
+            SELECT 1 FROM mls_messages AS messages
+            WHERE messages.conversation_id = members.conversation_id
+              AND messages.kind = 'application'
+              AND messages.id > COALESCE(reads.last_read_id, 0)
+              AND messages.sender_id IS DISTINCT FROM members.user_id
+            LIMIT 1000
+        ) AS unread
+    )::bigint AS unread_count
+FROM conversation_members AS members
+LEFT JOIN conversation_reads AS reads
+    ON reads.conversation_id = members.conversation_id AND reads.user_id = members.user_id
+WHERE members.user_id = $1
+ORDER BY members.conversation_id
+`
+
+type ReadStatesRow struct {
+	ConversationID uuid.UUID
+	LastReadID     int64
+	UnreadCount    int64
+}
+
+// For each of the user's conversations: how far they read, and how many
+// application messages from others came after, counting up to 1000.
+func (q *Queries) ReadStates(ctx context.Context, userID uuid.UUID) ([]ReadStatesRow, error) {
+	rows, err := q.db.Query(ctx, readStates, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReadStatesRow
+	for rows.Next() {
+		var i ReadStatesRow
+		if err := rows.Scan(&i.ConversationID, &i.LastReadID, &i.UnreadCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

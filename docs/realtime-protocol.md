@@ -137,6 +137,7 @@ replayed. Frames with `seq` are events.
 | `conversation_update` | yes   | `{ "conversationId" }`: a DM or group DM was created, renamed, or gained or lost a member; fetch it again (a 404 means you left)                                                                        |
 | `mls_messages`        | yes   | `{ "conversationId", "lastId" }`: new MLS messages up to `lastId`; fetch those after the last one this device has                                                                                       |
 | `typing_start`        | yes   | `{ "conversationId", "userId" }`: another member is typing there (§4.1)                                                                                                                                 |
+| `read_update`         | yes   | `{ "conversationId", "lastReadId" }`: the user read the conversation up to that live message on one of their devices (`PUT /api/v1/conversations/{id}/read`)                                            |
 
 `CurrentUser` is the object from `GET /api/v1/users/me`. `Presence` is:
 

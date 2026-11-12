@@ -462,6 +462,22 @@ export type MlsMessageId = {
     id: number;
 };
 
+export type ReadMark = {
+    /**
+     * The ID of the last live MLS message the user has seen; negative IDs get 422.
+     */
+    lastReadId: number;
+};
+
+export type ReadState = {
+    conversationId: string;
+    lastReadId: number;
+    /**
+     * Application messages from others after `lastReadId`, counted up to 1000.
+     */
+    unreadCount: number;
+};
+
 export type MlsMessage = {
     id: number;
     kind: 'commit' | 'application' | 'welcome' | 'directive';
@@ -3707,6 +3723,70 @@ export type SendMlsMessageResponses = {
 };
 
 export type SendMlsMessageResponse = SendMlsMessageResponses[keyof SendMlsMessageResponses];
+
+export type MarkConversationReadData = {
+    body: ReadMark;
+    path: {
+        conversationId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/read';
+};
+
+export type MarkConversationReadErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation, or you are not in it (`conversation_not_found`).
+     */
+    404: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type MarkConversationReadError = MarkConversationReadErrors[keyof MarkConversationReadErrors];
+
+export type MarkConversationReadResponses = {
+    /**
+     * The read position now.
+     */
+    200: ReadState;
+};
+
+export type MarkConversationReadResponse = MarkConversationReadResponses[keyof MarkConversationReadResponses];
+
+export type ListReadStatesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/read-state';
+};
+
+export type ListReadStatesErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListReadStatesError = ListReadStatesErrors[keyof ListReadStatesErrors];
+
+export type ListReadStatesResponses = {
+    /**
+     * One entry per conversation the caller is in.
+     */
+    200: Array<ReadState>;
+};
+
+export type ListReadStatesResponse = ListReadStatesResponses[keyof ListReadStatesResponses];
 
 export type ListArchivedMessagesData = {
     body?: never;

@@ -45,6 +45,13 @@ type events struct {
 	mutex  sync.Mutex
 	lastID int64
 	users  []uuid.UUID
+	reads  []int64
+}
+
+func (fake *events) ReadChanged(_ context.Context, _ uuid.UUID, _ uuid.UUID, lastReadID int64) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
+	fake.reads = append(fake.reads, lastReadID)
 }
 
 func (fake *events) MessagesArrived(_ context.Context, userIDs []uuid.UUID, _ uuid.UUID, lastID int64) {

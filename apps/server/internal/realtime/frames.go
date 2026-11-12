@@ -41,6 +41,8 @@ const (
 	TypeConversationUpdate = "conversation_update"
 	// TypeMlsMessages: a conversation has new MLS messages to fetch.
 	TypeMlsMessages = "mls_messages"
+	// TypeReadUpdate: the user read a conversation further on some device.
+	TypeReadUpdate = "read_update"
 )
 
 var errMalformed = errors.New("malformed frame")
