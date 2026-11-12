@@ -14,3 +14,4 @@ export * from "./mls/memberKeys.js";
 export * from "./history/archive.js";
 export * from "./history/bundle.js";
 export * from "./mls/persistence.js";
+export * from "./mls/vectors.js";

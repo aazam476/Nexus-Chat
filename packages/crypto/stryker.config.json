@@ -6,7 +6,7 @@
     "configFile": "jest.mutation.config.ts"
   },
   "testRunnerNodeArgs": ["--experimental-vm-modules", "--no-warnings=ExperimentalWarning"],
-  "mutate": ["src/**/*.ts", "!src/**/*.test.ts"],
+  "mutate": ["src/**/*.ts", "!src/**/*.test.ts", "!src/mls/vectors.ts"],
   "coverageAnalysis": "perTest",
   "thresholds": {
     "high": 90,

@@ -410,8 +410,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   every commit.
 - Two M3 items moved here, since they need the key-setup screens and the
   native crypto stack. The E2E "signup → recovery phrase → second device"
-  now runs in the release gate (above). Running the RFC 9420 vectors on
-  Hermes is still to do.
+  now runs in the release gate (above). The RFC 9420 vectors now also run
+  on Hermes: CI's Android test build has a self-test screen (present only
+  when `EXPO_PUBLIC_NEXUS_VECTORS_URL` is set at build time) that fetches
+  the pinned vector files from the CI machine and runs every
+  passive-client case with the same runner as the Node tests
+  (`packages/crypto/src/mls/vectors.ts`); the Maestro flow `4-vectors`
+  waits for all of them to pass.
 
 ## Known issues
 

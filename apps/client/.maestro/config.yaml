@@ -8,3 +8,4 @@ executionOrder:
     - 1-setup
     - 2-login
     - 3-register
+    - 4-vectors

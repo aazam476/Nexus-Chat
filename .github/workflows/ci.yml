@@ -129,6 +129,11 @@ jobs:
           done
           [ -n "$token" ] || { cat "$RUNNER_TEMP/server.log"; exit 1; }
           echo "SETUP_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Serve the MLS test vectors for the app's self-test on port 8090
+        run: |
+          scripts/fetch-mls-vectors.sh
+          nohup python3 -m http.server 8090 --bind 127.0.0.1 --directory packages/crypto/vectors \
+            > "$RUNNER_TEMP/vectors.log" 2>&1 &
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -138,7 +143,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # The vector address turns on the self-test screen, which runs the MLS
+      # interop vectors on Hermes; store builds never set it.
       - name: Build the release APK (plain HTTP allowed for the test instance only)
+        env:
+          EXPO_PUBLIC_NEXUS_VECTORS_URL: http://10.0.2.2:8090
         run: |
           pnpm install --frozen-lockfile
           pnpm --filter @nexus-chat/api-client build

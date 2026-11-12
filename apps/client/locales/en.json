@@ -332,5 +332,10 @@
       "rate_limited": "Too many changes. Wait a minute and try again."
     },
     "checkMark": "✓"
+  },
+  "selfTest": {
+    "title": "MLS test vectors",
+    "loading": "Fetching the test vectors…",
+    "progress": "{{done}} of {{total}} cases run, {{failed}} failed"
   }
 }

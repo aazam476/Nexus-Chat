@@ -1,0 +1,11 @@
+# The MLS interoperability vectors (spec §5.1) on Hermes, with the device's
+# native crypto: the test build's self-test screen fetches them from the CI
+# machine and runs every case. Store builds have no such screen.
+appId: org.nexuschat.app
+---
+- openLink: nexuschat://self-test
+- assertVisible: "MLS test vectors"
+- extendedWaitUntil:
+    visible:
+      id: "self-test-passed"
+    timeout: 1500000
