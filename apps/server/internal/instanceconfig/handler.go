@@ -43,12 +43,18 @@ func (handler *Handler) GetInstanceInfo(ctx context.Context, _ api.GetInstanceIn
 	if err != nil {
 		return nil, err
 	}
+	attachmentLimit, err := handler.service.AttachmentMaxBytes(ctx)
+	if err != nil {
+		return nil, err
+	}
 	response := api.GetInstanceInfo200JSONResponse{
 		Name:             name,
 		RegistrationMode: api.RegistrationMode(mode),
 		SecureConnection: clientip.FromContext(ctx).SecureContext(),
 		SigningKey:       handler.signingKey,
-		Limits:           api.InstanceLimits{GroupDmMaxMembers: handler.limits.GroupDMMaxMembers},
+		Limits: api.InstanceLimits{
+			GroupDmMaxMembers: handler.limits.GroupDMMaxMembers, AttachmentMaxBytes: attachmentLimit,
+		},
 	}
 	if domain != "" {
 		response.Domain = &domain

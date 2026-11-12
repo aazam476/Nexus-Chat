@@ -45,7 +45,10 @@ function withGroupLimit(connection: Connection, maximum: number): Connection {
   }
   return {
     ...connection,
-    instance: { ...instance, info: { ...instance.info, limits: { groupDmMaxMembers: maximum } } },
+    instance: {
+      ...instance,
+      info: { ...instance.info, limits: { ...instance.info.limits, groupDmMaxMembers: maximum } },
+    },
   };
 }
 

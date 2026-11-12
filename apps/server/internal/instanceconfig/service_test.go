@@ -151,3 +151,18 @@ func TestSaveReportsFailures(t *testing.T) {
 	failing := NewService(&fakeSettingsStore{err: errors.New("down")}, clock.Fixed{}, "")
 	assert.ErrorContains(t, failing.Save(t.Context(), "key", "value"), "saving setting key: down")
 }
+
+func TestAttachmentLimit(t *testing.T) {
+	service := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "")
+	limit, err := service.AttachmentMaxBytes(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, DefaultAttachmentMaxBytes, limit, "25 MiB until the admin changes it")
+
+	require.NoError(t, service.SetAttachmentMaxBytes(t.Context(), 100<<20))
+	limit, err = service.AttachmentMaxBytes(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, int64(100<<20), limit)
+	require.ErrorIs(t, service.SetAttachmentMaxBytes(t.Context(), MinimumAttachmentMaxBytes-1), ErrInvalidAttachmentLimit)
+	require.ErrorIs(t, service.SetAttachmentMaxBytes(t.Context(), MaximumAttachmentMaxBytes+1), ErrInvalidAttachmentLimit)
+	require.NoError(t, service.SetAttachmentMaxBytes(t.Context(), MaximumAttachmentMaxBytes))
+}

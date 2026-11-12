@@ -9,6 +9,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/accounts"
 	"github.com/aazam476/nexus-chat/apps/server/internal/admin"
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
+	"github.com/aazam476/nexus-chat/apps/server/internal/attachments"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth"
 	"github.com/aazam476/nexus-chat/apps/server/internal/auth/oidc"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
@@ -33,6 +34,7 @@ type Features struct {
 	Auth          *auth.Handler
 	Conversations *conversations.Handler
 	Delivery      *delivery.Handler
+	Attachments   *attachments.Handler
 	Health        *health.Handler
 	Identities    *identities.Handler
 	Instance      *instanceconfig.Handler
@@ -64,6 +66,7 @@ type Options struct {
 type (
 	accountsHandler      = accounts.Handler
 	adminHandler         = admin.Handler
+	attachmentsHandler   = attachments.Handler
 	authHandler          = auth.Handler
 	conversationsHandler = conversations.Handler
 	deliveryHandler      = delivery.Handler
@@ -85,6 +88,7 @@ type (
 type handlers struct {
 	*accountsHandler
 	*adminHandler
+	*attachmentsHandler
 	*authHandler
 	*conversationsHandler
 	*deliveryHandler
@@ -115,6 +119,7 @@ func NewHandler(features Features, options Options) http.Handler {
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup,
 			socialHandler: features.Social, conversationsHandler: features.Conversations, deliveryHandler: features.Delivery,
+			attachmentsHandler: features.Attachments,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
 		api.StrictHTTPServerOptions{

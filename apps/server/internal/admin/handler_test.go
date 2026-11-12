@@ -18,12 +18,13 @@ type handlerFixture struct {
 	certificates *fakeCertificates
 	settings     *fakeSettings
 	sender       *fakeSender
+	uploads      *fakeUploads
 }
 
 func newHandlerFixture(t *testing.T, users fakeUsers) handlerFixture {
 	t.Helper()
-	fixture := handlerFixture{certificates: &fakeCertificates{}, settings: &fakeSettings{}, sender: &fakeSender{}}
-	fixture.handler = NewHandler(users, fixture.certificates, newMailSettings(t, fixture.settings, fixture.sender))
+	fixture := handlerFixture{certificates: &fakeCertificates{}, settings: &fakeSettings{}, sender: &fakeSender{}, uploads: &fakeUploads{limit: 25 << 20}}
+	fixture.handler = NewHandler(users, fixture.certificates, newMailSettings(t, fixture.settings, fixture.sender), fixture.uploads)
 	return fixture
 }
 
@@ -37,6 +38,8 @@ func everyOperation(ctx context.Context, handler *Handler) []any {
 		call(handler.GetSmtpSettings(ctx, api.GetSmtpSettingsRequestObject{})),
 		call(handler.UpdateSmtpSettings(ctx, api.UpdateSmtpSettingsRequestObject{Body: &api.UpdateSmtpSettingsRequest{}})),
 		call(handler.SendTestEmail(ctx, api.SendTestEmailRequestObject{})),
+		call(handler.GetUploadSettings(ctx, api.GetUploadSettingsRequestObject{})),
+		call(handler.UpdateUploadSettings(ctx, api.UpdateUploadSettingsRequestObject{Body: &api.UploadSettings{}})),
 	}
 }
 
@@ -48,7 +51,9 @@ func TestEveryOperationRequiresAnInstanceAdmin(t *testing.T) {
 	want := []any{
 		api.GetTlsStatus403JSONResponse{}, api.InstallTlsCertificate403JSONResponse{}, api.RemoveTlsCertificate403JSONResponse{},
 		api.GetSmtpSettings403JSONResponse{}, api.UpdateSmtpSettings403JSONResponse{}, api.SendTestEmail403JSONResponse{},
+		api.GetUploadSettings403JSONResponse{}, api.UpdateUploadSettings403JSONResponse{},
 	}
+	require.Len(t, responses, len(want))
 	for index, response := range responses {
 		assert.IsType(t, want[index], response)
 	}
@@ -68,6 +73,8 @@ func TestEveryOperationReportsLookupFailures(t *testing.T) {
 		call(handler.GetSmtpSettings(ctx, api.GetSmtpSettingsRequestObject{})),
 		call(handler.UpdateSmtpSettings(ctx, api.UpdateSmtpSettingsRequestObject{Body: &api.UpdateSmtpSettingsRequest{}})),
 		call(handler.SendTestEmail(ctx, api.SendTestEmailRequestObject{})),
+		call(handler.GetUploadSettings(ctx, api.GetUploadSettingsRequestObject{})),
+		call(handler.UpdateUploadSettings(ctx, api.UpdateUploadSettingsRequestObject{Body: &api.UploadSettings{}})),
 	} {
 		assert.ErrorIs(t, err, errFailure)
 	}

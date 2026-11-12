@@ -15,4 +15,7 @@ const (
 	KeySetupCompletedAt = "setup.completed_at"
 	// KeySMTP is the mail server configuration (JSON mail.SMTPConfig).
 	KeySMTP = "smtp"
+	// KeyAttachmentMaxBytes is the instance's attachment limit in bytes
+	// (JSON number), set in the Admin panel.
+	KeyAttachmentMaxBytes = "uploads.attachment_max_bytes"
 )

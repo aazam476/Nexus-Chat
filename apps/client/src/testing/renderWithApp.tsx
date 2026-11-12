@@ -24,7 +24,7 @@ export const exampleInstance: InstanceInfo = {
   registrationMode: "open",
   secureConnection: true,
   signingKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  limits: { groupDmMaxMembers: 25 },
+  limits: { groupDmMaxMembers: 25, attachmentMaxBytes: 26214400 },
   domain: "chat.example.com",
 };
 

@@ -590,6 +590,9 @@ type InstanceInfo struct {
 
 // InstanceLimits defines model for InstanceLimits.
 type InstanceLimits struct {
+	// AttachmentMaxBytes The largest attachment, before encryption, set in the Admin panel (25 MiB by default).
+	AttachmentMaxBytes int64 `json:"attachmentMaxBytes"`
+
 	// GroupDmMaxMembers The largest group DM, counting its creator (GROUP_DM_MAX_MEMBERS).
 	GroupDmMaxMembers int `json:"groupDmMaxMembers"`
 }
@@ -961,6 +964,12 @@ type SmtpSettings struct {
 	Username string       `json:"username"`
 }
 
+// StoredAttachment defines model for StoredAttachment.
+type StoredAttachment struct {
+	Id   openapi_types.UUID `json:"id"`
+	Size int64              `json:"size"`
+}
+
 // TlsStatus defines model for TlsStatus.
 type TlsStatus struct {
 	// Active True while the server serves HTTPS with its own certificate.
@@ -1032,6 +1041,12 @@ type UpdateSmtpSettingsRequest struct {
 	// the connection; `none` is only for a relay on the same network.
 	Security SmtpSecurity `json:"security"`
 	Username *string      `json:"username,omitempty"`
+}
+
+// UploadSettings defines model for UploadSettings.
+type UploadSettings struct {
+	// AttachmentMaxBytes The largest attachment before encryption, 1 MiB to 4 GiB.
+	AttachmentMaxBytes int64 `json:"attachmentMaxBytes"`
 }
 
 // UserProfile defines model for UserProfile.
@@ -1172,6 +1187,11 @@ type ListArchivedMessagesParams struct {
 	Limit  *int       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// UploadAttachmentParams defines parameters for UploadAttachment.
+type UploadAttachmentParams struct {
+	Size int64 `form:"size" json:"size"`
+}
+
 // ListMlsMessagesParams defines parameters for ListMlsMessages.
 type ListMlsMessagesParams struct {
 	// After The ID of the last message this device has; 0 for the oldest kept.
@@ -1200,6 +1220,9 @@ type UpdateSmtpSettingsJSONRequestBody = UpdateSmtpSettingsRequest
 
 // InstallTlsCertificateJSONRequestBody defines body for InstallTlsCertificate for application/json ContentType.
 type InstallTlsCertificateJSONRequestBody = InstallTlsCertificateRequest
+
+// UpdateUploadSettingsJSONRequestBody defines body for UpdateUploadSettings for application/json ContentType.
+type UpdateUploadSettingsJSONRequestBody = UploadSettings
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
@@ -1344,6 +1367,12 @@ type ServerInterface interface {
 	// InstallTlsCertificate Upload an HTTPS certificate
 	// (PUT /api/v1/admin/tls)
 	InstallTlsCertificate(w http.ResponseWriter, r *http.Request)
+	// GetUploadSettings Upload limits
+	// (GET /api/v1/admin/uploads)
+	GetUploadSettings(w http.ResponseWriter, r *http.Request)
+	// UpdateUploadSettings Change the upload limits
+	// (PUT /api/v1/admin/uploads)
+	UpdateUploadSettings(w http.ResponseWriter, r *http.Request)
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -1473,6 +1502,12 @@ type ServerInterface interface {
 	// ListArchivedMessages Archive copies, newest first, for scrolling back and search
 	// (GET /api/v1/conversations/{conversationId}/archive)
 	ListArchivedMessages(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params ListArchivedMessagesParams)
+	// UploadAttachment Upload an encrypted attachment
+	// (POST /api/v1/conversations/{conversationId}/attachments)
+	UploadAttachment(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params UploadAttachmentParams)
+	// DownloadAttachment Download an encrypted attachment
+	// (GET /api/v1/conversations/{conversationId}/attachments/{attachmentId})
+	DownloadAttachment(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, attachmentId openapi_types.UUID)
 	// RemoveConversationIcon Remove a group DM's icon
 	// (DELETE /api/v1/conversations/{conversationId}/icon)
 	RemoveConversationIcon(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
@@ -1810,6 +1845,34 @@ func (siw *ServerInterfaceWrapper) InstallTlsCertificate(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.InstallTlsCertificate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUploadSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetUploadSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUploadSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateUploadSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateUploadSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateUploadSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2654,6 +2717,83 @@ func (siw *ServerInterfaceWrapper) ListArchivedMessages(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListArchivedMessages(w, r, conversationId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadAttachment operation middleware
+func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "conversationId" -------------
+	var conversationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "conversationId", r.PathValue("conversationId"), &conversationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversationId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UploadAttachmentParams
+
+	// ------------- Required query parameter "size" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "size", r.URL.Query(), &params.Size, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "size"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "size", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadAttachment(w, r, conversationId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadAttachment operation middleware
+func (siw *ServerInterfaceWrapper) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "conversationId" -------------
+	var conversationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "conversationId", r.PathValue("conversationId"), &conversationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversationId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "attachmentId" -------------
+	var attachmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "attachmentId", r.PathValue("attachmentId"), &attachmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "attachmentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadAttachment(w, r, conversationId, attachmentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3655,6 +3795,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.RemoveTlsCertificate)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.GetTlsStatus)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.InstallTlsCertificate)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/uploads", wrapper.GetUploadSettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/uploads", wrapper.UpdateUploadSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.GetSmtpSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.UpdateSmtpSettings)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/smtp/test", wrapper.SendTestEmail)
@@ -3726,6 +3868,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/commits", wrapper.SubmitMlsCommit)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/messages", wrapper.ListMlsMessages)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/mls/messages", wrapper.SendMlsMessage)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/attachments", wrapper.UploadAttachment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/attachments/{attachmentId}", wrapper.DownloadAttachment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/icon", wrapper.RemoveConversationIcon)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/icon", wrapper.SetConversationIcon)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversation-icons/{iconId}", wrapper.GetConversationIcon)
@@ -4610,6 +4754,133 @@ func (response InstallTlsCertificate403JSONResponse) VisitInstallTlsCertificateR
 type InstallTlsCertificate422JSONResponse Error
 
 func (response InstallTlsCertificate422JSONResponse) VisitInstallTlsCertificateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUploadSettingsRequestObject struct {
+}
+
+type GetUploadSettingsResponseObject interface {
+	VisitGetUploadSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetUploadSettings200JSONResponse UploadSettings
+
+func (response GetUploadSettings200JSONResponse) VisitGetUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUploadSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetUploadSettings401JSONResponse) VisitGetUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUploadSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetUploadSettings403JSONResponse) VisitGetUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUploadSettingsRequestObject struct {
+	Body *UpdateUploadSettingsJSONRequestBody
+}
+
+type UpdateUploadSettingsResponseObject interface {
+	VisitUpdateUploadSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateUploadSettings200JSONResponse UploadSettings
+
+func (response UpdateUploadSettings200JSONResponse) VisitUpdateUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUploadSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateUploadSettings400JSONResponse) VisitUpdateUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUploadSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateUploadSettings401JSONResponse) VisitUpdateUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUploadSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateUploadSettings403JSONResponse) VisitUpdateUploadSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUploadSettings422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response UpdateUploadSettings422JSONResponse) VisitUpdateUploadSettingsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -7283,6 +7554,177 @@ func (response ListArchivedMessages404JSONResponse) VisitListArchivedMessagesRes
 	return err
 }
 
+type UploadAttachmentRequestObject struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+	Params         UploadAttachmentParams
+	Body           io.Reader
+}
+
+type UploadAttachmentResponseObject interface {
+	VisitUploadAttachmentResponse(w http.ResponseWriter) error
+}
+
+type UploadAttachment201JSONResponse StoredAttachment
+
+func (response UploadAttachment201JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadAttachment400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UploadAttachment400JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadAttachment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UploadAttachment401JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadAttachment403JSONResponse Error
+
+func (response UploadAttachment403JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadAttachment413JSONResponse Error
+
+func (response UploadAttachment413JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadAttachment422JSONResponse Error
+
+func (response UploadAttachment422JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadAttachment429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response UploadAttachment429JSONResponse) VisitUploadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DownloadAttachmentRequestObject struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+	AttachmentId   openapi_types.UUID `json:"attachmentId"`
+}
+
+type DownloadAttachmentResponseObject interface {
+	VisitDownloadAttachmentResponse(w http.ResponseWriter) error
+}
+
+type DownloadAttachment200ResponseHeaders struct {
+	CacheControl string
+}
+
+type DownloadAttachment200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	Headers       DownloadAttachment200ResponseHeaders
+	ContentLength int64
+}
+
+func (response DownloadAttachment200ApplicationoctetStreamResponse) VisitDownloadAttachmentResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type DownloadAttachment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DownloadAttachment401JSONResponse) VisitDownloadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DownloadAttachment404JSONResponse Error
+
+func (response DownloadAttachment404JSONResponse) VisitDownloadAttachmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RemoveConversationIconRequestObject struct {
 	ConversationId openapi_types.UUID `json:"conversationId"`
 }
@@ -9696,6 +10138,12 @@ type StrictServerInterface interface {
 	// InstallTlsCertificate Upload an HTTPS certificate
 	// (PUT /api/v1/admin/tls)
 	InstallTlsCertificate(ctx context.Context, request InstallTlsCertificateRequestObject) (InstallTlsCertificateResponseObject, error)
+	// GetUploadSettings Upload limits
+	// (GET /api/v1/admin/uploads)
+	GetUploadSettings(ctx context.Context, request GetUploadSettingsRequestObject) (GetUploadSettingsResponseObject, error)
+	// UpdateUploadSettings Change the upload limits
+	// (PUT /api/v1/admin/uploads)
+	UpdateUploadSettings(ctx context.Context, request UpdateUploadSettingsRequestObject) (UpdateUploadSettingsResponseObject, error)
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -9825,6 +10273,12 @@ type StrictServerInterface interface {
 	// ListArchivedMessages Archive copies, newest first, for scrolling back and search
 	// (GET /api/v1/conversations/{conversationId}/archive)
 	ListArchivedMessages(ctx context.Context, request ListArchivedMessagesRequestObject) (ListArchivedMessagesResponseObject, error)
+	// UploadAttachment Upload an encrypted attachment
+	// (POST /api/v1/conversations/{conversationId}/attachments)
+	UploadAttachment(ctx context.Context, request UploadAttachmentRequestObject) (UploadAttachmentResponseObject, error)
+	// DownloadAttachment Download an encrypted attachment
+	// (GET /api/v1/conversations/{conversationId}/attachments/{attachmentId})
+	DownloadAttachment(ctx context.Context, request DownloadAttachmentRequestObject) (DownloadAttachmentResponseObject, error)
 	// RemoveConversationIcon Remove a group DM's icon
 	// (DELETE /api/v1/conversations/{conversationId}/icon)
 	RemoveConversationIcon(ctx context.Context, request RemoveConversationIconRequestObject) (RemoveConversationIconResponseObject, error)
@@ -10329,6 +10783,61 @@ func (sh *strictHandler) InstallTlsCertificate(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(InstallTlsCertificateResponseObject); ok {
 		if err := validResponse.VisitInstallTlsCertificateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUploadSettings operation middleware
+func (sh *strictHandler) GetUploadSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetUploadSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUploadSettings(ctx, request.(GetUploadSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUploadSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUploadSettingsResponseObject); ok {
+		if err := validResponse.VisitGetUploadSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateUploadSettings operation middleware
+func (sh *strictHandler) UpdateUploadSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateUploadSettingsRequestObject
+
+	var body UpdateUploadSettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateUploadSettings(ctx, request.(UpdateUploadSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateUploadSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateUploadSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateUploadSettingsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -11539,6 +12048,62 @@ func (sh *strictHandler) ListArchivedMessages(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListArchivedMessagesResponseObject); ok {
 		if err := validResponse.VisitListArchivedMessagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UploadAttachment operation middleware
+func (sh *strictHandler) UploadAttachment(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params UploadAttachmentParams) {
+	var request UploadAttachmentRequestObject
+
+	request.ConversationId = conversationId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadAttachment(ctx, request.(UploadAttachmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadAttachment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UploadAttachmentResponseObject); ok {
+		if err := validResponse.VisitUploadAttachmentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DownloadAttachment operation middleware
+func (sh *strictHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, attachmentId openapi_types.UUID) {
+	var request DownloadAttachmentRequestObject
+
+	request.ConversationId = conversationId
+	request.AttachmentId = attachmentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadAttachment(ctx, request.(DownloadAttachmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadAttachment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DownloadAttachmentResponseObject); ok {
+		if err := validResponse.VisitDownloadAttachmentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

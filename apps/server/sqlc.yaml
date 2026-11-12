@@ -124,3 +124,10 @@ sql:
       go:
         <<: *go-options
         out: internal/delivery/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/attachments/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/attachments/store

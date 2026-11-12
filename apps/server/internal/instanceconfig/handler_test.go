@@ -21,7 +21,7 @@ func TestGetInstanceInfoOnAFreshInstance(t *testing.T) {
 	response, err := handler.GetInstanceInfo(t.Context(), api.GetInstanceInfoRequestObject{})
 
 	require.NoError(t, err)
-	assert.Equal(t, api.GetInstanceInfo200JSONResponse{Name: "Nexus Chat", RegistrationMode: api.RegistrationModeInviteOnly, SigningKey: signingKey, Limits: api.InstanceLimits{GroupDmMaxMembers: 25}}, response)
+	assert.Equal(t, api.GetInstanceInfo200JSONResponse{Name: "Nexus Chat", RegistrationMode: api.RegistrationModeInviteOnly, SigningKey: signingKey, Limits: api.InstanceLimits{GroupDmMaxMembers: 25, AttachmentMaxBytes: DefaultAttachmentMaxBytes}}, response)
 }
 
 func TestGetInstanceInfoReportsSettingsAndSecureConnection(t *testing.T) {
@@ -40,7 +40,7 @@ func TestGetInstanceInfoReportsSettingsAndSecureConnection(t *testing.T) {
 	domain := "chat.example.com"
 	assert.Equal(t, api.GetInstanceInfo200JSONResponse{
 		Name: "Example", Domain: &domain, RegistrationMode: api.RegistrationModeOpen, SecureConnection: true, SigningKey: signingKey,
-		Limits: api.InstanceLimits{GroupDmMaxMembers: 25},
+		Limits: api.InstanceLimits{GroupDmMaxMembers: 25, AttachmentMaxBytes: DefaultAttachmentMaxBytes},
 	}, response)
 }
 
@@ -50,7 +50,7 @@ func TestGetInstanceInfoReportsStoreFailures(t *testing.T) {
 	require.ErrorContains(t, err, "down")
 
 	// Later lookups fail too: each one is reported, not skipped.
-	for _, key := range []string{KeyRegistrationMode, KeyInstanceDomain} {
+	for _, key := range []string{KeyRegistrationMode, KeyInstanceDomain, KeyAttachmentMaxBytes} {
 		corrupt := &fakeSettingsStore{values: map[string][]byte{key: []byte(`{`)}}
 		_, err := NewHandler(NewService(corrupt, clock.Fixed{}, ""), signingKey, Limits{GroupDMMaxMembers: 25}).GetInstanceInfo(t.Context(), api.GetInstanceInfoRequestObject{})
 		assert.ErrorContains(t, err, "decoding setting "+key)

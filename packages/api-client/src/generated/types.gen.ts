@@ -635,7 +635,23 @@ export type InstanceInfo = {
     secureConnection: boolean;
 };
 
+export type StoredAttachment = {
+    id: string;
+    size: number;
+};
+
+export type UploadSettings = {
+    /**
+     * The largest attachment before encryption, 1 MiB to 4 GiB.
+     */
+    attachmentMaxBytes: number;
+};
+
 export type InstanceLimits = {
+    /**
+     * The largest attachment, before encryption, set in the Admin panel (25 MiB by default).
+     */
+    attachmentMaxBytes: number;
     /**
      * The largest group DM, counting its creator (GROUP_DM_MAX_MEMBERS).
      */
@@ -1258,6 +1274,72 @@ export type InstallTlsCertificateResponses = {
 };
 
 export type InstallTlsCertificateResponse = InstallTlsCertificateResponses[keyof InstallTlsCertificateResponses];
+
+export type GetUploadSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/uploads';
+};
+
+export type GetUploadSettingsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetUploadSettingsError = GetUploadSettingsErrors[keyof GetUploadSettingsErrors];
+
+export type GetUploadSettingsResponses = {
+    /**
+     * The current limits.
+     */
+    200: UploadSettings;
+};
+
+export type GetUploadSettingsResponse = GetUploadSettingsResponses[keyof GetUploadSettingsResponses];
+
+export type UpdateUploadSettingsData = {
+    body: UploadSettings;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/uploads';
+};
+
+export type UpdateUploadSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type UpdateUploadSettingsError = UpdateUploadSettingsErrors[keyof UpdateUploadSettingsErrors];
+
+export type UpdateUploadSettingsResponses = {
+    /**
+     * The limits now.
+     */
+    200: UploadSettings;
+};
+
+export type UpdateUploadSettingsResponse = UpdateUploadSettingsResponses[keyof UpdateUploadSettingsResponses];
 
 export type GetSmtpSettingsData = {
     body?: never;
@@ -3735,6 +3817,87 @@ export type SendMlsMessageResponses = {
 };
 
 export type SendMlsMessageResponse = SendMlsMessageResponses[keyof SendMlsMessageResponses];
+
+export type UploadAttachmentData = {
+    body: Blob | File;
+    path: {
+        conversationId: string;
+    };
+    query: {
+        size: number;
+    };
+    url: '/api/v1/conversations/{conversationId}/attachments';
+};
+
+export type UploadAttachmentErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You cannot send in this conversation (`not_allowed`).
+     */
+    403: Error;
+    /**
+     * Larger than the instance allows (`attachment_too_large`).
+     */
+    413: Error;
+    /**
+     * The size is not positive, or the file was not that long (`invalid_size`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type UploadAttachmentError = UploadAttachmentErrors[keyof UploadAttachmentErrors];
+
+export type UploadAttachmentResponses = {
+    /**
+     * The stored attachment.
+     */
+    201: StoredAttachment;
+};
+
+export type UploadAttachmentResponse = UploadAttachmentResponses[keyof UploadAttachmentResponses];
+
+export type DownloadAttachmentData = {
+    body?: never;
+    path: {
+        conversationId: string;
+        attachmentId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/attachments/{attachmentId}';
+};
+
+export type DownloadAttachmentErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such attachment, or you are not in its conversation (`attachment_not_found`).
+     */
+    404: Error;
+};
+
+export type DownloadAttachmentError = DownloadAttachmentErrors[keyof DownloadAttachmentErrors];
+
+export type DownloadAttachmentResponses = {
+    /**
+     * The encrypted file, exactly as uploaded.
+     */
+    200: Blob | File;
+};
+
+export type DownloadAttachmentResponse = DownloadAttachmentResponses[keyof DownloadAttachmentResponses];
 
 export type RemoveConversationIconData = {
     body?: never;

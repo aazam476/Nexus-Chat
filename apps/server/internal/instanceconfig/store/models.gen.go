@@ -28,6 +28,14 @@ type ArchivedMessage struct {
 	CreatedAt      time.Time
 }
 
+type Attachment struct {
+	ID             uuid.UUID
+	ConversationID uuid.UUID
+	UploaderID     *uuid.UUID
+	Size           int64
+	CreatedAt      time.Time
+}
+
 type BackupCode struct {
 	UserID   uuid.UUID
 	CodeHash []byte

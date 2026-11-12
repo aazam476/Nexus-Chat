@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/admin"
+	"github.com/aazam476/nexus-chat/apps/server/internal/attachments"
+	attachmentsstore "github.com/aazam476/nexus-chat/apps/server/internal/attachments/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/config"
 	"github.com/aazam476/nexus-chat/apps/server/internal/conversations"
 	conversationsstore "github.com/aazam476/nexus-chat/apps/server/internal/conversations/store"
@@ -18,6 +20,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/identities"
 	identitiesstore "github.com/aazam476/nexus-chat/apps/server/internal/identities/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig"
+	instanceconfigstore "github.com/aazam476/nexus-chat/apps/server/internal/instanceconfig/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keybackup"
 	keybackupstore "github.com/aazam476/nexus-chat/apps/server/internal/keybackup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/keypackages"
@@ -99,6 +102,12 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	leaves.delivery = deliveryService
 	app.typing.conversations = conversationService
 	features.Conversations = conversations.NewHandler(conversationService)
+	features.Attachments = attachments.NewHandler(attachments.NewService(attachments.Dependencies{
+		Store: attachmentsstore.New(app.pool), Files: filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
+		Members: conversationService, Limits: instanceconfig.NewService(instanceconfigstore.New(app.pool), system, configuration.Domain),
+		// Uploads are limited per user: 60 a minute, bursts of 20.
+		Limiter: ratelimit.New(ratelimit.PerMinute(60, 20), system), Clock: system,
+	}))
 	features.Delivery = delivery.NewHandler(deliveryService)
 }
 

@@ -357,6 +357,54 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/uploads:
+    get:
+      operationId: getUploadSettings
+      summary: Upload limits
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The current limits.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateUploadSettings
+      summary: Change the upload limits
+      description: |
+        The attachment limit applies to new uploads at once (ADR 0014). It is
+        1 MiB to 4 GiB; clients read it from `GET /api/v1/instance`.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadSettings"
+      responses:
+        "200":
+          description: The limits now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /api/v1/admin/smtp:
     get:
       operationId: getSmtpSettings
@@ -2488,6 +2536,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/conversations/{conversationId}/attachments:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: uploadAttachment
+      summary: Upload an encrypted attachment
+      description: |
+        The body is the file as the device encrypted it (docs/e2ee-design.md
+        §7); the server never sees the key. `size` is the body's length in
+        bytes: the instance's limit is checked against it before the upload
+        is read, and the stored file must be exactly that long. Only a member
+        who may send in the conversation can upload.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: The stored attachment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoredAttachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You cannot send in this conversation (`not_allowed`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Larger than the instance allows (`attachment_too_large`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: The size is not positive, or the file was not that long (`invalid_size`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/conversations/{conversationId}/attachments/{attachmentId}:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: downloadAttachment
+      summary: Download an encrypted attachment
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The encrypted file, exactly as uploaded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such attachment, or you are not in its conversation (`attachment_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/conversations/{conversationId}/icon:
     parameters:
       - name: conversationId
@@ -3828,11 +3982,34 @@ components:
           description: |
             True when this request arrived over HTTPS (directly or via a
             trusted proxy) or is addressed to localhost.
+    StoredAttachment:
+      type: object
+      required: [id, size]
+      properties:
+        id:
+          type: string
+          format: uuid
+        size:
+          type: integer
+          format: int64
+    UploadSettings:
+      type: object
+      additionalProperties: false
+      required: [attachmentMaxBytes]
+      properties:
+        attachmentMaxBytes:
+          type: integer
+          format: int64
+          description: The largest attachment before encryption, 1 MiB to 4 GiB.
     InstanceLimits:
       type: object
       additionalProperties: false
-      required: [groupDmMaxMembers]
+      required: [groupDmMaxMembers, attachmentMaxBytes]
       properties:
+        attachmentMaxBytes:
+          type: integer
+          format: int64
+          description: The largest attachment, before encryption, set in the Admin panel (25 MiB by default).
         groupDmMaxMembers:
           type: integer
           minimum: 3

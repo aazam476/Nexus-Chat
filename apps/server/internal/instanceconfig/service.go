@@ -130,3 +130,30 @@ func (service *Service) InstanceName(ctx context.Context) (string, error) {
 	_, err := service.Load(ctx, KeyInstanceName, &name)
 	return name, err
 }
+
+// Attachment limits (ADR 0014). The limit counts plaintext bytes; the
+// encrypted file is a little larger, which the attachments feature allows.
+const (
+	DefaultAttachmentMaxBytes int64 = 25 << 20
+	MinimumAttachmentMaxBytes int64 = 1 << 20
+	MaximumAttachmentMaxBytes int64 = 4 << 30
+)
+
+// ErrInvalidAttachmentLimit means a limit outside 1 MiB to 4 GiB.
+var ErrInvalidAttachmentLimit = errors.New("the attachment limit must be between 1 MiB and 4 GiB")
+
+// AttachmentMaxBytes returns the instance's attachment limit, 25 MiB unless
+// the admin changed it.
+func (service *Service) AttachmentMaxBytes(ctx context.Context) (int64, error) {
+	limit := DefaultAttachmentMaxBytes
+	_, err := service.Load(ctx, KeyAttachmentMaxBytes, &limit)
+	return limit, err
+}
+
+// SetAttachmentMaxBytes changes the instance's attachment limit.
+func (service *Service) SetAttachmentMaxBytes(ctx context.Context, limit int64) error {
+	if limit < MinimumAttachmentMaxBytes || limit > MaximumAttachmentMaxBytes {
+		return ErrInvalidAttachmentLimit
+	}
+	return service.Save(ctx, KeyAttachmentMaxBytes, limit)
+}

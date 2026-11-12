@@ -20,6 +20,10 @@ import (
 // ErrNotFound means no file is stored under the key.
 var ErrNotFound = errors.New("file not found")
 
+// ErrTooLarge means a streamed file went over its size limit; nothing was
+// stored.
+var ErrTooLarge = errors.New("the file is larger than allowed")
+
 // keyPattern allows "folder/name" keys only, so a key can never escape
 // the store's directory ("..", absolute paths, backslashes).
 var keyPattern = regexp.MustCompile(`^[a-z0-9-]+/[a-z0-9-]+$`)
@@ -55,6 +59,39 @@ func (store *Local) Save(_ context.Context, key string, data []byte) error {
 		return fmt.Errorf("saving %s: %w", key, err)
 	}
 	return nil
+}
+
+// SaveStream stores what content yields under key, reading at most limit
+// bytes; one byte more and nothing is stored (ErrTooLarge). It returns the
+// size stored. As with Save, readers never see a partial file, and each
+// upload writes its own temporary file, so uploads can run at once.
+func (store *Local) SaveStream(_ context.Context, key string, content io.Reader, limit int64) (int64, error) {
+	path, err := store.path(key)
+	if err != nil {
+		return 0, err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return 0, fmt.Errorf("creating file folder: %w", err)
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(path), "upload-*.tmp")
+	if err != nil {
+		return 0, fmt.Errorf("writing %s: %w", key, err)
+	}
+	defer func() { _ = os.Remove(temporary.Name()) }()
+	written, copyErr := io.Copy(temporary, io.LimitReader(content, limit+1))
+	closeErr := temporary.Close()
+	switch {
+	case copyErr != nil:
+		return 0, fmt.Errorf("writing %s: %w", key, copyErr)
+	case closeErr != nil:
+		return 0, fmt.Errorf("writing %s: %w", key, closeErr)
+	case written > limit:
+		return 0, ErrTooLarge
+	}
+	if err := os.Rename(temporary.Name(), path); err != nil {
+		return 0, fmt.Errorf("saving %s: %w", key, err)
+	}
+	return written, nil
 }
 
 // Open returns the file stored under key, or ErrNotFound. The caller
