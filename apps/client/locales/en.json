@@ -224,7 +224,6 @@
     "groupName": "{{first}} and {{count}} others",
     "groupName_one": "{{first}} and 1 other",
     "noMessages": "No messages yet",
-    "open": "Open conversation with {{name}}",
     "unread": "{{count}} unread messages",
     "unread_one": "1 unread message",
     "newGroup": "New group"
@@ -251,7 +250,7 @@
     "react": "React with {{emoji}}",
     "reaction": "{{emoji}} {{count}}",
     "reactionLabel": "{{emoji}} from {{users}}",
-    "spoiler": "Spoiler, press to show",
+    "spoiler": "Spoiler",
     "messageActions": "Actions for the message from {{name}}",
     "identityChanged": "Warning: the encryption identity of {{name}} changed. They may have reset their account, or someone may be trying to listen in. Check with them before you trust it.",
     "acceptIdentity": "Trust the new identity",
@@ -277,7 +276,8 @@
     "gigabytes": "{{count}} GB",
     "bytes_one": "{{count}} byte",
     "previewDisclosure": "Previews of links go through your instance, which sees the link.",
-    "previewOpen": "Open {{title}}"
+    "previewOpen": "Open {{title}}",
+    "spoilerHint": "Shows the hidden text"
   },
   "friends": {
     "title": "Friends",

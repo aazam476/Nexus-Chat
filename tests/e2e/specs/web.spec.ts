@@ -93,7 +93,7 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
   await restoreWithPhrase(tablet, linPhrase);
   await shown(tablet, "open-messages").click();
   await tablet
-    .getByLabel(/^Open conversation with/)
+    .getByTestId(/^conversation-/)
     .filter({ visible: true })
     .first()
     .click();

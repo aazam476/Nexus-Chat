@@ -133,9 +133,11 @@ describe("a message's Markdown", () => {
     expect(screen.getByText("quoted")).toBeOnTheScreen();
     expect(screen.getByText("@u1")).toBeOnTheScreen();
     expect(screen.getByText("@here")).toBeOnTheScreen();
-    const spoiler = screen.getByLabelText("Spoiler, press to show");
-    await fireEvent.press(spoiler);
-    expect(screen.queryByLabelText("Spoiler, press to show")).toBeNull();
+    // Hidden, the spoiler's text is not on the screen at all.
+    expect(screen.queryByText(/secret/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Spoiler" }));
+    expect(screen.getByText(/secret/)).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Spoiler" })).toBeNull();
     await fireEvent.press(screen.getByText("site"));
   });
 });
@@ -167,6 +169,9 @@ describe("a message as one line", () => {
     expect(lastLine({ ...item, attachments: [attachment] }, t)).toBe("Attachment: photo.png");
     expect(lastLine(item, t)).toBe("");
     expect(lastLine({ ...item, text: "two\n\nlines" }, t)).toBe("two lines");
+    const long = lastLine({ ...item, text: "🎉".repeat(150) }, t);
+    expect(Array.from(long)).toHaveLength(100);
+    expect(long.endsWith("…")).toBe(true);
   });
 
   it("sends a logged-out user away from the list", async () => {

@@ -82,13 +82,13 @@ describe("ListRow", () => {
     expect(screen.getByText("T")).toBeOnTheScreen();
   });
 
-  it("is plain content without onPress, named by its title when pressable", async () => {
+  it("is plain content without onPress, named by what it shows when pressable", async () => {
     await render(themed(<ListRow title="Just text" testID="row" />));
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByText("Just text")).toBeOnTheScreen();
 
-    await render(themed(<ListRow title="Named" onPress={() => undefined} />));
-    expect(screen.getByRole("button", { name: "Named" })).toBeOnTheScreen();
+    await render(themed(<ListRow title="Named" subtitle="and more" onPress={() => undefined} />));
+    expect(screen.getByRole("button", { name: /Named.*and more/ })).toBeOnTheScreen();
   });
 });
 

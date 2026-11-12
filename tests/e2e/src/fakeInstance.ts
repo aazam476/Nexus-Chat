@@ -7,10 +7,18 @@
 import type { Dataset } from "@nexus-chat/fixtures";
 import type { Page, Route } from "@playwright/test";
 
+import { FakeMessaging } from "./fakeMessaging.js";
+
 /** What the fake instance should be doing. */
 export interface FakeInstanceOptions {
   /** Whether the instance still needs its setup wizard. */
   setupRequired?: boolean;
+  /**
+   * Whether the user is new to encryption, so this browser sets it up and
+   * can open conversations; otherwise the account has keys elsewhere and
+   * the browser must restore them.
+   */
+  messaging?: boolean;
 }
 
 /** Field errors as the setup endpoint reports them (under `admin.`). */
@@ -69,6 +77,15 @@ function answers(dataset: Dataset, options: FakeInstanceOptions): Record<string,
   };
 }
 
+/** A request's JSON body; undefined when it has none or it is not JSON. */
+function jsonBody(text: string | null): unknown {
+  try {
+    return text === null ? undefined : (JSON.parse(text) as unknown);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Answers the app's requests from `dataset`. Call before the first navigation. */
 export async function fakeInstance(
   page: Page,
@@ -76,11 +93,16 @@ export async function fakeInstance(
   options: FakeInstanceOptions = {},
 ): Promise<void> {
   const table = answers(dataset, options);
+  const messaging = options.messaging === true ? new FakeMessaging(dataset) : undefined;
   await page.route("**/api/v1/**", async (route: Route) => {
     const request = route.request();
-    const key = `${request.method()} ${new URL(request.url()).pathname}`;
-    const [status, body] = table[key] ?? [404, { code: "not_found", message: key }];
-    await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    const path = new URL(request.url()).pathname;
+    const key = `${request.method()} ${path}`;
+    const [status, body] = messaging?.answer(request.method(), path, jsonBody(request.postData())) ??
+      table[key] ?? [404, { code: "not_found", message: key }];
+    await route.fulfill(
+      status === 204 ? { status } : { status, contentType: "application/json", body: JSON.stringify(body) },
+    );
   });
   await page.routeWebSocket("**/api/v1/gateway", (socket) => {
     socket.send(JSON.stringify({ type: "hello", data: { heartbeatIntervalMs: 30000, protocolVersion: 1 } }));

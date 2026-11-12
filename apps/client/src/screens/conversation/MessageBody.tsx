@@ -7,21 +7,27 @@ import { parseMarkdown, type Block, type Inline } from "../../messaging/markdown
 
 const monospace = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
 
-/** A spoiler: hidden behind a block of color until pressed. */
+/**
+ * A spoiler: until pressed, a bar that says "Spoiler" stands in for it, so
+ * the hidden text is neither shown, selectable nor read out.
+ */
 function Spoiler({ children }: { children: ReactNode }): ReactNode {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [shown, setShown] = useState(false);
+  if (shown) {
+    return <NativeText>{children}</NativeText>;
+  }
   return (
     <NativeText
       role="button"
-      accessibilityLabel={shown ? undefined : t("conversation.spoiler")}
+      accessibilityHint={t("conversation.spoilerHint")}
       onPress={() => {
         setShown(true);
       }}
-      style={shown ? undefined : { backgroundColor: colors.textMuted, color: colors.textMuted }}
+      style={{ backgroundColor: colors.textMuted, color: colors.background }}
     >
-      {children}
+      {t("conversation.spoiler")}
     </NativeText>
   );
 }

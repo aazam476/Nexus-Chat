@@ -12,7 +12,9 @@ import { env } from "node:process";
 
 import { expectAccessible } from "../src/accessibility.js";
 import { fakeInstance, type FakeInstanceOptions } from "../src/fakeInstance.js";
+import { dmId } from "../src/fakeMessaging.js";
 import { expectSoundLayout } from "../src/layout.js";
+import { sendMessage, shown, writeDownRecoveryPhrase } from "../src/messaging.js";
 import { field } from "../src/screens.js";
 
 const snapshots = env.NEXUS_VISUAL_SNAPSHOTS === "1";
@@ -53,6 +55,14 @@ async function logIn(page: Page): Promise<void> {
   await expect(page.getByTestId("logout")).toBeVisible();
 }
 
+/** Sets encryption up as a new user would, then opens the conversations. */
+async function openConversations(page: Page): Promise<void> {
+  await logIn(page);
+  await writeDownRecoveryPhrase(page);
+  await shown(page, "open-messages").click();
+  await expect(shown(page, `conversation-${dmId}`)).toBeVisible();
+}
+
 const screens: Screen[] = [
   {
     name: "setup",
@@ -91,6 +101,27 @@ const screens: Screen[] = [
     },
   },
   {
+    name: "conversations",
+    instance: { messaging: true },
+    open: openConversations,
+  },
+  {
+    name: "conversation",
+    instance: { messaging: true },
+    open: async (page, dataset) => {
+      await openConversations(page);
+      await shown(page, `conversation-${dmId}`).click();
+      for (const [index, text] of dataset.messaging.messages.entries()) {
+        // A minute apart, so the messages keep their order.
+        await page.clock.setFixedTime(Date.parse(fixedNow) + (index + 1) * 60_000);
+        await sendMessage(page, text);
+      }
+      await expect(page.getByTestId(/^message-[0-9a-f-]{36}$/).filter({ visible: true })).toHaveCount(
+        dataset.messaging.messages.length,
+      );
+    },
+  },
+  {
     name: "admin",
     open: async (page) => {
       await logIn(page);
@@ -102,15 +133,19 @@ const screens: Screen[] = [
 ];
 
 /**
- * Grows the window to the screen's whole height. Screens scroll inside
- * their own container, so a full-page screenshot would stop at the window.
+ * Grows the window until nothing scrolls: by the hidden height of every
+ * scrolling area, since screens scroll inside their own containers (and a
+ * conversation's messages inside the screen), so a full-page screenshot
+ * would stop at the window.
  */
 async function fitToContent(page: Page): Promise<void> {
-  const height = await page.evaluate(() =>
-    Math.max(...Array.from(document.querySelectorAll("body *")).map((element) => element.scrollHeight)),
+  const hidden = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("body *"))
+      .filter((element) => ["auto", "scroll"].includes(getComputedStyle(element).overflowY))
+      .reduce((total, element) => total + Math.max(0, element.scrollHeight - element.clientHeight), 0),
   );
-  const width = page.viewportSize()?.width ?? 390;
-  await page.setViewportSize({ width, height: Math.max(height, 900) });
+  const { width, height } = page.viewportSize() ?? { width: 390, height: 900 };
+  await page.setViewportSize({ width, height: Math.max(height + hidden, 900) });
 }
 
 for (const variant of variants) {

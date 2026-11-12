@@ -8,7 +8,7 @@ import { useInteraction } from "./useInteraction";
 /** Props of {@link ListRow}. */
 export interface ListRowProps {
   title: string;
-  /** A second line, e.g. the last message; cut to one line. */
+  /** A second line, e.g. the last message; keep it short, since it wraps. */
   subtitle?: string;
   /** Shown before the text, e.g. an avatar. */
   leading?: ReactNode;
@@ -18,7 +18,10 @@ export interface ListRowProps {
   emphasized?: boolean;
   /** Without it the row is not pressable. */
   onPress?: () => void;
-  /** What a screen reader says for the whole row. */
+  /**
+   * What a screen reader says for the whole row. Without it the row is named
+   * by what it shows, which keeps the visible text in the name (WCAG 2.5.3).
+   */
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -52,13 +55,9 @@ function RowFace({
     >
       {leading}
       <View style={styles.text}>
-        <Text numberOfLines={1} style={[type.body, { color: colors.text }, emphasized && styles.emphasized]}>
-          {title}
-        </Text>
+        <Text style={[type.body, { color: colors.text }, emphasized && styles.emphasized]}>{title}</Text>
         {subtitle === undefined ? null : (
-          <Text numberOfLines={1} style={[type.small, { color: colors.textMuted }]}>
-            {subtitle}
-          </Text>
+          <Text style={[type.small, { color: colors.textMuted }]}>{subtitle}</Text>
         )}
       </View>
       {trailing === undefined ? null : <View style={styles.trailing}>{trailing}</View>}
@@ -68,8 +67,8 @@ function RowFace({
 
 /**
  * One row of a list. Rows are pressed many times a day, so the press shows
- * a background highlight at once, with no animation; text cuts to one line
- * rather than overflowing at large font sizes.
+ * a background highlight at once, with no animation. Text wraps rather
+ * than being cut off, so long names stay readable at any width and size.
  */
 export function ListRow({ onPress, accessibilityLabel, testID, ...face }: ListRowProps): ReactNode {
   const { pressed, focused, handlers } = useInteraction();
@@ -83,7 +82,7 @@ export function ListRow({ onPress, accessibilityLabel, testID, ...face }: ListRo
   return (
     <Pressable
       role="button"
-      accessibilityLabel={accessibilityLabel ?? face.title}
+      {...(accessibilityLabel === undefined ? {} : { accessibilityLabel })}
       onPress={onPress}
       {...handlers}
       testID={testID}

@@ -41,7 +41,6 @@ export function ConversationRow({ conversation, selfId, unread }: ConversationRo
       onPress={() => {
         router.push({ pathname: "/conversation/[id]", params: { id: conversation.id } });
       }}
-      accessibilityLabel={t("conversations.open", { name })}
       testID={`conversation-${conversation.id}`}
     />
   );

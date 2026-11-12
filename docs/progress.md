@@ -392,7 +392,15 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   phrases, become friends and message each other live (with typing), and
   a second device of one of them restores from the phrase and reads the
   conversation.
-- Still to do in M4: visual snapshots of the conversation screens.
+- Visual checks of the conversation list and a conversation, in every
+  dataset, theme and width: the fake instance can now act as a delivery
+  service (`tests/e2e/src/fakeMessaging.ts`), so the browser sets up
+  encryption for real, writes down its phrase and sends the dataset's
+  messages. They found and fixed: long conversation names cut to one line
+  (list rows now wrap; previews are shortened to 100 characters instead),
+  and two WCAG 2.5.3 label-in-name failures (rows are now named by what
+  they show, and a hidden spoiler shows the word "Spoiler" rather than
+  keeping its text, hidden, in the page).
 - `packages/crypto` saves and loads group and member state for the
   device database, joins by external commit, and returns a GroupInfo with
   every commit.

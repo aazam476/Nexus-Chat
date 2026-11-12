@@ -13,6 +13,7 @@ import type {
   SignInProvider,
   SmtpSettings,
   TlsStatus,
+  UserSummary,
 } from "@nexus-chat/api-client";
 
 /** Everything a screen can show, as the API would return it. */
@@ -28,6 +29,16 @@ export interface Dataset {
   smtp: SmtpSettings;
   /** Validation errors the sign-up and setup forms get back. */
   fieldErrors: FieldError[];
+  /** The conversations screens: who the user talks to, and what they send. */
+  messaging: {
+    /** The first is the user's DM; all of them are in the group. */
+    contacts: UserSummary[];
+    groupName: string;
+    /** Unread messages in the group, for its badge. */
+    groupUnread: number;
+    /** Sent in the DM, in order. */
+    messages: string[];
+  };
 }
 
 /** The time the checks run at, so dates and "expires in" counts never change. */
@@ -68,6 +79,15 @@ export const demo: Dataset = {
     passwordSet: true,
   },
   fieldErrors: [{ field: "username", message: "That username is taken." }],
+  messaging: {
+    contacts: [
+      { id: "0195f0e0-0000-7000-8000-000000000101", username: "grace", displayName: "Grace" },
+      { id: "0195f0e0-0000-7000-8000-000000000102", username: "linus", displayName: "Linus" },
+    ],
+    groupName: "Book club",
+    groupUnread: 2,
+    messages: ["Are we still on for Thursday?", "I'll bring the **second** volume."],
+  },
 };
 
 const longDomain = "chat.northwind-industries-holdings.example.com";
@@ -152,6 +172,27 @@ export const worstCase: Dataset = {
         "This password appears in lists of breached passwords, so attackers try it first. Choose another one.",
     },
   ],
+  messaging: {
+    contacts: [
+      {
+        id: "0195f0e0-0000-7000-8000-000000000201",
+        username: "maximilian.von_hohenstein_wittelsbach",
+        displayName: "Maximilian von Hohenstein-Wittelsbach-Löwenstein",
+      },
+      { id: "0195f0e0-0000-7000-8000-000000000202", username: "q", displayName: "Q" },
+      { id: "0195f0e0-0000-7000-8000-000000000203", username: "nadia", displayName: "نادية الحسيني" },
+      { id: "0195f0e0-0000-7000-8000-000000000204", username: "emoji", displayName: "🦄🦄🦄" },
+    ],
+    // 64 characters, the maximum.
+    groupName: "Planning committee for the 2027 Wrocław offsite & regional sync",
+    groupUnread: 1,
+    messages: [
+      "Here is the report: https://northwind-industries-holdings.example.com/reports/quarterly/2026/q3/final-final-v2-reviewed.pdf",
+      "Supercalifragilisticexpialidocious-antidisestablishmentarianism-pneumonoultramicroscopicsilicovolcanoconiosis",
+      "> quoted from earlier\n\n**bold**, *italic*, `code`, ~~struck~~ and ||a spoiler|| 🎉",
+      "1",
+    ],
+  },
 };
 
 /** Right-to-left text in every name, and the shortest names allowed. */
@@ -168,4 +209,9 @@ export const rightToLeft: Dataset = {
   },
   presence: "online",
   providers: [{ id: "x", displayName: "X" }],
+  messaging: {
+    ...worstCase.messaging,
+    groupName: "مجموعة الشطرنج",
+    messages: ["مرحبا، هل نلتقي يوم الخميس؟", "نعم، في الساعة ٧ مساءً 👍"],
+  },
 };
