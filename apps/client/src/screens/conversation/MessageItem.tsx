@@ -7,6 +7,7 @@ import type { TimelineItem } from "../../messaging/timeline";
 import { ActionButton } from "./ActionButton";
 import { AttachmentList } from "./AttachmentList";
 import { MessageBody } from "./MessageBody";
+import { PreviewCard } from "./PreviewCard";
 import { Reactions } from "./Reactions";
 
 /** What the people in a conversation are called, by `@name@instance`. */
@@ -138,6 +139,7 @@ export function MessageItem({ item, replied, context, on }: MessageItemProps): R
         ) : (
           <>
             {item.text === "" ? null : <MessageBody text={item.text} />}
+            <PreviewCard preview={item.preview} text={item.text} />
             <AttachmentList files={item.attachments} />
           </>
         )}

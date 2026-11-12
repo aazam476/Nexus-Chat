@@ -8,7 +8,9 @@ import { useTranslation } from "react-i18next";
 
 import { AttachmentTransferError } from "../../messaging/attachmentTransfer";
 import { fileSize } from "../../messaging/fileSize";
+import { firstLink } from "../../messaging/linkPreview";
 import type { Payload } from "../../messaging/payload";
+import { buildPreview, type PreviewSource } from "../../messaging/previewFetch";
 import type { ConversationAttachments } from "../../messaging/useAttachments";
 import type { Composer } from "./useComposer";
 
@@ -19,11 +21,35 @@ export interface Submit {
   error: string | undefined;
 }
 
-/** Sends the composer's message with `send`, uploading its files through `attachments`. */
+/** The payload with a preview of its first link, when one can be made. */
+async function withPreview(
+  payload: Payload,
+  previews: PreviewSource | undefined,
+  attachments: ConversationAttachments,
+): Promise<Payload> {
+  const link = payload.kind === "text" ? firstLink(payload.text) : undefined;
+  if (payload.kind !== "text" || link === undefined || previews === undefined) {
+    return payload;
+  }
+  const preview = await buildPreview(link, previews, async (file) => {
+    const [reference] = await attachments.upload([file]);
+    if (reference === undefined) {
+      throw new Error("the preview image was not uploaded");
+    }
+    return reference;
+  });
+  return preview === undefined ? payload : { ...payload, preview };
+}
+
+/**
+ * Sends the composer's message with `send`, uploading its files through
+ * `attachments` and adding a link preview from `previews`, if any.
+ */
 export function useSubmit(
   composer: Composer,
   send: (payload: Payload) => Promise<unknown>,
   attachments: ConversationAttachments,
+  previews?: PreviewSource,
 ): Submit {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -44,7 +70,7 @@ export function useSubmit(
       const references = await attachments.upload(composer.files);
       const payload = composer.payload(references);
       if (payload !== undefined) {
-        await send(payload);
+        await send(await withPreview(payload, previews, attachments));
       }
     })()
       .then(composer.sent, (cause: unknown) => {

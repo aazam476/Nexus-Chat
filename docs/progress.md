@@ -354,8 +354,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   any file; messages show image thumbnails and open files through the
   share sheet on phones or a download in browsers. Optional lossy
   compression (ADR 0014) is still to come.
-- Still to do in M4: link previews and the web
-  preview proxy toggle, the native crypto
+- Link previews: the sender's device previews the first web link of a
+  message (Open Graph, then Twitter, then the page title), uploads its
+  image as an encrypted attachment and puts the preview in the message;
+  recipients never fetch the link, and a preview whose link is not in the
+  message is not shown. Phones fetch the link themselves and the desktop
+  app fetches it in its main process. A plain browser uses the instance's
+  preview proxy (`GET /api/v1/link-previews`), which refuses private and
+  local addresses at connect time, caps sizes, redirects and time, and is
+  off until the admin turns it on; the composer then says the instance
+  sees the link. Making a preview never holds a message up more than four
+  seconds, and a message goes out without one if it fails.
+- Still to do in M4: the native crypto
   stack (Hermes has no WebCrypto, so Android shows that encryption could
   not be set up), multi-user Playwright DM flows, WebSocket frame fuzzing,
   and visual snapshots of the conversation screens.

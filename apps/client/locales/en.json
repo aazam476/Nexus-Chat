@@ -275,7 +275,9 @@
     "kilobytes": "{{count}} KB",
     "megabytes": "{{count}} MB",
     "gigabytes": "{{count}} GB",
-    "bytes_one": "{{count}} byte"
+    "bytes_one": "{{count}} byte",
+    "previewDisclosure": "Previews of links go through your instance, which sees the link.",
+    "previewOpen": "Open {{title}}"
   },
   "friends": {
     "title": "Friends",

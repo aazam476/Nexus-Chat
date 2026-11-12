@@ -15,4 +15,12 @@ contextBridge.exposeInMainWorld("nexusDesktop", {
   /** Unwraps a key that protectKey wrapped. */
   unprotectKey: (sealed: Uint8Array): Promise<Uint8Array> =>
     ipcRenderer.invoke("unprotect-key", sealed) as Promise<Uint8Array>,
+  /** Fetches a link preview's page or image directly, so the instance never sees the link. */
+  fetchPreview: (
+    url: string,
+    kind: "page" | "image",
+  ): Promise<{ contentType: string; bytes: Uint8Array } | undefined> =>
+    ipcRenderer.invoke("fetch-preview", url, kind) as Promise<
+      { contentType: string; bytes: Uint8Array } | undefined
+    >,
 });

@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 
 import { appOrigin, contentTypeFor, fileFor } from "./files";
 import { protectKey, unprotectKey } from "./keyProtection";
+import { fetchPreviewResource } from "./previews";
 import {
   contentSecurityPolicy,
   isAppAddress,
@@ -125,6 +126,19 @@ function handleKeyProtection(): void {
   });
 }
 
+/**
+ * Link previews (previews.ts): the app's own pages may ask the shell to
+ * fetch a page or image, which it does directly, as a browser would.
+ */
+function handlePreviews(): void {
+  ipcMain.handle("fetch-preview", (event, url: unknown, kind: unknown) => {
+    if (!isAppAddress(event.senderFrame?.url ?? "")) {
+      throw new Error("only the app may fetch previews");
+    }
+    return fetchPreviewResource((address, init) => net.fetch(address, init), url, kind);
+  });
+}
+
 void app.whenReady().then(() => {
   // No page may use the camera, microphone or notifications until the
   // features that need them ask the user (M8, M9).
@@ -134,6 +148,7 @@ void app.whenReady().then(() => {
   serveWebBuild();
   handleProviderSignIn();
   handleKeyProtection();
+  handlePreviews();
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

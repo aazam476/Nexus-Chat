@@ -288,7 +288,9 @@ The sender's native or desktop client fetches the URL and builds
 attachment, and the preview travels in the message plaintext. Recipients never
 fetch the link. In the web client, previews come from the optional instance
 preview proxy (admin toggle; users are told the instance sees the URL) or are
-omitted.
+omitted. The desktop app fetches in its main process instead, so the instance
+never sees the link there. A preview is shown only when its URL is one of the
+message's own links, so a sender cannot dress a link up as another site.
 
 ## 9. Call media
 

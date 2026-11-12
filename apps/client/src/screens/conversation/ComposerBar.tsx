@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
+import { useConnection } from "../../connection/ConnectionContext";
+import { firstLink } from "../../messaging/linkPreview";
 import { payloadLimits, type Payload } from "../../messaging/payload";
+import { previewSource } from "../../platform/previewSource";
 import type { ConversationAttachments } from "../../messaging/useAttachments";
 import { ActionButton } from "./ActionButton";
 import { AttachmentPicker } from "./AttachmentPicker";
@@ -40,7 +43,9 @@ function ModeLine({ composer, nameOf }: Pick<ComposerBarProps, "composer" | "nam
 /** The message field, its send button and what the next send replies to or edits. */
 export function ComposerBar({ composer, nameOf, send, attachments }: ComposerBarProps): ReactNode {
   const { t } = useTranslation();
-  const submitting = useSubmit(composer, send, attachments);
+  const { client, instance } = useConnection();
+  const previews = previewSource(client, instance?.info.linkPreviewProxy ?? false);
+  const submitting = useSubmit(composer, send, attachments, previews);
   const { submit, busy } = submitting;
   const error = composer.tooLong
     ? t("conversation.tooLong", { limit: payloadLimits.textLength })
@@ -57,6 +62,11 @@ export function ComposerBar({ composer, nameOf, send, attachments }: ComposerBar
         lines={2}
         testID="composer"
       />
+      {previews?.viaInstance === true && firstLink(composer.draft) !== undefined ? (
+        <Text variant="small" tone="muted" testID="preview-disclosure">
+          {t("conversation.previewDisclosure")}
+        </Text>
+      ) : null}
       <AttachmentPicker composer={composer} disabled={busy} />
       <Button
         label={t("conversation.send")}
