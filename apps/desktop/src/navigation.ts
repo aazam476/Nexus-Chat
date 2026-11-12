@@ -54,8 +54,10 @@ export function providerReturnFragment(url: string): string | undefined {
 /**
  * The Content Security Policy for the bundled web build. Instances live at
  * any address, so the app may connect anywhere over HTTP(S) and WebSocket,
- * but scripts and styles come only from the bundle.
+ * but scripts and styles come only from the bundle. 'wasm-unsafe-eval' lets
+ * the bundle compile its own WebAssembly (libsodium, for encryption)
+ * without allowing JavaScript eval.
  */
 export const contentSecurityPolicy =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; " +
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; " +
   "connect-src https: http: wss: ws:; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";

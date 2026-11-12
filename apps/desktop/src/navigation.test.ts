@@ -68,8 +68,8 @@ describe("providerReturnFragment", () => {
 
 describe("contentSecurityPolicy", () => {
   it("allows scripts only from the bundle", () => {
-    expect(contentSecurityPolicy).toContain("script-src 'self';");
+    expect(contentSecurityPolicy).toContain("script-src 'self' 'wasm-unsafe-eval';");
+    expect(contentSecurityPolicy).not.toContain("'unsafe-eval'");
     expect(contentSecurityPolicy).toContain("object-src 'none'");
-    expect(contentSecurityPolicy).not.toContain("unsafe-eval");
   });
 });

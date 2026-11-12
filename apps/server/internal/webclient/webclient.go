@@ -22,8 +22,10 @@ import (
 // elsewhere or send data to another site. 'self' covers the gateway's
 // ws:// and wss:// addresses on this host. React Native Web sets styles
 // inline, hence 'unsafe-inline' for styles only. Images may be data: and
-// blob: URLs, which the app creates for previews.
-const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+// blob: URLs, which the app creates for previews. 'wasm-unsafe-eval' lets
+// the bundle compile its own WebAssembly (libsodium, for encryption)
+// without allowing JavaScript eval.
+const contentSecurityPolicy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
 	"img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; " +
 	"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 

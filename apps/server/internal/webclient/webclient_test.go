@@ -52,6 +52,8 @@ func TestThePolicyAllowsNothingFromElsewhere(t *testing.T) {
 		}
 	}
 	assert.Contains(t, directives, "connect-src 'self'")
+	// WebAssembly from the bundle may compile (libsodium); JavaScript eval may not.
+	assert.Contains(t, directives, "script-src 'self' 'wasm-unsafe-eval'")
 }
 
 func TestFilesAreServedAndHashedBundlesCachedForever(t *testing.T) {
