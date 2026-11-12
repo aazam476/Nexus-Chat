@@ -365,9 +365,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   off until the admin turns it on; the composer then says the instance
   sees the link. Making a preview never holds a message up more than four
   seconds, and a message goes out without one if it fails.
-- Still to do in M4: the native crypto
-  stack (Hermes has no WebCrypto, so Android shows that encryption could
-  not be set up), multi-user Playwright DM flows, WebSocket frame fuzzing,
+- Native crypto on iOS and Android: Hermes has no WebCrypto, so the app's
+  entry installs `react-native-quick-crypto` (OpenSSL) as `crypto` before
+  anything else loads, giving MLS, HPKE and attachments native Ed25519,
+  X25519, AES-GCM, HKDF and SHA-2. The Android end-to-end flow now checks
+  that a new user's device sets up encryption and shows the recovery
+  phrase.
+- Still to do in M4: multi-user Playwright DM flows, WebSocket frame fuzzing,
   and visual snapshots of the conversation screens.
 - `packages/crypto` saves and loads group and member state for the
   device database, joins by external commit, and returns a GroupInfo with

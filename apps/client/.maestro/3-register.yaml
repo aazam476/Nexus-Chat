@@ -1,4 +1,4 @@
-# A second user signs up and lands on the home screen.
+# A second user signs up, lands on the home screen and gets a recovery phrase.
 appId: org.nexuschat.app
 ---
 - runFlow: common/connect.yaml
@@ -17,3 +17,12 @@ appId: org.nexuschat.app
 - tapOn:
     id: "register-submit"
 - assertVisible: "Welcome, .*Grace Member.*"
+# Encryption is set up on the device (native WebCrypto under Hermes): the
+# new user is asked to write down their recovery phrase.
+- scrollUntilVisible:
+    element:
+      id: "messaging-next-step"
+    timeout: 60000
+- tapOn:
+    id: "messaging-next-step"
+- assertVisible: "Write down your recovery phrase"

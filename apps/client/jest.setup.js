@@ -28,3 +28,5 @@ jest.mock("expo-router", () => {
 // op-sqlite is native code; screens get the database through the messaging
 // environment, and the database tests drive a fake of it.
 jest.mock("@op-engineering/op-sqlite", () => ({ open: jest.fn() }));
+// react-native-quick-crypto is native code; its own mock forwards to Node's crypto.
+jest.mock("react-native-quick-crypto", () => jest.requireActual("react-native-quick-crypto/jest"));
