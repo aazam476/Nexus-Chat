@@ -281,7 +281,9 @@
     "previewOpen": "Open {{title}}",
     "spoilerHint": "Shows the hidden text",
     "unknownMention": "someone",
-    "mentionSuggestion": "Mention {{name}}"
+    "mentionSuggestion": "Mention {{name}}",
+    "sendOriginal": "Send original quality",
+    "videoOriginal": "Videos are sent in original quality."
   },
   "friends": {
     "title": "Friends",
@@ -341,5 +343,12 @@
     "title": "MLS test vectors",
     "loading": "Fetching the test vectors…",
     "progress": "{{done}} of {{total}} cases run, {{failed}} failed"
+  },
+  "mediaQuality": {
+    "title": "Photos you send",
+    "intro": "Compressed photos are smaller and send faster. You can still choose for each photo.",
+    "auto": "Compress on mobile data",
+    "compress": "Always compress",
+    "original": "Always send originals"
   }
 }

@@ -357,8 +357,17 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   device) travel in the MLS message. The Admin panel sets the limit (1 MiB
   to 4 GiB, 25 MiB by default). The composer attaches photos, videos and
   any file; messages show image thumbnails and open files through the
-  share sheet on phones or a download in browsers. Optional lossy
-  compression (ADR 0014) is still to come.
+  Optional lossy compression (ADR 0014):
+  photos (JPEG, HEIC, WebP, and PNG without transparency) also get a WebP
+  copy at quality 82 and at most 2560 pixels, made on the device, which is
+  sent instead unless the user picks "Send original quality" or the copy is
+  not smaller; animations and transparent images are sent as they are.
+  Location and other metadata are taken out of every photo, originals
+  included (JPEG, PNG and WebP losslessly; HEIC originals become
+  full-quality JPEG). A setting on the home screen chooses the default:
+  compress on mobile data (the default; never in browsers and the desktop
+  app), always, or never. Videos are sent in original quality for now, and
+  the composer says so.
 - Link previews: the sender's device previews the first web link of a
   message (Open Graph, then Twitter, then the page title), uploads its
   image as an encrypted attachment and puts the preview in the message;
@@ -425,6 +434,12 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   waits for all of them to pass.
 
 ## Known issues
+
+- Video compression (ADR 0014) is not built yet: it needs the platforms'
+  own encoders (AVFoundation, Media3 Transformer, WebCodecs). Until then,
+  videos are sent in original quality and the composer says so, as the ADR
+  allows where no encoder is available. The per-server "compress media by
+  default" setting comes with servers in M5.
 
 - **Left out by the maintainer's decision (November 2026):** publishing to
   the App Store, Mac App Store, Google Play, Microsoft Store and Flathub;

@@ -3,6 +3,7 @@ import { createContext, use } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
 import { fetchAttachment, sendAttachment, type PickedFile } from "./attachmentTransfer";
+import { versionToSend } from "./compression";
 import type { AttachmentReference } from "./payload";
 
 /** Uploads files, and fetches files the conversation's messages refer to. */
@@ -27,7 +28,7 @@ export function useAttachments(conversationId: string): ConversationAttachments 
       }
       const references: AttachmentReference[] = [];
       for (const file of files) {
-        references.push(await sendAttachment({ client, conversationId, maxBytes }, file));
+        references.push(await sendAttachment({ client, conversationId, maxBytes }, versionToSend(file)));
       }
       return references;
     },

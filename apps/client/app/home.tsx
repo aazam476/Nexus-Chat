@@ -9,6 +9,7 @@ import { hostOf } from "../src/instance/address";
 import { useGatewayStatus } from "../src/realtime/GatewayContext";
 import { AdminLink } from "../src/screens/home/AdminLink";
 import { MessagingLinks } from "../src/screens/home/MessagingLinks";
+import { MediaQualityPicker } from "../src/screens/home/MediaQualityPicker";
 import { CustomStatusEditor } from "../src/screens/home/CustomStatusEditor";
 import { StatusPicker } from "../src/screens/home/StatusPicker";
 import { isolate } from "../src/i18n/bidi";
@@ -39,6 +40,7 @@ export default function Home(): ReactNode {
       <MessagingLinks />
       <StatusPicker current={user.status} presence={presenceStatus} />
       <CustomStatusEditor />
+      <MediaQualityPicker />
       <AdminLink admin={user.isInstanceAdmin} />
       <Button
         label={t("home.logout")}

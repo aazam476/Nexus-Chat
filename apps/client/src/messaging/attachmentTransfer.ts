@@ -36,6 +36,10 @@ export interface PickedFile {
   height?: number;
   /** For images, a small preview made before encryption. */
   thumbnail?: { bytes: Uint8Array<ArrayBuffer>; mimeType: string; width: number; height: number };
+  /** For photos, a smaller re-encoded copy (ADR 0014), sent unless the original is chosen. */
+  compressed?: { bytes: Uint8Array<ArrayBuffer>; mimeType: string; width: number; height: number };
+  /** Send the original even though a compressed copy exists. */
+  sendOriginal?: boolean;
 }
 
 /** Where to upload and how large a file may be. */

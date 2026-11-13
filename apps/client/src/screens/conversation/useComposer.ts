@@ -25,6 +25,8 @@ export interface Composer {
   files: PickedFile[];
   attach: (file: PickedFile) => void;
   detach: (index: number) => void;
+  /** Sends a photo's original instead of its compressed copy, or not. */
+  setOriginal: (index: number, original: boolean) => void;
   /**
    * The payload to send, with the uploaded files' references, or
    * undefined when there is nothing to send.
@@ -54,17 +56,41 @@ function payloadOf(
   };
 }
 
+/** The files waiting to go with the next message. */
+function usePendingFiles(): Pick<Composer, "files" | "attach" | "detach" | "setOriginal"> & {
+  clear: () => void;
+} {
+  const [files, setFiles] = useState<PickedFile[]>([]);
+  return {
+    files,
+    attach: (file) => {
+      setFiles((current) => (current.length < payloadLimits.attachments ? [...current, file] : current));
+    },
+    detach: (index) => {
+      setFiles((current) => current.filter((_, at) => at !== index));
+    },
+    setOriginal: (index, original) => {
+      setFiles((current) =>
+        current.map((file, at) => (at === index ? { ...file, sendOriginal: original } : file)),
+      );
+    },
+    clear: () => {
+      setFiles([]);
+    },
+  };
+}
+
 /** Keeps the draft, mode and pending files of a conversation's composer. */
 export function useComposer(): Composer {
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<ComposerMode>({ kind: "new" });
-  const [files, setFiles] = useState<PickedFile[]>([]);
+  const { clear, ...pending } = usePendingFiles();
   const text = draft.trim();
   const tooLong = draft.length > payloadLimits.textLength;
   const reset = (): void => {
     setMode({ kind: "new" });
     setDraft("");
-    setFiles([]);
+    clear();
   };
   return {
     draft,
@@ -76,18 +102,13 @@ export function useComposer(): Composer {
     edit: (item) => {
       setMode({ kind: "edit", item });
       setDraft(item.text);
-      setFiles([]);
+      clear();
     },
     cancel: reset,
     tooLong,
-    files,
-    attach: (file) => {
-      setFiles((current) => (current.length < payloadLimits.attachments ? [...current, file] : current));
-    },
-    detach: (index) => {
-      setFiles((current) => current.filter((_, at) => at !== index));
-    },
-    payload: (attachments = []) => (tooLong ? undefined : payloadOf({ text, mode, files }, attachments)),
+    ...pending,
+    payload: (attachments = []) =>
+      tooLong ? undefined : payloadOf({ text, mode, files: pending.files }, attachments),
     sent: reset,
   };
 }

@@ -124,6 +124,39 @@ describe("attachments in a conversation", () => {
   });
 });
 
+describe("photo quality", () => {
+  it("sends originals off mobile data unless a photo is switched to compressed, and says videos go as they are", async () => {
+    const compressed = { bytes: new Uint8Array([7]), mimeType: "image/webp", width: 320, height: 240 };
+    jest
+      .mocked(pickMedia)
+      .mockResolvedValueOnce({ ...photo, compressed })
+      .mockResolvedValueOnce({ ...photo, name: "second.jpg", compressed })
+      .mockResolvedValueOnce({ name: "clip.mp4", mimeType: "video/mp4", bytes: new Uint8Array([1]) });
+    const { adaMessenger } = await openConversation();
+    for (let picks = 0; picks < 3; picks++) {
+      await fireEvent.press(screen.getByTestId("attach-media"));
+    }
+    expect(await screen.findByText("Videos are sent in original quality.")).toBeOnTheScreen();
+    // Not on mobile data, so photos start as originals. Tapping the first twice
+    // changes nothing; the second goes compressed.
+    await fireEvent.press(screen.getByTestId("original-0"));
+    await fireEvent.press(screen.getByTestId("original-0"));
+    await fireEvent.press(screen.getByTestId("original-1"));
+    await fireEvent.press(screen.getByTestId("composer-send"));
+
+    await waitFor(async () => {
+      expect((await adaMessenger.messages("dm")).length).toBe(1);
+    });
+    const [sent] = await adaMessenger.messages("dm");
+    const files = sent?.payload.kind === "text" ? (sent.payload.attachments ?? []) : [];
+    expect(files.map((file) => [file.name, file.mimeType, file.size])).toEqual([
+      ["photo.jpg", "image/jpeg", 3],
+      ["second.webp", "image/webp", 1],
+      ["clip.mp4", "video/mp4", 1],
+    ]);
+  });
+});
+
 describe("file sizes", () => {
   it("reads naturally at every scale", () => {
     const { t } = createI18n();

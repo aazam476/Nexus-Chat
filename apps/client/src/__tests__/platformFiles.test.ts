@@ -35,7 +35,7 @@ jest.mock("expo-image-manipulator", () => {
     saveAsync: () => Promise.resolve({ uri: "thumb", width, height, base64: "CQ==" }),
   });
   return {
-    SaveFormat: { JPEG: "jpeg" },
+    SaveFormat: { JPEG: "jpeg", WEBP: "webp" },
     ImageManipulator: {
       manipulate: jest.fn(() => {
         let size = { width: 1280, height: 960 };

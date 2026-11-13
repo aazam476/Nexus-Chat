@@ -7,7 +7,7 @@ import { getDocumentAsync } from "expo-document-picker";
 import { launchImageLibraryAsync } from "expo-image-picker";
 
 import type { PickedFile } from "../messaging/attachmentTransfer";
-import { describeImage } from "./thumbnails";
+import { prepareImage } from "./thumbnails";
 
 async function readBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
   return new Uint8Array(await (await fetch(uri)).arrayBuffer());
@@ -16,7 +16,7 @@ async function readBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
 /** A picked file with its image details, when it is an image. */
 async function picked(uri: string, name: string, mimeType: string): Promise<PickedFile> {
   const file = { name, mimeType, bytes: await readBytes(uri) };
-  return mimeType.startsWith("image/") ? { ...file, ...(await describeImage(uri)) } : file;
+  return mimeType.startsWith("image/") ? prepareImage(uri, file) : file;
 }
 
 /** Any file, through the browser's file chooser; undefined if cancelled. */
