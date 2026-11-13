@@ -84,3 +84,28 @@ export async function becomeFriends(
   await expectAccessible(accepter.page);
   await shown(requester.page, `message-${accepter.account.username}`).click();
 }
+
+/** Opens the actions of the visible message that says `text`. */
+async function messageActions(page: Page, text: string): Promise<void> {
+  await page
+    .getByLabel(/^Actions for the message from/)
+    .filter({ visible: true, hasText: text })
+    .click();
+}
+
+/** Replies to the message that says `text` with `reply`. */
+export async function replyTo(page: Page, text: string, reply: string): Promise<void> {
+  await messageActions(page, text);
+  await page.getByRole("button", { name: "Reply", exact: true }).filter({ visible: true }).click();
+  await expect(page.getByText(/^Replying to/).filter({ visible: true })).toBeVisible();
+  await sendMessage(page, reply);
+}
+
+/** Reacts to the message that says `text` with `emoji`. */
+export async function react(page: Page, text: string, emoji: string): Promise<void> {
+  await messageActions(page, text);
+  await page
+    .getByRole("button", { name: `React with ${emoji}` })
+    .filter({ visible: true })
+    .click();
+}

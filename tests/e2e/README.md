@@ -11,7 +11,8 @@ What they cover today:
 - the setup wizard creates the admin, and a second user signs up;
 - the admin opens the Admin panel;
 - two people sign up, write down their recovery phrases, become friends and
-  message each other end-to-end encrypted, live, with typing shown; a
+  message each other end-to-end encrypted, live, with typing shown, a
+  reply that quotes what it answers and a reaction that names who reacted; a
   second device of one of them restores from the phrase and reads the
   conversation's history;
 - a status change on one device reaches the user's other devices live;

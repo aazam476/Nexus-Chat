@@ -4,11 +4,13 @@
  * Two people then message each other, end-to-end encrypted; voice join
  * comes with milestone M9.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { expectAccessible } from "../src/accessibility.js";
 import {
   becomeFriends,
+  react,
+  replyTo,
   restoreWithPhrase,
   sendMessage,
   shown,
@@ -64,7 +66,21 @@ test("a second user signs up", async ({ page }) => {
   await expectHome(page, accounts.member);
 });
 
+/** A reply quotes what it answers, and a reaction shows who reacted, on both sides. */
+async function replyAndReact(lin: Page, omar: Page): Promise<void> {
+  await replyTo(lin, "Hi Lin, it works", "Great, replying to you");
+  await expect(
+    omar.getByText(/^Reply to .*Omar Reader.*: Hi Lin, it works$/).filter({ visible: true }),
+  ).toBeVisible({ timeout: 30_000 });
+  await react(omar, "Great, replying to you", "👍");
+  await expect(
+    lin.getByRole("button", { name: /^👍 1, from .*Omar Reader/ }).filter({ visible: true }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expectAccessible(lin);
+}
+
 test("two people message each other, end to end encrypted", async ({ browser }) => {
+  test.setTimeout(180_000);
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
   const [lin, omar] = await Promise.all(contexts.map((context) => context.newPage()));
   if (lin === undefined || omar === undefined) {
@@ -75,7 +91,9 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
   await becomeFriends({ page: lin, account: accounts.lin }, { page: omar, account: accounts.omar });
 
   await sendMessage(lin, "Hello from the release gate");
-  await expect(omar.getByText("Hello from the release gate").filter({ visible: true })).toBeVisible({
+  await expect(
+    omar.getByText("Hello from the release gate", { exact: true }).filter({ visible: true }),
+  ).toBeVisible({
     timeout: 30_000,
   });
 
@@ -83,8 +101,12 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
   await shown(omar, "composer").pressSequentially("Hi");
   await expect(shown(lin, "typing")).toBeVisible({ timeout: 10_000 });
   await sendMessage(omar, "Hi Lin, it works");
-  await expect(lin.getByText("Hi Lin, it works").filter({ visible: true })).toBeVisible({ timeout: 30_000 });
+  await expect(lin.getByText("Hi Lin, it works", { exact: true }).filter({ visible: true })).toBeVisible({
+    timeout: 30_000,
+  });
   await expectAccessible(lin);
+
+  await replyAndReact(lin, omar);
 
   // A second device restores with the phrase and reads the conversation.
   const tabletContext = await browser.newContext();
@@ -98,7 +120,7 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
     .filter({ visible: true })
     .first()
     .click();
-  await expect(tablet.getByText("Hi Lin, it works").filter({ visible: true })).toBeVisible({
+  await expect(tablet.getByText("Hi Lin, it works", { exact: true }).filter({ visible: true })).toBeVisible({
     timeout: 30_000,
   });
   await Promise.all([...contexts, tabletContext].map((context) => context.close()));

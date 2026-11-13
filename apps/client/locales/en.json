@@ -249,7 +249,7 @@
     "delete": "Delete",
     "react": "React with {{emoji}}",
     "reaction": "{{emoji}} {{count}}",
-    "reactionLabel": "{{emoji}} from {{users}}",
+    "reactionLabel": "{{emoji}} {{count}}, from {{users}}",
     "spoiler": "Spoiler",
     "messageActions": "Actions for the message from {{name}}",
     "identityChanged": "Warning: the encryption identity of {{name}} changed. They may have reset their account, or someone may be trying to listen in. Check with them before you trust it.",

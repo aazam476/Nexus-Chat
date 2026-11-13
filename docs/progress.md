@@ -393,7 +393,8 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   before it knew its members dropped the Welcome and joined a second time,
   leaving a duplicate leaf that blocked every later join.
 - The release gate now has two people sign up, write down their recovery
-  phrases, become friends and message each other live (with typing), and
+  phrases, become friends and message each other live (with typing, a
+  reply and a reaction), and
   a second device of one of them restores from the phrase and reads the
   conversation.
 - Visual checks of the conversation list and a conversation, in every

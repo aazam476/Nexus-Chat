@@ -32,6 +32,7 @@ export function Reactions({ reactions, self, nameOf, onToggle }: ReactionsProps)
             label={t("conversation.reaction", { emoji, count: users.length })}
             accessibilityLabel={t("conversation.reactionLabel", {
               emoji,
+              count: users.length,
               users: users.map(nameOf).join(", "),
             })}
             selected={mine}
