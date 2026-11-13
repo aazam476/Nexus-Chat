@@ -8,3 +8,4 @@
 ./internal/auth/oidc
 ./internal/identities
 ./internal/keybackup
+./internal/permissions

@@ -433,7 +433,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
 
 ## Next
 
-**M5: Servers, channels, permissions** (see [roadmap.md](roadmap.md)).
+**M5: Servers, channels, permissions** (in progress; see
+[roadmap.md](roadmap.md)).
+
+- Permission resolution (`apps/server/internal/permissions`), the one
+  module that decides what a member may do: the 27 permissions of spec
+  §4.4, `@everyone` and roles, `ADMINISTRATOR` and the owner, channel
+  overrides for `@everyone`, roles and members, `VIEW_CHANNEL` gating,
+  timeouts, and role order for managing others. The algorithm, a worked
+  example and who enforces what are in [permissions.md](permissions.md).
+  Every combination of the deciding layers (1,944 cases) is checked
+  against the rule written the other way round, with property tests on
+  top; the package is in the 100% branch and mutation-tested list.
 
 ## Known issues
 
