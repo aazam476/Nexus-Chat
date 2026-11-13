@@ -67,9 +67,7 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   example in `docs/self-hosting.md` is the tested file).
 - Coverage at completion: server 95.6% statements / 91.7% branches.
 
-## Next
-
-**M2: Accounts and client shell** (in progress). Server side done so far:
+### M2: Accounts and client shell
 
 - Sessions: hashed 256-bit tokens, sliding 90-day expiry, list and revoke,
   default-deny authentication checked against the OpenAPI contract.
@@ -178,7 +176,7 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   Simulator once the macOS build pipeline exists (M11), since iOS builds
   need macOS runners.
 
-## M3: Crypto core [REVIEW] (in progress)
+### M3: Crypto core [REVIEW]
 
 - `packages/crypto` with the MLS engine on ts-mls 1.6.4: create a group,
   add and remove devices, join from a Welcome, refresh keys, encrypt and
@@ -260,7 +258,7 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   very large channels batch membership changes. Still to do: reuse
   imported WebCrypto keys, and measure on a mid-range Android phone.
 
-## M4: DMs and E2EE messaging (in progress)
+### M4: DMs and E2EE messaging
 
 - Friends, blocks and privacy (`internal/social`, migration 00013):
   friend requests (send, accept, decline, cancel; requesting someone who
@@ -432,6 +430,10 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   passive-client case with the same runner as the Node tests
   (`packages/crypto/src/mls/vectors.ts`); the Maestro flow `4-vectors`
   waits for all of them to pass.
+
+## Next
+
+**M5: Servers, channels, permissions** (see [roadmap.md](roadmap.md)).
 
 ## Known issues
 
