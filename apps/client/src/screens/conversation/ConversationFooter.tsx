@@ -75,7 +75,13 @@ export function ConversationFooter({
   return (
     <View>
       <TypingLine names={names} />
-      <ComposerBar composer={typingComposer} nameOf={open.nameOf} send={send} attachments={attachments} />
+      <ComposerBar
+        composer={typingComposer}
+        nameOf={open.nameOf}
+        send={send}
+        attachments={attachments}
+        mention={{ people: open.conversation?.members ?? [], selfId }}
+      />
     </View>
   );
 }

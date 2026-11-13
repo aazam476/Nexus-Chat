@@ -30,6 +30,7 @@ export function ConversationList({ conversations, selfId }: ConversationListProp
           conversation={conversation}
           selfId={selfId}
           unread={readStates?.get(conversation.id)?.unreadCount ?? 0}
+          lastReadId={readStates?.get(conversation.id)?.lastReadId ?? 0}
         />
       ))}
     </Stack>

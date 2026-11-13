@@ -125,13 +125,16 @@ describe("a message's Markdown", () => {
     await renderWithApp(
       <MessageBody
         text={
-          "**b** *i* ~~s~~ `c` ||secret|| [site](https://example.com) <@u1> @here\n> quoted\n```\ncode\n```"
+          "**b** *i* ~~s~~ `c` ||secret|| [site](https://example.com) <@u1> <#c1> <@&r1> @here\n> quoted\n```\ncode\n```"
         }
       />,
     );
     expect(screen.getByText("code")).toBeOnTheScreen();
     expect(screen.getByText("quoted")).toBeOnTheScreen();
-    expect(screen.getByText("@u1")).toBeOnTheScreen();
+    // Outside a conversation nobody is known by ID; channels and roles show their ID until M5.
+    expect(screen.getByText("@someone")).toBeOnTheScreen();
+    expect(screen.getByText("#c1")).toBeOnTheScreen();
+    expect(screen.getByText("@r1")).toBeOnTheScreen();
     expect(screen.getByText("@here")).toBeOnTheScreen();
     // Hidden, the spoiler's text is not on the screen at all.
     expect(screen.queryByText(/secret/)).toBeNull();

@@ -9,6 +9,8 @@ export interface BadgeProps {
   count: number;
   /** What the count means, read by screen readers, e.g. "3 unread messages". */
   label: string;
+  /** Shown before the count, e.g. an at sign for mentions. */
+  prefix?: string;
 }
 
 /** The most a badge shows; beyond it reads "99+", so huge counts never stretch a row. */
@@ -18,7 +20,7 @@ export const badgeLimit = 99;
  * An unread or mention count. It shows nothing at zero, and the number is
  * never the only signal: the label says what it counts (spec §4.12).
  */
-export function Badge({ count, label }: BadgeProps): ReactNode {
+export function Badge({ count, label, prefix = "" }: BadgeProps): ReactNode {
   const { colors } = useTheme();
   if (count <= 0) {
     return null;
@@ -26,6 +28,7 @@ export function Badge({ count, label }: BadgeProps): ReactNode {
   return (
     <View style={[styles.badge, { backgroundColor: colors.primary }]} accessible accessibilityLabel={label}>
       <Text style={[styles.count, { color: colors.onPrimary }]} maxFontSizeMultiplier={1.5}>
+        {prefix}
         {count > badgeLimit ? `${String(badgeLimit)}+` : String(count)}
       </Text>
     </View>

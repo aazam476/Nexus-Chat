@@ -10,6 +10,7 @@ import { useTimeline } from "../../src/messaging/useConversations";
 import { useReadTracking } from "../../src/messaging/useReadTracking";
 import { ConversationFooter } from "../../src/screens/conversation/ConversationFooter";
 import { ConversationHeader } from "../../src/screens/conversation/ConversationHeader";
+import { MentionNamesContext } from "../../src/screens/conversation/MentionNames";
 import { MessageList } from "../../src/screens/conversation/MessageList";
 import { useComposer } from "../../src/screens/conversation/useComposer";
 
@@ -27,27 +28,30 @@ export default function ConversationScreen(): ReactNode {
     messenger === undefined
       ? Promise.reject(new Error("messaging is not ready"))
       : messenger.send(id, payload);
+  const mentionNames = { nameOfId: open.nameOfId, selfId: open.userIdOf(open.self) ?? "" };
   return (
     <AttachmentsContext value={attachments}>
-      <ConversationLayout
-        header={<ConversationHeader open={open} messenger={messenger} />}
-        footer={
-          <ConversationFooter
-            conversationId={id}
-            open={open}
+      <MentionNamesContext value={mentionNames}>
+        <ConversationLayout
+          header={<ConversationHeader open={open} messenger={messenger} />}
+          footer={
+            <ConversationFooter
+              conversationId={id}
+              open={open}
+              timeline={timeline}
+              compose={{ composer, send, attachments }}
+            />
+          }
+        >
+          <MessageList
             timeline={timeline}
-            compose={{ composer, send, attachments }}
+            people={{ self: open.self, nameOf: open.nameOf }}
+            composer={composer}
+            send={send}
+            firstUnreadId={firstUnreadId}
           />
-        }
-      >
-        <MessageList
-          timeline={timeline}
-          people={{ self: open.self, nameOf: open.nameOf }}
-          composer={composer}
-          send={send}
-          firstUnreadId={firstUnreadId}
-        />
-      </ConversationLayout>
+        </ConversationLayout>
+      </MentionNamesContext>
     </AttachmentsContext>
   );
 }

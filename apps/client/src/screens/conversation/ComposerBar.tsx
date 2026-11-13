@@ -8,8 +8,10 @@ import { firstLink } from "../../messaging/linkPreview";
 import { payloadLimits, type Payload } from "../../messaging/payload";
 import { previewSource } from "../../platform/previewSource";
 import type { ConversationAttachments } from "../../messaging/useAttachments";
+import type { Mentionable } from "../../messaging/mentions";
 import { ActionButton } from "./ActionButton";
 import { AttachmentPicker } from "./AttachmentPicker";
+import { MentionSuggestions } from "./MentionSuggestions";
 import type { NameOf } from "./MessageItem";
 import type { Composer } from "./useComposer";
 import { useSubmit } from "./useSubmit";
@@ -20,6 +22,8 @@ export interface ComposerBarProps {
   nameOf: NameOf;
   send: (payload: Payload) => Promise<unknown>;
   attachments: ConversationAttachments;
+  /** Who can be mentioned, and who is writing. */
+  mention: { people: Mentionable[]; selfId: string };
 }
 
 function ModeLine({ composer, nameOf }: Pick<ComposerBarProps, "composer" | "nameOf">): ReactNode {
@@ -41,7 +45,7 @@ function ModeLine({ composer, nameOf }: Pick<ComposerBarProps, "composer" | "nam
 }
 
 /** The message field, its send button and what the next send replies to or edits. */
-export function ComposerBar({ composer, nameOf, send, attachments }: ComposerBarProps): ReactNode {
+export function ComposerBar({ composer, nameOf, send, attachments, mention }: ComposerBarProps): ReactNode {
   const { t } = useTranslation();
   const { client, instance } = useConnection();
   const previews = previewSource(client, instance?.info.linkPreviewProxy ?? false);
@@ -53,6 +57,7 @@ export function ComposerBar({ composer, nameOf, send, attachments }: ComposerBar
   return (
     <View style={styles.bar}>
       <ModeLine composer={composer} nameOf={nameOf} />
+      <MentionSuggestions composer={composer} people={mention.people} selfId={mention.selfId} />
       <TextField
         label={t("conversation.composer")}
         hint={t("conversation.composerHint")}

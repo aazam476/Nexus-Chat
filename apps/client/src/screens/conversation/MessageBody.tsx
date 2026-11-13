@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Linking, Platform, Text as NativeText, StyleSheet, View } from "react-native";
 
 import { parseMarkdown, type Block, type Inline } from "../../messaging/markdown";
+import { useMentionNames } from "./MentionNames";
 
 const monospace = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
 
@@ -51,8 +52,31 @@ function LinkText({ url, children }: { url: string; children: ReactNode }): Reac
   );
 }
 
-function mentionText(node: Extract<Inline, { type: "mention" }>): string {
-  return "id" in node ? `@${node.id}` : `@${node.kind}`;
+type MentionNode = Extract<Inline, { type: "mention" }>;
+
+/**
+ * A mention, by the member's name where the conversation knows them; a
+ * mention of the signed-in user, or of everyone, stands out.
+ */
+function Mention({ node, colors }: { node: MentionNode; colors: Colors }): ReactNode {
+  const { t } = useTranslation();
+  const names = useMentionNames();
+  let text = `@${node.kind}`;
+  let forMe = true;
+  if ("id" in node) {
+    forMe = node.kind === "user" && node.id === names?.selfId;
+    text =
+      node.kind === "user"
+        ? `@${names?.nameOfId(node.id) ?? t("conversation.unknownMention")}`
+        : `${node.kind === "channel" ? "#" : "@"}${node.id}`;
+  }
+  return (
+    <NativeText
+      style={[styles.mention, { color: colors.primary }, forMe && { backgroundColor: colors.surface }]}
+    >
+      {text}
+    </NativeText>
+  );
 }
 
 function renderNode(node: Inline, key: number, colors: Colors): ReactNode {
@@ -84,11 +108,7 @@ function renderNode(node: Inline, key: number, colors: Colors): ReactNode {
         </LinkText>
       );
     case "mention":
-      return (
-        <NativeText key={key} style={[styles.mention, { color: colors.primary }]}>
-          {mentionText(node)}
-        </NativeText>
-      );
+      return <Mention key={key} node={node} colors={colors} />;
   }
 }
 

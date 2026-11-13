@@ -336,8 +336,13 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   delivery ID of the last message they saw) and counts the messages from
   others after it, so every device agrees. The list shows unread counts;
   a conversation marks where new messages begin, offers "Jump to first
-  unread", and marks everything shown as read. Mention badge counts wait
-  for mentions in the composer.
+  unread", and marks everything shown as read.
+- Mentions: typing `@` and part of a name suggests the conversation's
+  members (by username or display name), and choosing one writes `<@id>`;
+  every device shows it as `@Display Name`, with mentions of the user (or
+  `@everyone` and `@here`) highlighted. The conversation list shows an
+  "@N" badge for unread messages from others that mention the user,
+  counted on the device, since the server cannot read messages.
 - Group DMs in the app: "New group" picks two or more friends (up to the
   instance's limit) and an optional name; group settings rename the
   group, set or remove its icon (the system photo picker,

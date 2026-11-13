@@ -33,6 +33,9 @@ describe("Badge", () => {
 
     await render(themed(<Badge count={0} label="none" />));
     expect(screen.queryByLabelText("none")).toBeNull();
+
+    await render(themed(<Badge count={2} prefix="@" label="2 mentions" />));
+    expect(screen.getByLabelText("2 mentions")).toHaveTextContent("@2");
   });
 });
 

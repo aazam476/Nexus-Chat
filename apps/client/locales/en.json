@@ -226,7 +226,9 @@
     "noMessages": "No messages yet",
     "unread": "{{count}} unread messages",
     "unread_one": "1 unread message",
-    "newGroup": "New group"
+    "newGroup": "New group",
+    "mentions": "{{count}} unread mentions of you",
+    "mentions_one": "1 unread mention of you"
   },
   "conversation": {
     "back": "Back",
@@ -277,7 +279,9 @@
     "bytes_one": "{{count}} byte",
     "previewDisclosure": "Previews of links go through your instance, which sees the link.",
     "previewOpen": "Open {{title}}",
-    "spoilerHint": "Shows the hidden text"
+    "spoilerHint": "Shows the hidden text",
+    "unknownMention": "someone",
+    "mentionSuggestion": "Mention {{name}}"
   },
   "friends": {
     "title": "Friends",
