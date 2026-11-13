@@ -77,13 +77,12 @@ type Notifier interface {
 }
 
 // ServerMembership answers whether two users share a server, for the
-// "server members" privacy choices. Servers arrive in M5; until then
-// NoServers answers no.
+// "server members" privacy choices; servers.Service is the real one.
 type ServerMembership interface {
 	ShareAServer(ctx context.Context, first uuid.UUID, second uuid.UUID) (bool, error)
 }
 
-// NoServers is the ServerMembership of an instance without servers.
+// NoServers is a ServerMembership for which nobody shares a server.
 type NoServers struct{}
 
 // ShareAServer always answers false.

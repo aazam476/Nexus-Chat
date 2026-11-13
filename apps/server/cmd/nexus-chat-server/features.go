@@ -30,6 +30,8 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/filestore"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/ratelimit"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/secretbox"
+	"github.com/aazam476/nexus-chat/apps/server/internal/servers"
+	serversstore "github.com/aazam476/nexus-chat/apps/server/internal/servers/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/social"
 	socialstore "github.com/aazam476/nexus-chat/apps/server/internal/social/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/webclient"
@@ -72,14 +74,16 @@ func (app *application) addEncryptionFeatures(features *httpserver.Features) {
 	features.KeyBackup = app.newKeyBackupHandler()
 }
 
-// addSocialFeatures adds friends, blocks and privacy, DMs and group DMs,
-// and the MLS delivery service. Friend requests are limited per sender (30
+// addSocialFeatures adds servers, friends, blocks and privacy, DMs and
+// group DMs, and the MLS delivery service. Friend requests are limited per sender (30
 // a minute, bursts of 10). Changes reach users' devices through the
 // realtime hub, so it must exist already.
 func (app *application) addSocialFeatures(features *httpserver.Features, configuration config.Config) {
 	system := clock.System{}
+	serverService := servers.NewService(servers.Dependencies{Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Clock: system})
+	features.Servers = servers.NewHandler(serverService)
 	socialService := social.NewService(social.Dependencies{
-		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: social.NoServers{},
+		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: serverService,
 		Limiter: ratelimit.New(ratelimit.PerMinute(30, 10), system), Clock: system,
 	})
 	features.Social = social.NewHandler(socialService)

@@ -131,3 +131,10 @@ sql:
       go:
         <<: *go-options
         out: internal/attachments/store
+  - engine: postgresql
+    schema: internal/platform/database/migrations
+    queries: internal/servers/store/queries.sql
+    gen:
+      go:
+        <<: *go-options
+        out: internal/servers/store

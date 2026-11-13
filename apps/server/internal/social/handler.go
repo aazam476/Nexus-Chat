@@ -33,21 +33,12 @@ func caller(ctx context.Context) (uuid.UUID, error) {
 	return principal.UserID, nil
 }
 
-// avatarPath matches accounts.AvatarURL for a bare avatar ID.
-func avatarPath(avatarID *uuid.UUID) *string {
-	if avatarID == nil {
-		return nil
-	}
-	path := "/api/v1/avatars/" + avatarID.String()
-	return &path
-}
-
 func contacts(list []Contact) []api.Contact {
 	out := make([]api.Contact, 0, len(list))
 	for _, contact := range list {
 		out = append(out, api.Contact{
 			Since: contact.Since,
-			User:  api.UserSummary{Id: contact.UserID, Username: contact.Username, DisplayName: contact.DisplayName, AvatarUrl: avatarPath(contact.AvatarID)},
+			User:  api.UserSummary{Id: contact.UserID, Username: contact.Username, DisplayName: contact.DisplayName, AvatarUrl: apiresponse.AvatarPath(contact.AvatarID)},
 		})
 	}
 	return out

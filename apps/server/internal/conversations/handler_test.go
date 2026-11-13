@@ -138,6 +138,4 @@ func TestEndpointsNeedASession(t *testing.T) {
 	for _, call := range calls {
 		require.ErrorIs(t, call(), errNoPrincipal)
 	}
-	avatar := uuid.New()
-	assert.Equal(t, "/api/v1/avatars/"+avatar.String(), *avatarPath(&avatar))
 }

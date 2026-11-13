@@ -24,6 +24,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
+	"github.com/aazam476/nexus-chat/apps/server/internal/servers"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
 	"github.com/aazam476/nexus-chat/apps/server/internal/social"
 )
@@ -45,6 +46,7 @@ type Features struct {
 	OIDC          *oidc.Handler
 	Profiles      *profiles.Handler
 	Registration  *registration.Handler
+	Servers       *servers.Handler
 	Setup         *setup.Handler
 	Social        *social.Handler
 }
@@ -81,6 +83,7 @@ type (
 	oidcHandler          = oidc.Handler
 	profilesHandler      = profiles.Handler
 	registrationHandler  = registration.Handler
+	serversHandler       = servers.Handler
 	setupHandler         = setup.Handler
 	socialHandler        = social.Handler
 )
@@ -104,6 +107,7 @@ type handlers struct {
 	*oidcHandler
 	*profilesHandler
 	*registrationHandler
+	*serversHandler
 	*setupHandler
 	*socialHandler
 }
@@ -121,7 +125,7 @@ func NewHandler(features Features, options Options) http.Handler {
 			keyPackagesHandler:  features.KeyPackages,
 			oidcHandler:         features.OIDC,
 			profilesHandler:     features.Profiles,
-			registrationHandler: features.Registration, setupHandler: features.Setup,
+			registrationHandler: features.Registration, setupHandler: features.Setup, serversHandler: features.Servers,
 			socialHandler: features.Social, conversationsHandler: features.Conversations, deliveryHandler: features.Delivery,
 			attachmentsHandler: features.Attachments, linkPreviewHandler: features.LinkPreviews,
 		},

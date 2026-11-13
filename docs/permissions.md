@@ -129,6 +129,16 @@ server sends it, and ignores what the sender was not allowed to do. The
 result is the same for everyone who follows the rules, and a modified app
 cannot make other members' apps show what it was not allowed to send.
 
+Managing follows three more rules, all enforced by the server:
+
+- Nobody allows or denies, in a role or a channel override, a permission
+  they do not have themselves, unless they are an administrator or the
+  owner.
+- Roles, and members' roles, can only be changed below the actor's own
+  highest role. `@everyone` is never given or taken, and its name is fixed.
+- Rearranging channels lists every channel, so it needs `VIEW_CHANNEL` on
+  every one of them as well as `MANAGE_CHANNELS`.
+
 ## Tests
 
 `resolve_test.go` checks every combination of the layers that can decide a

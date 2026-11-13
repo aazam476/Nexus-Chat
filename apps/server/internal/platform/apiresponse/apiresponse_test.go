@@ -40,3 +40,9 @@ func TestDeviceName(t *testing.T) {
 	assert.Equal(t, "Firefox on Linux", DeviceName("Firefox\ton  Linux"))
 	assert.Equal(t, strings.Repeat("é", 64), DeviceName(strings.Repeat("é", 70)))
 }
+
+func TestAvatarPath(t *testing.T) {
+	assert.Nil(t, AvatarPath(nil))
+	id := uuid.MustParse("01890000-0000-7000-8000-000000000001")
+	assert.Equal(t, "/api/v1/avatars/"+id.String(), *AvatarPath(&id))
+}

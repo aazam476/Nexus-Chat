@@ -31,6 +31,8 @@ tags:
     description: DMs and group DMs (spec §4.3). Messages travel encrypted through the encryption endpoints.
   - name: messaging
     description: Help with composing messages, such as the web app's optional link preview proxy (spec §4.5).
+  - name: servers
+    description: Servers, their channels, roles, permission overrides and invites (spec §4.4).
 paths:
   /api/v1/auth/login:
     post:
@@ -3157,6 +3159,988 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /api/v1/servers:
+    get:
+      operationId: listServers
+      summary: The servers you are in
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The servers, in the order you joined them.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Server"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createServer
+      summary: Create a server
+      description: |
+        You become its owner. It starts with the @everyone role and a
+        "Text channels" category holding #general and a "Voice channels"
+        category holding General.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewServer"
+      responses:
+        "201":
+          description: The server, with @everyone and starter channels.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerDetails"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: The name is not 1 to 100 characters or the description is over 1000 (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getServer
+      summary: A server as you see it
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The settings, every role, and the channels you can see with what you may do in each.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerDetails"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateServer
+      summary: Change a server's settings (MANAGE_SERVER)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerSettings"
+      responses:
+        "204":
+          description: Changed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteServer
+      summary: Delete a server (owner only)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted, with its channels, roles and invites.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/members:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listServerMembers
+      summary: A server's members
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The members, in order of joining.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/members/me:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: leaveServer
+      summary: Leave a server
+      description: |
+        The owner cannot leave; they delete the server instead.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Left.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/members/{userId}/roles/{roleId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: giveServerRole
+      summary: Give a member a role (MANAGE_ROLES)
+      description: |
+        Only a role below your highest, and @everyone is never given.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Given; giving it again changes nothing.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: takeServerRole
+      summary: Take a role from a member (MANAGE_ROLES)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Taken.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createServerChannel
+      summary: Add a category, text or voice channel (MANAGE_CHANNELS)
+      description: |
+        It goes last in its category, or last among the top level.
+        A text channel gets its own MLS group.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewServerChannel"
+      responses:
+        "201":
+          description: The new channel's ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedId"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateServerChannel
+      summary: Rename a channel or set its topic (MANAGE_CHANNELS)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChannelText"
+      responses:
+        "204":
+          description: Changed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteServerChannel
+      summary: Delete a channel (MANAGE_CHANNELS)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted. A category's channels move to the top level.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channel-order:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: orderServerChannels
+      summary: Place every channel (MANAGE_CHANNELS)
+      description: |
+        Lists every channel once, in order. Categories stay at the top level;
+        other channels name the category they now sit in, if any. Only
+        someone who can see every channel can list them all.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ChannelPlacement"
+      responses:
+        "204":
+          description: Placed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: targetKind
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/OverrideTargetKind"
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: setChannelOverride
+      summary: Allow or deny permissions in a channel for a role or member (MANAGE_CHANNELS)
+      description: |
+        You may only allow or deny permissions you have yourself, and a
+        permission cannot be both allowed and denied.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OverrideSpec"
+      responses:
+        "204":
+          description: Set.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: clearChannelOverride
+      summary: Remove a channel override (MANAGE_CHANNELS)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Removed; removing a missing one changes nothing.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/roles:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createServerRole
+      summary: Add a role (MANAGE_ROLES)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleSpec"
+      responses:
+        "201":
+          description: The new role's ID; it sits just above @everyone.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedId"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/roles/{roleId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateServerRole
+      summary: Change a role below your highest (MANAGE_ROLES)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleSpec"
+      responses:
+        "204":
+          description: Changed. @everyone keeps its name.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteServerRole
+      summary: Delete a role below your highest (MANAGE_ROLES)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/role-order:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: orderServerRoles
+      summary: Order the roles (MANAGE_ROLES)
+      description: |
+        Lists every role but @everyone once, highest first. Only the roles
+        below your highest may move.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleOrder"
+      responses:
+        "204":
+          description: Ordered.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/invites:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listServerInvites
+      summary: A server's invites (MANAGE_SERVER)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The invites, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerInvite"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createServerInvite
+      summary: Make an invite link (CREATE_INVITES)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewServerInvite"
+      responses:
+        "201":
+          description: The invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerInvite"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/invites/{code}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      operationId: revokeServerInvite
+      summary: Revoke an invite you made, or any with MANAGE_SERVER
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Revoked.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`), or no such invite (`invite_invalid`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/invites/{code}:
+    parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: previewInvite
+      summary: The server an invite leads to
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The server's name and size.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitePreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such invite, or it expired or was used up (`invite_invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/invites/{code}/join:
+    parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: joinServer
+      summary: Join a server with an invite
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: You are a member; using an invite to a server you are in already uses nothing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinedServer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such invite, or it expired or was used up (`invite_invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   securitySchemes:
     bearerAuth:
@@ -3235,6 +4219,328 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    PermissionName:
+      type: string
+      description: A permission, as listed in docs/permissions.md.
+      enum:
+        [
+          ADMINISTRATOR,
+          MANAGE_SERVER,
+          MANAGE_ROLES,
+          MANAGE_CHANNELS,
+          MANAGE_EMOJI,
+          VIEW_AUDIT_LOG,
+          CREATE_INVITES,
+          KICK_MEMBERS,
+          BAN_MEMBERS,
+          TIMEOUT_MEMBERS,
+          VIEW_CHANNEL,
+          SEND_MESSAGES,
+          SEND_IN_THREADS,
+          CREATE_THREADS,
+          READ_HISTORY_BEFORE_JOIN,
+          ATTACH_FILES,
+          ADD_REACTIONS,
+          USE_CUSTOM_EMOJI,
+          MENTION_EVERYONE,
+          MANAGE_MESSAGES,
+          CONNECT_VOICE,
+          SPEAK,
+          VIDEO,
+          SCREEN_SHARE,
+          MUTE_MEMBERS,
+          DEAFEN_MEMBERS,
+          MOVE_MEMBERS,
+        ]
+    OverrideTargetKind:
+      type: string
+      enum: [role, member]
+    ServerChannelKind:
+      type: string
+      enum: [category, text, voice]
+    NewServer:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Server:
+      type: object
+      required: [id, name, description, ownerId, compressMedia, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        attachmentMaxBytes:
+          type: integer
+          format: int64
+          description: The server's own attachment limit, below the instance's; absent means the instance's.
+        compressMedia:
+          type: boolean
+          description: Whether members' clients compress photos by default (ADR 0014).
+        createdAt:
+          type: string
+          format: date-time
+    ServerSettings:
+      type: object
+      required: [name, description, compressMedia]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        attachmentMaxBytes:
+          type: integer
+          format: int64
+          nullable: true
+          description: Null or missing uses the instance's limit.
+        compressMedia:
+          type: boolean
+    ServerRole:
+      type: object
+      required: [id, name, permissions, position, everyone]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: integer
+          format: int32
+          description: 0xRRGGBB; absent for no colour.
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+        position:
+          type: integer
+          format: int32
+          description: Higher outranks lower; @everyone is 0.
+        everyone:
+          type: boolean
+    ChannelOverride:
+      type: object
+      required: [targetKind, targetId, allow, deny]
+      properties:
+        targetKind:
+          $ref: "#/components/schemas/OverrideTargetKind"
+        targetId:
+          type: string
+          format: uuid
+        allow:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+        deny:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+    ServerChannel:
+      type: object
+      required: [id, kind, name, topic, position, overrides, permissions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/ServerChannelKind"
+        name:
+          type: string
+        topic:
+          type: string
+        parentId:
+          type: string
+          format: uuid
+          description: The category it sits in; absent at the top level.
+        position:
+          type: integer
+          format: int32
+        mlsGroupId:
+          type: string
+          format: byte
+          description: Text channels only; the MLS group that encrypts it.
+        overrides:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChannelOverride"
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+          description: What you may do in this channel.
+    ServerDetails:
+      type: object
+      required: [server, roles, channels, myRoleIds, permissions]
+      properties:
+        server:
+          $ref: "#/components/schemas/Server"
+        roles:
+          type: array
+          description: Every role, lowest first.
+          items:
+            $ref: "#/components/schemas/ServerRole"
+        channels:
+          type: array
+          description: The channels you can see.
+          items:
+            $ref: "#/components/schemas/ServerChannel"
+        myRoleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+          description: What you may do in the server.
+    ServerMember:
+      type: object
+      required: [user, joinedAt, roleIds]
+      properties:
+        user:
+          $ref: "#/components/schemas/UserSummary"
+        joinedAt:
+          type: string
+          format: date-time
+        roleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    NewServerChannel:
+      type: object
+      required: [kind, name]
+      properties:
+        kind:
+          $ref: "#/components/schemas/ServerChannelKind"
+        name:
+          type: string
+        topic:
+          type: string
+        parentId:
+          type: string
+          format: uuid
+    ChannelText:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        topic:
+          type: string
+    ChannelPlacement:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+    OverrideSpec:
+      type: object
+      required: [allow, deny]
+      properties:
+        allow:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+        deny:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+    RoleSpec:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+        color:
+          type: integer
+          format: int32
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionName"
+    RoleOrder:
+      type: object
+      required: [roleIds]
+      properties:
+        roleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    CreatedId:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+    NewServerInvite:
+      type: object
+      properties:
+        maxUses:
+          type: integer
+          format: int32
+          description: 1 to 10000; absent for no limit.
+        expiresInSeconds:
+          type: integer
+          format: int64
+          description: Up to 365 days; absent for never.
+    ServerInvite:
+      type: object
+      required: [code, serverId, uses, createdAt]
+      properties:
+        code:
+          type: string
+        serverId:
+          type: string
+          format: uuid
+        createdBy:
+          type: string
+          format: uuid
+        maxUses:
+          type: integer
+          format: int32
+        uses:
+          type: integer
+          format: int32
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    InvitePreview:
+      type: object
+      required: [server, members]
+      properties:
+        server:
+          $ref: "#/components/schemas/Server"
+        members:
+          type: integer
+          format: int64
+    JoinedServer:
+      type: object
+      required: [serverId]
+      properties:
+        serverId:
+          type: string
+          format: uuid
     Error:
       type: object
       additionalProperties: false

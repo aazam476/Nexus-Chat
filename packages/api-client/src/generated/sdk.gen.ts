@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptFriendRequestData, AcceptFriendRequestErrors, AcceptFriendRequestResponses, AddConversationMemberData, AddConversationMemberErrors, AddConversationMemberResponses, BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, BlockUserData, BlockUserErrors, BlockUserResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateGroupConversationData, CreateGroupConversationErrors, CreateGroupConversationResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteFriendRequestData, DeleteFriendRequestErrors, DeleteFriendRequestResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, DownloadAttachmentData, DownloadAttachmentErrors, DownloadAttachmentResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetConversationData, GetConversationErrors, GetConversationIconData, GetConversationIconErrors, GetConversationIconResponses, GetConversationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLinkPreviewData, GetLinkPreviewErrors, GetLinkPreviewImageData, GetLinkPreviewImageErrors, GetLinkPreviewImageResponses, GetLinkPreviewResponses, GetLivenessData, GetLivenessResponses, GetMlsGroupStateData, GetMlsGroupStateErrors, GetMlsGroupStateResponses, GetPreviewSettingsData, GetPreviewSettingsErrors, GetPreviewSettingsResponses, GetPrivacySettingsData, GetPrivacySettingsErrors, GetPrivacySettingsResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUploadSettingsData, GetUploadSettingsErrors, GetUploadSettingsResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, LeaveConversationData, LeaveConversationErrors, LeaveConversationResponses, ListArchivedMessagesData, ListArchivedMessagesErrors, ListArchivedMessagesResponses, ListBlockedData, ListBlockedErrors, ListBlockedResponses, ListConversationsData, ListConversationsErrors, ListConversationsResponses, ListFriendsData, ListFriendsErrors, ListFriendsResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListMlsMessagesData, ListMlsMessagesErrors, ListMlsMessagesResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListReadStatesData, ListReadStatesErrors, ListReadStatesResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MarkConversationReadData, MarkConversationReadErrors, MarkConversationReadResponses, OpenDirectMessageData, OpenDirectMessageErrors, OpenDirectMessageResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveConversationIconData, RemoveConversationIconErrors, RemoveConversationIconResponses, RemoveFriendData, RemoveFriendErrors, RemoveFriendResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RenameConversationData, RenameConversationErrors, RenameConversationResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendFriendRequestData, SendFriendRequestErrors, SendFriendRequestResponses, SendMlsMessageData, SendMlsMessageErrors, SendMlsMessageResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetConversationIconData, SetConversationIconErrors, SetConversationIconResponses, SetStatusData, SetStatusErrors, SetStatusResponses, SubmitMlsCommitData, SubmitMlsCommitErrors, SubmitMlsCommitResponses, UnblockUserData, UnblockUserErrors, UnblockUserResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdatePreviewSettingsData, UpdatePreviewSettingsErrors, UpdatePreviewSettingsResponses, UpdatePrivacySettingsData, UpdatePrivacySettingsErrors, UpdatePrivacySettingsResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UpdateUploadSettingsData, UpdateUploadSettingsErrors, UpdateUploadSettingsResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
+import type { AcceptFriendRequestData, AcceptFriendRequestErrors, AcceptFriendRequestResponses, AddConversationMemberData, AddConversationMemberErrors, AddConversationMemberResponses, BeginPasskeyLoginData, BeginPasskeyLoginErrors, BeginPasskeyLoginResponses, BeginProviderLinkData, BeginProviderLinkErrors, BeginProviderLinkResponses, BeginProviderSignInData, BeginProviderSignInErrors, BeginProviderSignInResponses, BeginSecurityKeyLoginData, BeginSecurityKeyLoginErrors, BeginSecurityKeyLoginResponses, BeginWebAuthnRegistrationData, BeginWebAuthnRegistrationErrors, BeginWebAuthnRegistrationResponses, BlockUserData, BlockUserErrors, BlockUserResponses, ClaimKeyPackagesData, ClaimKeyPackagesErrors, ClaimKeyPackagesResponses, ClearChannelOverrideData, ClearChannelOverrideErrors, ClearChannelOverrideResponses, CompleteLoginMfaData, CompleteLoginMfaErrors, CompleteLoginMfaResponses, CompletePasswordResetData, CompletePasswordResetErrors, CompletePasswordResetResponses, CompleteProviderLinkData, CompleteProviderLinkErrors, CompleteProviderLinkResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteSetupData, CompleteSetupErrors, CompleteSetupResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateGroupConversationData, CreateGroupConversationErrors, CreateGroupConversationResponses, CreateInviteData, CreateInviteErrors, CreateInviteResponses, CreateOidcProviderData, CreateOidcProviderErrors, CreateOidcProviderResponses, CreateServerChannelData, CreateServerChannelErrors, CreateServerChannelResponses, CreateServerData, CreateServerErrors, CreateServerInviteData, CreateServerInviteErrors, CreateServerInviteResponses, CreateServerResponses, CreateServerRoleData, CreateServerRoleErrors, CreateServerRoleResponses, DeleteBackupBlobData, DeleteBackupBlobErrors, DeleteBackupBlobResponses, DeleteFriendRequestData, DeleteFriendRequestErrors, DeleteFriendRequestResponses, DeleteInviteData, DeleteInviteErrors, DeleteInviteResponses, DeleteOidcProviderData, DeleteOidcProviderErrors, DeleteOidcProviderResponses, DeleteServerChannelData, DeleteServerChannelErrors, DeleteServerChannelResponses, DeleteServerData, DeleteServerErrors, DeleteServerResponses, DeleteServerRoleData, DeleteServerRoleErrors, DeleteServerRoleResponses, DeleteWrappedBackupKeyData, DeleteWrappedBackupKeyErrors, DeleteWrappedBackupKeyResponses, DownloadAttachmentData, DownloadAttachmentErrors, DownloadAttachmentResponses, EnrollTotpData, EnrollTotpErrors, EnrollTotpResponses, FinishPasskeyLoginData, FinishPasskeyLoginErrors, FinishPasskeyLoginResponses, FinishSecurityKeyLoginData, FinishSecurityKeyLoginErrors, FinishSecurityKeyLoginResponses, FinishWebAuthnRegistrationData, FinishWebAuthnRegistrationErrors, FinishWebAuthnRegistrationResponses, GetAvatarData, GetAvatarErrors, GetAvatarResponses, GetBackupBlobData, GetBackupBlobErrors, GetBackupBlobResponses, GetConversationData, GetConversationErrors, GetConversationIconData, GetConversationIconErrors, GetConversationIconResponses, GetConversationResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetIdentityData, GetIdentityErrors, GetIdentityResponses, GetInstanceInfoData, GetInstanceInfoResponses, GetKeyBackupData, GetKeyBackupErrors, GetKeyBackupResponses, GetKeyPackageStockData, GetKeyPackageStockErrors, GetKeyPackageStockResponses, GetLinkPreviewData, GetLinkPreviewErrors, GetLinkPreviewImageData, GetLinkPreviewImageErrors, GetLinkPreviewImageResponses, GetLinkPreviewResponses, GetLivenessData, GetLivenessResponses, GetMlsGroupStateData, GetMlsGroupStateErrors, GetMlsGroupStateResponses, GetPreviewSettingsData, GetPreviewSettingsErrors, GetPreviewSettingsResponses, GetPrivacySettingsData, GetPrivacySettingsErrors, GetPrivacySettingsResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSecondFactorsData, GetSecondFactorsErrors, GetSecondFactorsResponses, GetServerData, GetServerErrors, GetServerResponses, GetSetupStatusData, GetSetupStatusResponses, GetSmtpSettingsData, GetSmtpSettingsErrors, GetSmtpSettingsResponses, GetTlsStatusData, GetTlsStatusErrors, GetTlsStatusResponses, GetUploadSettingsData, GetUploadSettingsErrors, GetUploadSettingsResponses, GetUserProfileData, GetUserProfileErrors, GetUserProfileResponses, GiveServerRoleData, GiveServerRoleErrors, GiveServerRoleResponses, InstallTlsCertificateData, InstallTlsCertificateErrors, InstallTlsCertificateResponses, JoinServerData, JoinServerErrors, JoinServerResponses, LeaveConversationData, LeaveConversationErrors, LeaveConversationResponses, LeaveServerData, LeaveServerErrors, LeaveServerResponses, ListArchivedMessagesData, ListArchivedMessagesErrors, ListArchivedMessagesResponses, ListBlockedData, ListBlockedErrors, ListBlockedResponses, ListConversationsData, ListConversationsErrors, ListConversationsResponses, ListFriendsData, ListFriendsErrors, ListFriendsResponses, ListInvitesData, ListInvitesErrors, ListInvitesResponses, ListLinkedProvidersData, ListLinkedProvidersErrors, ListLinkedProvidersResponses, ListMlsMessagesData, ListMlsMessagesErrors, ListMlsMessagesResponses, ListOidcProvidersData, ListOidcProvidersErrors, ListOidcProvidersResponses, ListReadStatesData, ListReadStatesErrors, ListReadStatesResponses, ListServerInvitesData, ListServerInvitesErrors, ListServerInvitesResponses, ListServerMembersData, ListServerMembersErrors, ListServerMembersResponses, ListServersData, ListServersErrors, ListServersResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListWebAuthnCredentialsData, ListWebAuthnCredentialsErrors, ListWebAuthnCredentialsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MarkConversationReadData, MarkConversationReadErrors, MarkConversationReadResponses, OpenDirectMessageData, OpenDirectMessageErrors, OpenDirectMessageResponses, OrderServerChannelsData, OrderServerChannelsErrors, OrderServerChannelsResponses, OrderServerRolesData, OrderServerRolesErrors, OrderServerRolesResponses, PreviewInviteData, PreviewInviteErrors, PreviewInviteResponses, ProviderCallbackData, ProviderCallbackErrors, PublishIdentityData, PublishIdentityErrors, PublishIdentityResponses, PutBackupBlobData, PutBackupBlobErrors, PutBackupBlobResponses, PutWrappedBackupKeyData, PutWrappedBackupKeyErrors, PutWrappedBackupKeyResponses, ReauthenticateData, ReauthenticateErrors, ReauthenticateResponses, RegenerateBackupCodesData, RegenerateBackupCodesErrors, RegenerateBackupCodesResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveAvatarData, RemoveAvatarErrors, RemoveAvatarResponses, RemoveConversationIconData, RemoveConversationIconErrors, RemoveConversationIconResponses, RemoveFriendData, RemoveFriendErrors, RemoveFriendResponses, RemoveTlsCertificateData, RemoveTlsCertificateErrors, RemoveTlsCertificateResponses, RemoveTotpData, RemoveTotpErrors, RemoveTotpResponses, RemoveWebAuthnCredentialData, RemoveWebAuthnCredentialErrors, RemoveWebAuthnCredentialResponses, RenameConversationData, RenameConversationErrors, RenameConversationResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationEmailData, ResendVerificationEmailErrors, ResendVerificationEmailResponses, RevokeServerInviteData, RevokeServerInviteErrors, RevokeServerInviteResponses, RevokeSessionData, RevokeSessionErrors, RevokeSessionResponses, SendFriendRequestData, SendFriendRequestErrors, SendFriendRequestResponses, SendMlsMessageData, SendMlsMessageErrors, SendMlsMessageResponses, SendTestEmailData, SendTestEmailErrors, SendTestEmailResponses, SetAvatarData, SetAvatarErrors, SetAvatarResponses, SetChannelOverrideData, SetChannelOverrideErrors, SetChannelOverrideResponses, SetConversationIconData, SetConversationIconErrors, SetConversationIconResponses, SetStatusData, SetStatusErrors, SetStatusResponses, SubmitMlsCommitData, SubmitMlsCommitErrors, SubmitMlsCommitResponses, TakeServerRoleData, TakeServerRoleErrors, TakeServerRoleResponses, UnblockUserData, UnblockUserErrors, UnblockUserResponses, UnlinkProviderData, UnlinkProviderErrors, UnlinkProviderResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateOidcProviderData, UpdateOidcProviderErrors, UpdateOidcProviderResponses, UpdatePreviewSettingsData, UpdatePreviewSettingsErrors, UpdatePreviewSettingsResponses, UpdatePrivacySettingsData, UpdatePrivacySettingsErrors, UpdatePrivacySettingsResponses, UpdateServerChannelData, UpdateServerChannelErrors, UpdateServerChannelResponses, UpdateServerData, UpdateServerErrors, UpdateServerResponses, UpdateServerRoleData, UpdateServerRoleErrors, UpdateServerRoleResponses, UpdateSmtpSettingsData, UpdateSmtpSettingsErrors, UpdateSmtpSettingsResponses, UpdateUploadSettingsData, UpdateUploadSettingsErrors, UpdateUploadSettingsResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses, UploadKeyPackagesData, UploadKeyPackagesErrors, UploadKeyPackagesResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1332,3 +1332,287 @@ export const getLiveness = <ThrowOnError extends boolean = false>(options?: Opti
  *
  */
 export const getReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetReadinessData, ThrowOnError>): RequestResult<GetReadinessResponses, GetReadinessErrors, ThrowOnError> => (options?.client ?? client).get<GetReadinessResponses, GetReadinessErrors, ThrowOnError>({ url: '/readyz', ...options });
+
+/**
+ * The servers you are in
+ */
+export const listServers = <ThrowOnError extends boolean = false>(options?: Options<ListServersData, ThrowOnError>): RequestResult<ListServersResponses, ListServersErrors, ThrowOnError> => (options?.client ?? client).get<ListServersResponses, ListServersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers',
+    ...options
+});
+
+/**
+ * Create a server
+ *
+ * You become its owner. It starts with the @everyone role and a
+ * "Text channels" category holding #general and a "Voice channels"
+ * category holding General.
+ *
+ */
+export const createServer = <ThrowOnError extends boolean = false>(options: Options<CreateServerData, ThrowOnError>): RequestResult<CreateServerResponses, CreateServerErrors, ThrowOnError> => (options.client ?? client).post<CreateServerResponses, CreateServerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a server (owner only)
+ */
+export const deleteServer = <ThrowOnError extends boolean = false>(options: Options<DeleteServerData, ThrowOnError>): RequestResult<DeleteServerResponses, DeleteServerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteServerResponses, DeleteServerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}',
+    ...options
+});
+
+/**
+ * A server as you see it
+ */
+export const getServer = <ThrowOnError extends boolean = false>(options: Options<GetServerData, ThrowOnError>): RequestResult<GetServerResponses, GetServerErrors, ThrowOnError> => (options.client ?? client).get<GetServerResponses, GetServerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}',
+    ...options
+});
+
+/**
+ * Change a server's settings (MANAGE_SERVER)
+ */
+export const updateServer = <ThrowOnError extends boolean = false>(options: Options<UpdateServerData, ThrowOnError>): RequestResult<UpdateServerResponses, UpdateServerErrors, ThrowOnError> => (options.client ?? client).patch<UpdateServerResponses, UpdateServerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A server's members
+ */
+export const listServerMembers = <ThrowOnError extends boolean = false>(options: Options<ListServerMembersData, ThrowOnError>): RequestResult<ListServerMembersResponses, ListServerMembersErrors, ThrowOnError> => (options.client ?? client).get<ListServerMembersResponses, ListServerMembersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/members',
+    ...options
+});
+
+/**
+ * Leave a server
+ *
+ * The owner cannot leave; they delete the server instead.
+ *
+ */
+export const leaveServer = <ThrowOnError extends boolean = false>(options: Options<LeaveServerData, ThrowOnError>): RequestResult<LeaveServerResponses, LeaveServerErrors, ThrowOnError> => (options.client ?? client).delete<LeaveServerResponses, LeaveServerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/members/me',
+    ...options
+});
+
+/**
+ * Take a role from a member (MANAGE_ROLES)
+ */
+export const takeServerRole = <ThrowOnError extends boolean = false>(options: Options<TakeServerRoleData, ThrowOnError>): RequestResult<TakeServerRoleResponses, TakeServerRoleErrors, ThrowOnError> => (options.client ?? client).delete<TakeServerRoleResponses, TakeServerRoleErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}',
+    ...options
+});
+
+/**
+ * Give a member a role (MANAGE_ROLES)
+ *
+ * Only a role below your highest, and @everyone is never given.
+ *
+ */
+export const giveServerRole = <ThrowOnError extends boolean = false>(options: Options<GiveServerRoleData, ThrowOnError>): RequestResult<GiveServerRoleResponses, GiveServerRoleErrors, ThrowOnError> => (options.client ?? client).put<GiveServerRoleResponses, GiveServerRoleErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}',
+    ...options
+});
+
+/**
+ * Add a category, text or voice channel (MANAGE_CHANNELS)
+ *
+ * It goes last in its category, or last among the top level.
+ * A text channel gets its own MLS group.
+ *
+ */
+export const createServerChannel = <ThrowOnError extends boolean = false>(options: Options<CreateServerChannelData, ThrowOnError>): RequestResult<CreateServerChannelResponses, CreateServerChannelErrors, ThrowOnError> => (options.client ?? client).post<CreateServerChannelResponses, CreateServerChannelErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/channels',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a channel (MANAGE_CHANNELS)
+ */
+export const deleteServerChannel = <ThrowOnError extends boolean = false>(options: Options<DeleteServerChannelData, ThrowOnError>): RequestResult<DeleteServerChannelResponses, DeleteServerChannelErrors, ThrowOnError> => (options.client ?? client).delete<DeleteServerChannelResponses, DeleteServerChannelErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/channels/{channelId}',
+    ...options
+});
+
+/**
+ * Rename a channel or set its topic (MANAGE_CHANNELS)
+ */
+export const updateServerChannel = <ThrowOnError extends boolean = false>(options: Options<UpdateServerChannelData, ThrowOnError>): RequestResult<UpdateServerChannelResponses, UpdateServerChannelErrors, ThrowOnError> => (options.client ?? client).patch<UpdateServerChannelResponses, UpdateServerChannelErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/channels/{channelId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Place every channel (MANAGE_CHANNELS)
+ *
+ * Lists every channel once, in order. Categories stay at the top level;
+ * other channels name the category they now sit in, if any. Only
+ * someone who can see every channel can list them all.
+ *
+ */
+export const orderServerChannels = <ThrowOnError extends boolean = false>(options: Options<OrderServerChannelsData, ThrowOnError>): RequestResult<OrderServerChannelsResponses, OrderServerChannelsErrors, ThrowOnError> => (options.client ?? client).put<OrderServerChannelsResponses, OrderServerChannelsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/channel-order',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a channel override (MANAGE_CHANNELS)
+ */
+export const clearChannelOverride = <ThrowOnError extends boolean = false>(options: Options<ClearChannelOverrideData, ThrowOnError>): RequestResult<ClearChannelOverrideResponses, ClearChannelOverrideErrors, ThrowOnError> => (options.client ?? client).delete<ClearChannelOverrideResponses, ClearChannelOverrideErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId}',
+    ...options
+});
+
+/**
+ * Allow or deny permissions in a channel for a role or member (MANAGE_CHANNELS)
+ *
+ * You may only allow or deny permissions you have yourself, and a
+ * permission cannot be both allowed and denied.
+ *
+ */
+export const setChannelOverride = <ThrowOnError extends boolean = false>(options: Options<SetChannelOverrideData, ThrowOnError>): RequestResult<SetChannelOverrideResponses, SetChannelOverrideErrors, ThrowOnError> => (options.client ?? client).put<SetChannelOverrideResponses, SetChannelOverrideErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Add a role (MANAGE_ROLES)
+ */
+export const createServerRole = <ThrowOnError extends boolean = false>(options: Options<CreateServerRoleData, ThrowOnError>): RequestResult<CreateServerRoleResponses, CreateServerRoleErrors, ThrowOnError> => (options.client ?? client).post<CreateServerRoleResponses, CreateServerRoleErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/roles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a role below your highest (MANAGE_ROLES)
+ */
+export const deleteServerRole = <ThrowOnError extends boolean = false>(options: Options<DeleteServerRoleData, ThrowOnError>): RequestResult<DeleteServerRoleResponses, DeleteServerRoleErrors, ThrowOnError> => (options.client ?? client).delete<DeleteServerRoleResponses, DeleteServerRoleErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/roles/{roleId}',
+    ...options
+});
+
+/**
+ * Change a role below your highest (MANAGE_ROLES)
+ */
+export const updateServerRole = <ThrowOnError extends boolean = false>(options: Options<UpdateServerRoleData, ThrowOnError>): RequestResult<UpdateServerRoleResponses, UpdateServerRoleErrors, ThrowOnError> => (options.client ?? client).patch<UpdateServerRoleResponses, UpdateServerRoleErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/roles/{roleId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Order the roles (MANAGE_ROLES)
+ *
+ * Lists every role but @everyone once, highest first. Only the roles
+ * below your highest may move.
+ *
+ */
+export const orderServerRoles = <ThrowOnError extends boolean = false>(options: Options<OrderServerRolesData, ThrowOnError>): RequestResult<OrderServerRolesResponses, OrderServerRolesErrors, ThrowOnError> => (options.client ?? client).put<OrderServerRolesResponses, OrderServerRolesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/role-order',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A server's invites (MANAGE_SERVER)
+ */
+export const listServerInvites = <ThrowOnError extends boolean = false>(options: Options<ListServerInvitesData, ThrowOnError>): RequestResult<ListServerInvitesResponses, ListServerInvitesErrors, ThrowOnError> => (options.client ?? client).get<ListServerInvitesResponses, ListServerInvitesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/invites',
+    ...options
+});
+
+/**
+ * Make an invite link (CREATE_INVITES)
+ */
+export const createServerInvite = <ThrowOnError extends boolean = false>(options: Options<CreateServerInviteData, ThrowOnError>): RequestResult<CreateServerInviteResponses, CreateServerInviteErrors, ThrowOnError> => (options.client ?? client).post<CreateServerInviteResponses, CreateServerInviteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/invites',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Revoke an invite you made, or any with MANAGE_SERVER
+ */
+export const revokeServerInvite = <ThrowOnError extends boolean = false>(options: Options<RevokeServerInviteData, ThrowOnError>): RequestResult<RevokeServerInviteResponses, RevokeServerInviteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeServerInviteResponses, RevokeServerInviteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/servers/{serverId}/invites/{code}',
+    ...options
+});
+
+/**
+ * The server an invite leads to
+ */
+export const previewInvite = <ThrowOnError extends boolean = false>(options: Options<PreviewInviteData, ThrowOnError>): RequestResult<PreviewInviteResponses, PreviewInviteErrors, ThrowOnError> => (options.client ?? client).get<PreviewInviteResponses, PreviewInviteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/invites/{code}',
+    ...options
+});
+
+/**
+ * Join a server with an invite
+ */
+export const joinServer = <ThrowOnError extends boolean = false>(options: Options<JoinServerData, ThrowOnError>): RequestResult<JoinServerResponses, JoinServerErrors, ThrowOnError> => (options.client ?? client).post<JoinServerResponses, JoinServerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/invites/{code}/join',
+    ...options
+});

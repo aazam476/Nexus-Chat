@@ -34,6 +34,16 @@ type conversationData struct {
 	ConversationID uuid.UUID `json:"conversationId"`
 }
 
+type serverData struct {
+	ServerID uuid.UUID `json:"serverId"`
+}
+
+// ServerChanged tells members that something about a server changed; they
+// fetch it again. It implements servers.Notifier.
+func (hub *Hub) ServerChanged(_ context.Context, userIDs []uuid.UUID, serverID uuid.UUID) {
+	hub.SendToUsers(userIDs, TypeServerUpdate, serverData{ServerID: serverID})
+}
+
 type messagesData struct {
 	ConversationID uuid.UUID `json:"conversationId"`
 	LastID         int64     `json:"lastId"`

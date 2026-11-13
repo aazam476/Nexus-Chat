@@ -33,18 +33,10 @@ func caller(ctx context.Context) (uuid.UUID, error) {
 	return principal.UserID, nil
 }
 
-func avatarPath(avatarID *uuid.UUID) *string {
-	if avatarID == nil {
-		return nil
-	}
-	path := "/api/v1/avatars/" + avatarID.String()
-	return &path
-}
-
 func response(conversation Conversation) api.Conversation {
 	members := make([]api.UserSummary, 0, len(conversation.Members))
 	for _, member := range conversation.Members {
-		members = append(members, api.UserSummary{Id: member.UserID, Username: member.Username, DisplayName: member.DisplayName, AvatarUrl: avatarPath(member.AvatarID)})
+		members = append(members, api.UserSummary{Id: member.UserID, Username: member.Username, DisplayName: member.DisplayName, AvatarUrl: apiresponse.AvatarPath(member.AvatarID)})
 	}
 	return api.Conversation{
 		Id: conversation.ID, Kind: api.ConversationKind(conversation.Kind), Name: conversation.Name,

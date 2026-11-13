@@ -4,6 +4,178 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+/**
+ * A permission, as listed in docs/permissions.md.
+ */
+export type PermissionName = 'ADMINISTRATOR' | 'MANAGE_SERVER' | 'MANAGE_ROLES' | 'MANAGE_CHANNELS' | 'MANAGE_EMOJI' | 'VIEW_AUDIT_LOG' | 'CREATE_INVITES' | 'KICK_MEMBERS' | 'BAN_MEMBERS' | 'TIMEOUT_MEMBERS' | 'VIEW_CHANNEL' | 'SEND_MESSAGES' | 'SEND_IN_THREADS' | 'CREATE_THREADS' | 'READ_HISTORY_BEFORE_JOIN' | 'ATTACH_FILES' | 'ADD_REACTIONS' | 'USE_CUSTOM_EMOJI' | 'MENTION_EVERYONE' | 'MANAGE_MESSAGES' | 'CONNECT_VOICE' | 'SPEAK' | 'VIDEO' | 'SCREEN_SHARE' | 'MUTE_MEMBERS' | 'DEAFEN_MEMBERS' | 'MOVE_MEMBERS';
+
+export type OverrideTargetKind = 'role' | 'member';
+
+export type ServerChannelKind = 'category' | 'text' | 'voice';
+
+export type NewServer = {
+    name: string;
+    description?: string;
+};
+
+export type Server = {
+    id: string;
+    name: string;
+    description: string;
+    ownerId: string;
+    /**
+     * The server's own attachment limit, below the instance's; absent means the instance's.
+     */
+    attachmentMaxBytes?: number;
+    /**
+     * Whether members' clients compress photos by default (ADR 0014).
+     */
+    compressMedia: boolean;
+    createdAt: string;
+};
+
+export type ServerSettings = {
+    name: string;
+    description: string;
+    /**
+     * Null or missing uses the instance's limit.
+     */
+    attachmentMaxBytes?: number | null;
+    compressMedia: boolean;
+};
+
+export type ServerRole = {
+    id: string;
+    name: string;
+    /**
+     * 0xRRGGBB; absent for no colour.
+     */
+    color?: number;
+    permissions: Array<PermissionName>;
+    /**
+     * Higher outranks lower; @everyone is 0.
+     */
+    position: number;
+    everyone: boolean;
+};
+
+export type ChannelOverride = {
+    targetKind: OverrideTargetKind;
+    targetId: string;
+    allow: Array<PermissionName>;
+    deny: Array<PermissionName>;
+};
+
+export type ServerChannel = {
+    id: string;
+    kind: ServerChannelKind;
+    name: string;
+    topic: string;
+    /**
+     * The category it sits in; absent at the top level.
+     */
+    parentId?: string;
+    position: number;
+    /**
+     * Text channels only; the MLS group that encrypts it.
+     */
+    mlsGroupId?: string;
+    overrides: Array<ChannelOverride>;
+    /**
+     * What you may do in this channel.
+     */
+    permissions: Array<PermissionName>;
+};
+
+export type ServerDetails = {
+    server: Server;
+    /**
+     * Every role, lowest first.
+     */
+    roles: Array<ServerRole>;
+    /**
+     * The channels you can see.
+     */
+    channels: Array<ServerChannel>;
+    myRoleIds: Array<string>;
+    /**
+     * What you may do in the server.
+     */
+    permissions: Array<PermissionName>;
+};
+
+export type ServerMember = {
+    user: UserSummary;
+    joinedAt: string;
+    roleIds: Array<string>;
+};
+
+export type NewServerChannel = {
+    kind: ServerChannelKind;
+    name: string;
+    topic?: string;
+    parentId?: string;
+};
+
+export type ChannelText = {
+    name: string;
+    topic?: string;
+};
+
+export type ChannelPlacement = {
+    id: string;
+    parentId?: string;
+};
+
+export type OverrideSpec = {
+    allow: Array<PermissionName>;
+    deny: Array<PermissionName>;
+};
+
+export type RoleSpec = {
+    name: string;
+    color?: number;
+    permissions: Array<PermissionName>;
+};
+
+export type RoleOrder = {
+    roleIds: Array<string>;
+};
+
+export type CreatedId = {
+    id: string;
+};
+
+export type NewServerInvite = {
+    /**
+     * 1 to 10000; absent for no limit.
+     */
+    maxUses?: number;
+    /**
+     * Up to 365 days; absent for never.
+     */
+    expiresInSeconds?: number;
+};
+
+export type ServerInvite = {
+    code: string;
+    serverId: string;
+    createdBy?: string;
+    maxUses?: number;
+    uses: number;
+    expiresAt?: string;
+    createdAt: string;
+};
+
+export type InvitePreview = {
+    server: Server;
+    members: number;
+};
+
+export type JoinedServer = {
+    serverId: string;
+};
+
 export type Error = {
     /**
      * Stable machine-readable code, for example `validation_failed`.
@@ -4414,3 +4586,1006 @@ export type GetReadinessResponses = {
 };
 
 export type GetReadinessResponse = GetReadinessResponses[keyof GetReadinessResponses];
+
+export type ListServersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/servers';
+};
+
+export type ListServersErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+};
+
+export type ListServersError = ListServersErrors[keyof ListServersErrors];
+
+export type ListServersResponses = {
+    /**
+     * The servers, in the order you joined them.
+     */
+    200: Array<Server>;
+};
+
+export type ListServersResponse = ListServersResponses[keyof ListServersResponses];
+
+export type CreateServerData = {
+    body: NewServer;
+    path?: never;
+    query?: never;
+    url: '/api/v1/servers';
+};
+
+export type CreateServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * The name is not 1 to 100 characters or the description is over 1000 (`invalid`).
+     */
+    422: Error;
+};
+
+export type CreateServerError = CreateServerErrors[keyof CreateServerErrors];
+
+export type CreateServerResponses = {
+    /**
+     * The server, with @everyone and starter channels.
+     */
+    201: ServerDetails;
+};
+
+export type CreateServerResponse = CreateServerResponses[keyof CreateServerResponses];
+
+export type DeleteServerData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}';
+};
+
+export type DeleteServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type DeleteServerError = DeleteServerErrors[keyof DeleteServerErrors];
+
+export type DeleteServerResponses = {
+    /**
+     * Deleted, with its channels, roles and invites.
+     */
+    204: void;
+};
+
+export type DeleteServerResponse = DeleteServerResponses[keyof DeleteServerResponses];
+
+export type GetServerData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}';
+};
+
+export type GetServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type GetServerError = GetServerErrors[keyof GetServerErrors];
+
+export type GetServerResponses = {
+    /**
+     * The settings, every role, and the channels you can see with what you may do in each.
+     */
+    200: ServerDetails;
+};
+
+export type GetServerResponse = GetServerResponses[keyof GetServerResponses];
+
+export type UpdateServerData = {
+    body: ServerSettings;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}';
+};
+
+export type UpdateServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type UpdateServerError = UpdateServerErrors[keyof UpdateServerErrors];
+
+export type UpdateServerResponses = {
+    /**
+     * Changed.
+     */
+    204: void;
+};
+
+export type UpdateServerResponse = UpdateServerResponses[keyof UpdateServerResponses];
+
+export type ListServerMembersData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members';
+};
+
+export type ListServerMembersErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type ListServerMembersError = ListServerMembersErrors[keyof ListServerMembersErrors];
+
+export type ListServerMembersResponses = {
+    /**
+     * The members, in order of joining.
+     */
+    200: Array<ServerMember>;
+};
+
+export type ListServerMembersResponse = ListServerMembersResponses[keyof ListServerMembersResponses];
+
+export type LeaveServerData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members/me';
+};
+
+export type LeaveServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type LeaveServerError = LeaveServerErrors[keyof LeaveServerErrors];
+
+export type LeaveServerResponses = {
+    /**
+     * Left.
+     */
+    204: void;
+};
+
+export type LeaveServerResponse = LeaveServerResponses[keyof LeaveServerResponses];
+
+export type TakeServerRoleData = {
+    body?: never;
+    path: {
+        serverId: string;
+        userId: string;
+        roleId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}';
+};
+
+export type TakeServerRoleErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type TakeServerRoleError = TakeServerRoleErrors[keyof TakeServerRoleErrors];
+
+export type TakeServerRoleResponses = {
+    /**
+     * Taken.
+     */
+    204: void;
+};
+
+export type TakeServerRoleResponse = TakeServerRoleResponses[keyof TakeServerRoleResponses];
+
+export type GiveServerRoleData = {
+    body?: never;
+    path: {
+        serverId: string;
+        userId: string;
+        roleId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}';
+};
+
+export type GiveServerRoleErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type GiveServerRoleError = GiveServerRoleErrors[keyof GiveServerRoleErrors];
+
+export type GiveServerRoleResponses = {
+    /**
+     * Given; giving it again changes nothing.
+     */
+    204: void;
+};
+
+export type GiveServerRoleResponse = GiveServerRoleResponses[keyof GiveServerRoleResponses];
+
+export type CreateServerChannelData = {
+    body: NewServerChannel;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels';
+};
+
+export type CreateServerChannelErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type CreateServerChannelError = CreateServerChannelErrors[keyof CreateServerChannelErrors];
+
+export type CreateServerChannelResponses = {
+    /**
+     * The new channel's ID.
+     */
+    201: CreatedId;
+};
+
+export type CreateServerChannelResponse = CreateServerChannelResponses[keyof CreateServerChannelResponses];
+
+export type DeleteServerChannelData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}';
+};
+
+export type DeleteServerChannelErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type DeleteServerChannelError = DeleteServerChannelErrors[keyof DeleteServerChannelErrors];
+
+export type DeleteServerChannelResponses = {
+    /**
+     * Deleted. A category's channels move to the top level.
+     */
+    204: void;
+};
+
+export type DeleteServerChannelResponse = DeleteServerChannelResponses[keyof DeleteServerChannelResponses];
+
+export type UpdateServerChannelData = {
+    body: ChannelText;
+    path: {
+        serverId: string;
+        channelId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}';
+};
+
+export type UpdateServerChannelErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type UpdateServerChannelError = UpdateServerChannelErrors[keyof UpdateServerChannelErrors];
+
+export type UpdateServerChannelResponses = {
+    /**
+     * Changed.
+     */
+    204: void;
+};
+
+export type UpdateServerChannelResponse = UpdateServerChannelResponses[keyof UpdateServerChannelResponses];
+
+export type OrderServerChannelsData = {
+    body: Array<ChannelPlacement>;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channel-order';
+};
+
+export type OrderServerChannelsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type OrderServerChannelsError = OrderServerChannelsErrors[keyof OrderServerChannelsErrors];
+
+export type OrderServerChannelsResponses = {
+    /**
+     * Placed.
+     */
+    204: void;
+};
+
+export type OrderServerChannelsResponse = OrderServerChannelsResponses[keyof OrderServerChannelsResponses];
+
+export type ClearChannelOverrideData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+        targetKind: OverrideTargetKind;
+        targetId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId}';
+};
+
+export type ClearChannelOverrideErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type ClearChannelOverrideError = ClearChannelOverrideErrors[keyof ClearChannelOverrideErrors];
+
+export type ClearChannelOverrideResponses = {
+    /**
+     * Removed; removing a missing one changes nothing.
+     */
+    204: void;
+};
+
+export type ClearChannelOverrideResponse = ClearChannelOverrideResponses[keyof ClearChannelOverrideResponses];
+
+export type SetChannelOverrideData = {
+    body: OverrideSpec;
+    path: {
+        serverId: string;
+        channelId: string;
+        targetKind: OverrideTargetKind;
+        targetId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId}';
+};
+
+export type SetChannelOverrideErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type SetChannelOverrideError = SetChannelOverrideErrors[keyof SetChannelOverrideErrors];
+
+export type SetChannelOverrideResponses = {
+    /**
+     * Set.
+     */
+    204: void;
+};
+
+export type SetChannelOverrideResponse = SetChannelOverrideResponses[keyof SetChannelOverrideResponses];
+
+export type CreateServerRoleData = {
+    body: RoleSpec;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/roles';
+};
+
+export type CreateServerRoleErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type CreateServerRoleError = CreateServerRoleErrors[keyof CreateServerRoleErrors];
+
+export type CreateServerRoleResponses = {
+    /**
+     * The new role's ID; it sits just above @everyone.
+     */
+    201: CreatedId;
+};
+
+export type CreateServerRoleResponse = CreateServerRoleResponses[keyof CreateServerRoleResponses];
+
+export type DeleteServerRoleData = {
+    body?: never;
+    path: {
+        serverId: string;
+        roleId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/roles/{roleId}';
+};
+
+export type DeleteServerRoleErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type DeleteServerRoleError = DeleteServerRoleErrors[keyof DeleteServerRoleErrors];
+
+export type DeleteServerRoleResponses = {
+    /**
+     * Deleted.
+     */
+    204: void;
+};
+
+export type DeleteServerRoleResponse = DeleteServerRoleResponses[keyof DeleteServerRoleResponses];
+
+export type UpdateServerRoleData = {
+    body: RoleSpec;
+    path: {
+        serverId: string;
+        roleId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/roles/{roleId}';
+};
+
+export type UpdateServerRoleErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type UpdateServerRoleError = UpdateServerRoleErrors[keyof UpdateServerRoleErrors];
+
+export type UpdateServerRoleResponses = {
+    /**
+     * Changed. @everyone keeps its name.
+     */
+    204: void;
+};
+
+export type UpdateServerRoleResponse = UpdateServerRoleResponses[keyof UpdateServerRoleResponses];
+
+export type OrderServerRolesData = {
+    body: RoleOrder;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/role-order';
+};
+
+export type OrderServerRolesErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type OrderServerRolesError = OrderServerRolesErrors[keyof OrderServerRolesErrors];
+
+export type OrderServerRolesResponses = {
+    /**
+     * Ordered.
+     */
+    204: void;
+};
+
+export type OrderServerRolesResponse = OrderServerRolesResponses[keyof OrderServerRolesResponses];
+
+export type ListServerInvitesData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/invites';
+};
+
+export type ListServerInvitesErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type ListServerInvitesError = ListServerInvitesErrors[keyof ListServerInvitesErrors];
+
+export type ListServerInvitesResponses = {
+    /**
+     * The invites, oldest first.
+     */
+    200: Array<ServerInvite>;
+};
+
+export type ListServerInvitesResponse = ListServerInvitesResponses[keyof ListServerInvitesResponses];
+
+export type CreateServerInviteData = {
+    body: NewServerInvite;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/invites';
+};
+
+export type CreateServerInviteErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type CreateServerInviteError = CreateServerInviteErrors[keyof CreateServerInviteErrors];
+
+export type CreateServerInviteResponses = {
+    /**
+     * The invite.
+     */
+    201: ServerInvite;
+};
+
+export type CreateServerInviteResponse = CreateServerInviteResponses[keyof CreateServerInviteResponses];
+
+export type RevokeServerInviteData = {
+    body?: never;
+    path: {
+        serverId: string;
+        code: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/invites/{code}';
+};
+
+export type RevokeServerInviteErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or it would give more than you have or reach a role at or above your highest (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`), or no such invite (`invite_invalid`); or no such channel (`channel_not_found`), role (`role_not_found`) or member (`member_not_found`) in it.
+     */
+    404: Error;
+    /**
+     * A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+     */
+    422: Error;
+};
+
+export type RevokeServerInviteError = RevokeServerInviteErrors[keyof RevokeServerInviteErrors];
+
+export type RevokeServerInviteResponses = {
+    /**
+     * Revoked.
+     */
+    204: void;
+};
+
+export type RevokeServerInviteResponse = RevokeServerInviteResponses[keyof RevokeServerInviteResponses];
+
+export type PreviewInviteData = {
+    body?: never;
+    path: {
+        code: string;
+    };
+    query?: never;
+    url: '/api/v1/invites/{code}';
+};
+
+export type PreviewInviteErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such invite, or it expired or was used up (`invite_invalid`).
+     */
+    404: Error;
+};
+
+export type PreviewInviteError = PreviewInviteErrors[keyof PreviewInviteErrors];
+
+export type PreviewInviteResponses = {
+    /**
+     * The server's name and size.
+     */
+    200: InvitePreview;
+};
+
+export type PreviewInviteResponse = PreviewInviteResponses[keyof PreviewInviteResponses];
+
+export type JoinServerData = {
+    body?: never;
+    path: {
+        code: string;
+    };
+    query?: never;
+    url: '/api/v1/invites/{code}/join';
+};
+
+export type JoinServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such invite, or it expired or was used up (`invite_invalid`).
+     */
+    404: Error;
+};
+
+export type JoinServerError = JoinServerErrors[keyof JoinServerErrors];
+
+export type JoinServerResponses = {
+    /**
+     * You are a member; using an invite to a server you are in already uses nothing.
+     */
+    200: JoinedServer;
+};
+
+export type JoinServerResponse = JoinServerResponses[keyof JoinServerResponses];

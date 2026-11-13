@@ -445,14 +445,26 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   Every combination of the deciding layers (1,944 cases) is checked
   against the rule written the other way round, with property tests on
   top; the package is in the 100% branch and mutation-tested list.
+- Servers on the server side (`apps/server/internal/servers`, API tag
+  `servers`): creating a server (with `@everyone`, a text and a voice
+  category, #general and General), settings including the server's own
+  attachment limit and "compress media by default", leaving and deleting;
+  categories, text and voice channels with topics and drag-and-drop order;
+  roles with colours, permissions and order; channel overrides for roles
+  and members; giving and taking roles; and invite links with optional
+  expiry and use limits. Every check goes through the permission module:
+  nobody grants a permission they lack or acts on a role at or above
+  their own, and rearranging channels needs seeing every channel. Members
+  hear about changes through the `server_update` gateway event. The
+  "friends and server members" privacy choices now count shared servers.
+  Text channels get an MLS group ID; their encrypted audiences come next.
 
 ## Known issues
 
 - Video compression (ADR 0014) is not built yet: it needs the platforms'
   own encoders (AVFoundation, Media3 Transformer, WebCodecs). Until then,
   videos are sent in original quality and the composer says so, as the ADR
-  allows where no encoder is available. The per-server "compress media by
-  default" setting comes with servers in M5.
+  allows where no encoder is available.
 
 - **Left out by the maintainer's decision (November 2026):** publishing to
   the App Store, Mac App Store, Google Play, Microsoft Store and Flathub;

@@ -187,6 +187,69 @@ type PrivacySetting struct {
 	WhoCanFriendRequest string
 }
 
+type Server struct {
+	ID                 uuid.UUID
+	Name               string
+	Description        string
+	OwnerID            uuid.UUID
+	AttachmentMaxBytes *int64
+	CompressMedia      bool
+	CreatedAt          time.Time
+}
+
+type ServerChannel struct {
+	ID         uuid.UUID
+	ServerID   uuid.UUID
+	Kind       string
+	Name       string
+	Topic      string
+	ParentID   *uuid.UUID
+	Position   int32
+	MlsGroupID []byte
+	CreatedAt  time.Time
+}
+
+type ServerChannelOverride struct {
+	ChannelID  uuid.UUID
+	TargetKind string
+	TargetID   uuid.UUID
+	AllowBits  int64
+	DenyBits   int64
+}
+
+type ServerInvite struct {
+	Code      string
+	ServerID  uuid.UUID
+	CreatedBy *uuid.UUID
+	MaxUses   *int32
+	Uses      int32
+	ExpiresAt *time.Time
+	CreatedAt time.Time
+}
+
+type ServerMember struct {
+	ServerID      uuid.UUID
+	UserID        uuid.UUID
+	JoinedAt      time.Time
+	TimedOutUntil *time.Time
+}
+
+type ServerMemberRole struct {
+	ServerID uuid.UUID
+	UserID   uuid.UUID
+	RoleID   uuid.UUID
+}
+
+type ServerRole struct {
+	ID          uuid.UUID
+	ServerID    uuid.UUID
+	Name        string
+	Color       *int32
+	Permissions int64
+	Position    int32
+	Everyone    bool
+}
+
 type Session struct {
 	ID              uuid.UUID
 	UserID          uuid.UUID

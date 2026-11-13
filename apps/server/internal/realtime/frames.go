@@ -39,6 +39,8 @@ const (
 	TypeRelationshipUpdate = "relationship_update"
 	// TypeConversationUpdate: a DM or group DM's name or members changed.
 	TypeConversationUpdate = "conversation_update"
+	// TypeServerUpdate: a server's settings, channels, roles or members changed.
+	TypeServerUpdate = "server_update"
 	// TypeMlsMessages: a conversation has new MLS messages to fetch.
 	TypeMlsMessages = "mls_messages"
 	// TypeReadUpdate: the user read a conversation further on some device.
