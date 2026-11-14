@@ -36,7 +36,7 @@ RUN mkdir -p /out/data
 
 # distroless/static contains only CA certificates, time zone data and
 # /etc/passwd: no shell or package manager for an attacker to use.
-FROM gcr.io/distroless/static-debian13@sha256:448810357cc8e67b7208988abdba0f5ec3d3aebee0a5b13eb624979792cffc0f
+FROM gcr.io/distroless/static-debian13@sha256:1a64f46364620465ef9e9a8f5413757dfdf22695e050bbfd7303eeaf17a59383
 COPY --from=build /out/nexus-chat-server /nexus-chat-server
 COPY --from=build --chown=65532:65532 /out/data /data
 COPY --from=web /src/apps/client/dist /web
