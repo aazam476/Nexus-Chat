@@ -17,16 +17,16 @@
     "mutation": "stryker run"
   },
   "dependencies": {
-    "@noble/ciphers": "2.1.1",
-    "@noble/curves": "2.0.1",
-    "@noble/hashes": "2.0.1",
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
     "@scure/bip39": "2.4.0",
     "libsodium-wrappers-sumo": "0.8.4",
     "ts-mls": "1.6.4"
   },
   "devDependencies": {
-    "@hpke/chacha20poly1305": "1.8.0",
-    "@hpke/dhkem-x448": "1.8.0",
+    "@hpke/chacha20poly1305": "1.8.1",
+    "@hpke/dhkem-x448": "1.8.1",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/jest-runner": "10.1.1",
     "@types/jest": "30.0.0",
