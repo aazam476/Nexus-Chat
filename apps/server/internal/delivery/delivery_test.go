@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -75,6 +76,8 @@ type fixture struct {
 	events        *events
 	accounts      *accountsstore.Queries
 	key           ed25519.PublicKey
+	grants        *grants
+	pool          *pgxpool.Pool
 }
 
 func newFixture(t *testing.T) fixture {
@@ -89,8 +92,12 @@ func newFixture(t *testing.T) fixture {
 	public, private, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 	recorded := &events{}
-	service := NewService(Dependencies{Store: store.NewWriter(pool), Members: conversationService, Notifier: recorded, DirectiveKey: private, Clock: system})
-	return fixture{service: service, conversations: conversationService, social: socialService, events: recorded, accounts: accountsstore.New(pool), key: public}
+	answers := &grants{}
+	service := NewService(Dependencies{Store: store.NewWriter(pool), Members: conversationService, Channels: answers, Notifier: recorded, DirectiveKey: private, Clock: system})
+	return fixture{
+		service: service, conversations: conversationService, social: socialService, events: recorded,
+		accounts: accountsstore.New(pool), key: public, grants: answers, pool: pool,
+	}
 }
 
 func (f fixture) user(t *testing.T, name string) uuid.UUID {
@@ -116,7 +123,7 @@ func TestOneCommitPerEpochAndMessagesInOrder(t *testing.T) {
 
 	state, err := f.service.State(t.Context(), grace, dm.ID)
 	require.NoError(t, err)
-	assert.Equal(t, GroupState{GroupID: group, Epoch: 0}, state)
+	assert.Equal(t, GroupState{GroupID: group, Epoch: 0, kind: "dm"}, state)
 
 	epoch, err := f.service.SubmitCommit(t.Context(), ada, dm.ID, Commit{Commit: privateMessage(group, 0, 3), GroupInfo: groupInfo, Welcome: welcome})
 	require.NoError(t, err)

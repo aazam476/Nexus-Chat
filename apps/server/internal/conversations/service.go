@@ -16,6 +16,9 @@ import (
 const (
 	KindDirectMessage = "dm"
 	KindGroup         = "group"
+	// KindAudience is a server channel audience's MLS group, which the
+	// servers feature manages; members never see it as a conversation.
+	KindAudience = "audience"
 )
 
 // Group DM size (spec §4.3): at least 3 members, counting the creator, and

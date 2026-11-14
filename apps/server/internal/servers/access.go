@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 type access struct {
 	server    store.Server
 	userID    uuid.UUID
+	joinedAt  time.Time
 	timedOut  bool
 	roles     []store.ServerRole
 	myRoles   map[uuid.UUID]bool
@@ -55,7 +57,7 @@ func (service *Service) load(ctx context.Context, scope Scope) (access, error) {
 	for _, id := range mine {
 		myRoles[id] = true
 	}
-	return access{server: server, userID: userID, timedOut: timedOut, roles: roles, myRoles: myRoles, overrides: overrides}, nil
+	return access{server: server, userID: userID, joinedAt: member.JoinedAt, timedOut: timedOut, roles: roles, myRoles: myRoles, overrides: overrides}, nil
 }
 
 func (a access) owner() bool {

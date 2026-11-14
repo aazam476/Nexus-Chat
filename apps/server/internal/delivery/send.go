@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/aazam476/nexus-chat/apps/server/internal/conversations"
 	"github.com/aazam476/nexus-chat/apps/server/internal/delivery/mlsheader"
 	"github.com/aazam476/nexus-chat/apps/server/internal/delivery/store"
 )
@@ -68,12 +69,22 @@ type Archive struct {
 type Outgoing struct {
 	Message []byte
 	Archive *Archive
+	// channelID is set by SendToChannel, after checking the channel.
+	channelID *uuid.UUID
 }
 
 // SendMessage accepts an application message for the current epoch, with
-// its archive copy when given. It returns the live copy's ID.
+// its archive copy when given. It returns the live copy's ID. A server
+// audience's messages go through SendToChannel instead.
 func (service *Service) SendMessage(ctx context.Context, me uuid.UUID, conversationID uuid.UUID, outgoing Outgoing) (int64, error) {
-	message, archive := outgoing.Message, outgoing.Archive
+	outgoing.channelID = nil
+	return service.send(ctx, me, conversationID, outgoing)
+}
+
+// send stores an application message; outgoing.channelID names its server
+// channel when the conversation is that channel's audience.
+func (service *Service) send(ctx context.Context, me uuid.UUID, conversationID uuid.UUID, outgoing Outgoing) (int64, error) {
+	message, archive, channelID := outgoing.Message, outgoing.Archive, outgoing.channelID
 	allowed, err := service.dependencies.Members.MaySend(ctx, conversationID, me)
 	if err != nil {
 		return 0, err
@@ -85,10 +96,13 @@ func (service *Service) SendMessage(ctx context.Context, me uuid.UUID, conversat
 	if err != nil {
 		return 0, err
 	}
+	if (group.kind == conversations.KindAudience) != (channelID != nil) {
+		return 0, ErrNotAllowed
+	}
 	if _, err := header(message, group, mlsheader.ContentTypeApplication); err != nil {
 		return 0, err
 	}
-	params := store.SendParams{ConversationID: conversationID, Epoch: group.Epoch, Message: message, SenderID: me, Now: service.dependencies.Clock.Now()}
+	params := store.SendParams{ConversationID: conversationID, Epoch: group.Epoch, Message: message, SenderID: me, Now: service.dependencies.Clock.Now(), ChannelID: channelID}
 	if archive != nil {
 		if len(archive.Sealed) == 0 || len(archive.Sealed) > MaximumMessageSize {
 			return 0, ErrInvalidMessage

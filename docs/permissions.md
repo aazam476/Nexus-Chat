@@ -139,6 +139,14 @@ Managing follows three more rules, all enforced by the server:
 - Rearranging channels lists every channel, so it needs `VIEW_CHANNEL` on
   every one of them as well as `MANAGE_CHANNELS`.
 
+`VIEW_CHANNEL` also decides who is in a text channel's MLS group
+([e2ee-design.md](e2ee-design.md) §3.1), so the server works the groups out
+again after every change. `READ_HISTORY_BEFORE_JOIN` is enforced mainly by
+members' apps, which share history keys with a newcomer only when the
+channel grants it. The server adds a coarser limit: without the permission,
+a channel's archive is only served from the time the member joined the
+server.
+
 ## Tests
 
 `resolve_test.go` checks every combination of the layers that can decide a

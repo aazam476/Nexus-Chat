@@ -26,6 +26,7 @@ type ArchivedMessage struct {
 	SenderID       *uuid.UUID
 	Sealed         []byte
 	CreatedAt      time.Time
+	ChannelID      *uuid.UUID
 }
 
 type Attachment struct {
@@ -57,6 +58,7 @@ type Conversation struct {
 	CreatedAt  time.Time
 	IconID     *uuid.UUID
 	IconFormat *string
+	ServerID   *uuid.UUID
 }
 
 type ConversationMember struct {
@@ -145,6 +147,7 @@ type MlsMessage struct {
 	SenderID       *uuid.UUID
 	Data           []byte
 	CreatedAt      time.Time
+	ChannelID      *uuid.UUID
 }
 
 type OidcFlow struct {
@@ -205,8 +208,8 @@ type ServerChannel struct {
 	Topic      string
 	ParentID   *uuid.UUID
 	Position   int32
-	MlsGroupID []byte
 	CreatedAt  time.Time
+	AudienceID *uuid.UUID
 }
 
 type ServerChannelOverride struct {

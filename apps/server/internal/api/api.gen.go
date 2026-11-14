@@ -495,6 +495,18 @@ type ChallengeRequest struct {
 	ChallengeToken string `json:"challengeToken"`
 }
 
+// ChannelArchivedMessage defines model for ChannelArchivedMessage.
+type ChannelArchivedMessage struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Epoch     int64              `json:"epoch"`
+	MessageId openapi_types.UUID `json:"messageId"`
+
+	// MlsGroupId The audience group the message was sent in.
+	MlsGroupId []byte              `json:"mlsGroupId"`
+	Sealed     []byte              `json:"sealed"`
+	SenderId   *openapi_types.UUID `json:"senderId,omitempty"`
+}
+
 // ChannelOverride defines model for ChannelOverride.
 type ChannelOverride struct {
 	Allow      []PermissionName   `json:"allow"`
@@ -889,7 +901,9 @@ type MlsGroupState struct {
 
 // MlsMessage defines model for MlsMessage.
 type MlsMessage struct {
-	CreatedAt time.Time `json:"createdAt"`
+	// ChannelId In a server audience's group, the channel an application message is for.
+	ChannelId *openapi_types.UUID `json:"channelId,omitempty"`
+	CreatedAt time.Time           `json:"createdAt"`
 
 	// Data An MLSMessage, or for a directive the JSON
 	// `{"directive": base64, "signature": base64}`, signed with the
@@ -1112,10 +1126,14 @@ type Server struct {
 
 // ServerChannel defines model for ServerChannel.
 type ServerChannel struct {
-	Id   openapi_types.UUID `json:"id"`
-	Kind ServerChannelKind  `json:"kind"`
+	// AudienceId Text channels only; the conversation of its audience group, whose
+	// `/mls` endpoints carry its commits and live messages. It changes
+	// when the channel's audience does.
+	AudienceId *openapi_types.UUID `json:"audienceId,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	Kind       ServerChannelKind   `json:"kind"`
 
-	// MlsGroupId Text channels only; the MLS group that encrypts it.
+	// MlsGroupId Text channels only; the MLS group of its audience, which encrypts it.
 	MlsGroupId *[]byte           `json:"mlsGroupId,omitempty"`
 	Name       string            `json:"name"`
 	Overrides  []ChannelOverride `json:"overrides"`
@@ -1536,6 +1554,13 @@ type GetLinkPreviewImageParams struct {
 // OrderServerChannelsJSONBody defines parameters for OrderServerChannels.
 type OrderServerChannelsJSONBody = []ChannelPlacement
 
+// ListChannelArchiveParams defines parameters for ListChannelArchive.
+type ListChannelArchiveParams struct {
+	// Before Only copies made before this time; now if missing.
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+	Limit  *int       `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // SetAvatarParams defines parameters for SetAvatar.
 type SetAvatarParams struct {
 	CropX    *int `form:"cropX,omitempty" json:"cropX,omitempty"`
@@ -1671,6 +1696,9 @@ type CreateServerChannelJSONRequestBody = NewServerChannel
 
 // UpdateServerChannelJSONRequestBody defines body for UpdateServerChannel for application/json ContentType.
 type UpdateServerChannelJSONRequestBody = ChannelText
+
+// SendChannelMessageJSONRequestBody defines body for SendChannelMessage for application/json ContentType.
+type SendChannelMessageJSONRequestBody = MlsSend
 
 // SetChannelOverrideJSONRequestBody defines body for SetChannelOverride for application/json ContentType.
 type SetChannelOverrideJSONRequestBody = OverrideSpec
@@ -2004,6 +2032,12 @@ type ServerInterface interface {
 	// UpdateServerChannel Rename a channel or set its topic (MANAGE_CHANNELS)
 	// (PATCH /api/v1/servers/{serverId}/channels/{channelId})
 	UpdateServerChannel(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
+	// ListChannelArchive A text channel's archive copies, newest first
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/archive)
+	ListChannelArchive(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, params ListChannelArchiveParams)
+	// SendChannelMessage Send a message in a server text channel
+	// (POST /api/v1/servers/{serverId}/channels/{channelId}/messages)
+	SendChannelMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
 	// ClearChannelOverride Remove a channel override (MANAGE_CHANNELS)
 	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	ClearChannelOverride(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, targetKind OverrideTargetKind, targetId openapi_types.UUID)
@@ -4242,6 +4276,105 @@ func (siw *ServerInterfaceWrapper) UpdateServerChannel(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListChannelArchive operation middleware
+func (siw *ServerInterfaceWrapper) ListChannelArchive(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListChannelArchiveParams
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListChannelArchive(w, r, serverId, channelId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendChannelMessage operation middleware
+func (siw *ServerInterfaceWrapper) SendChannelMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendChannelMessage(w, r, serverId, channelId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClearChannelOverride operation middleware
 func (siw *ServerInterfaceWrapper) ClearChannelOverride(w http.ResponseWriter, r *http.Request) {
 
@@ -5163,6 +5296,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/link-previews/image", wrapper.GetLinkPreviewImage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/read-state", wrapper.ListReadStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive", wrapper.ListArchivedMessages)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/messages", wrapper.SendChannelMessage)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/archive", wrapper.ListChannelArchive)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/setup", wrapper.GetSetupStatus)
@@ -11968,6 +12103,180 @@ func (response UpdateServerChannel422JSONResponse) VisitUpdateServerChannelRespo
 	return err
 }
 
+type ListChannelArchiveRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	Params    ListChannelArchiveParams
+}
+
+type ListChannelArchiveResponseObject interface {
+	VisitListChannelArchiveResponse(w http.ResponseWriter) error
+}
+
+type ListChannelArchive200JSONResponse []ChannelArchivedMessage
+
+func (response ListChannelArchive200JSONResponse) VisitListChannelArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelArchive400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListChannelArchive400JSONResponse) VisitListChannelArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelArchive401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListChannelArchive401JSONResponse) VisitListChannelArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelArchive404JSONResponse Error
+
+func (response ListChannelArchive404JSONResponse) VisitListChannelArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessageRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	Body      *SendChannelMessageJSONRequestBody
+}
+
+type SendChannelMessageResponseObject interface {
+	VisitSendChannelMessageResponse(w http.ResponseWriter) error
+}
+
+type SendChannelMessage201JSONResponse MlsMessageId
+
+func (response SendChannelMessage201JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SendChannelMessage400JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SendChannelMessage401JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessage403JSONResponse Error
+
+func (response SendChannelMessage403JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessage404JSONResponse Error
+
+func (response SendChannelMessage404JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessage409JSONResponse Error
+
+func (response SendChannelMessage409JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendChannelMessage422JSONResponse Error
+
+func (response SendChannelMessage422JSONResponse) VisitSendChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ClearChannelOverrideRequestObject struct {
 	ServerId   openapi_types.UUID `json:"serverId"`
 	ChannelId  openapi_types.UUID `json:"channelId"`
@@ -14026,6 +14335,12 @@ type StrictServerInterface interface {
 	// UpdateServerChannel Rename a channel or set its topic (MANAGE_CHANNELS)
 	// (PATCH /api/v1/servers/{serverId}/channels/{channelId})
 	UpdateServerChannel(ctx context.Context, request UpdateServerChannelRequestObject) (UpdateServerChannelResponseObject, error)
+	// ListChannelArchive A text channel's archive copies, newest first
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/archive)
+	ListChannelArchive(ctx context.Context, request ListChannelArchiveRequestObject) (ListChannelArchiveResponseObject, error)
+	// SendChannelMessage Send a message in a server text channel
+	// (POST /api/v1/servers/{serverId}/channels/{channelId}/messages)
+	SendChannelMessage(ctx context.Context, request SendChannelMessageRequestObject) (SendChannelMessageResponseObject, error)
 	// ClearChannelOverride Remove a channel override (MANAGE_CHANNELS)
 	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	ClearChannelOverride(ctx context.Context, request ClearChannelOverrideRequestObject) (ClearChannelOverrideResponseObject, error)
@@ -16990,6 +17305,68 @@ func (sh *strictHandler) UpdateServerChannel(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateServerChannelResponseObject); ok {
 		if err := validResponse.VisitUpdateServerChannelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListChannelArchive operation middleware
+func (sh *strictHandler) ListChannelArchive(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, params ListChannelArchiveParams) {
+	var request ListChannelArchiveRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListChannelArchive(ctx, request.(ListChannelArchiveRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListChannelArchive")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListChannelArchiveResponseObject); ok {
+		if err := validResponse.VisitListChannelArchiveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SendChannelMessage operation middleware
+func (sh *strictHandler) SendChannelMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID) {
+	var request SendChannelMessageRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+
+	var body SendChannelMessageJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendChannelMessage(ctx, request.(SendChannelMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendChannelMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendChannelMessageResponseObject); ok {
+		if err := validResponse.VisitSendChannelMessageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

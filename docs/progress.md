@@ -457,7 +457,16 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   their own, and rearranging channels needs seeing every channel. Members
   hear about changes through the `server_update` gateway event. The
   "friends and server members" privacy choices now count shared servers.
-  Text channels get an MLS group ID; their encrypted audiences come next.
+- Channel audiences on the server: each text channel is encrypted in the
+  MLS group of everyone who can see it, and channels with the same audience
+  share one group. The server works the groups out again after every
+  change (joins, leaves, roles, overrides, new channels) in one locked
+  transaction, adds people to the groups they may now join, and publishes
+  removal directives for those who lost a channel. Channel messages go
+  through their own endpoint, which checks `SEND_MESSAGES` there and tags
+  each copy with its channel; a channel's archive spans every group it has
+  been in. Unread counts and typing in channels come with the channel
+  screens.
 
 ## Known issues
 

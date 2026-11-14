@@ -31,7 +31,7 @@ func channelResponse(channel Channel) api.ServerChannel {
 	}
 	out := api.ServerChannel{
 		Id: channel.ID, Kind: api.ServerChannelKind(channel.Kind), Name: channel.Name, Topic: channel.Topic,
-		ParentId: channel.ParentID, Position: channel.Position, Overrides: overrides,
+		ParentId: channel.ParentID, Position: channel.Position, Overrides: overrides, AudienceId: channel.AudienceID,
 		Permissions: permissionNames(channel.Permissions),
 	}
 	if channel.MLSGroupID != nil {

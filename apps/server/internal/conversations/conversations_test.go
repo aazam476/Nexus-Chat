@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,6 +50,7 @@ type fixture struct {
 	social   *social.Service
 	events   *recorder
 	accounts *accountsstore.Queries
+	pool     *pgxpool.Pool
 }
 
 func newFixture(t *testing.T) fixture {
@@ -63,7 +65,7 @@ func newFixture(t *testing.T) fixture {
 		Store: store.NewWriter(pool), Policy: socialService, Notifier: events, Members: events, Clock: clock.Fixed{Time: now},
 		Icons: Icons{Files: filestore.NewLocal(t.TempDir()), Limiter: allowAll{}, Logger: slog.New(slog.DiscardHandler)},
 	})
-	return fixture{service: service, social: socialService, events: events, accounts: accountsstore.New(pool)}
+	return fixture{service: service, social: socialService, events: events, accounts: accountsstore.New(pool), pool: pool}
 }
 
 type discard struct{}
@@ -213,4 +215,38 @@ func TestTheInstanceSetsTheGroupLimit(t *testing.T) {
 	group, err := small.CreateGroup(t.Context(), ada, nil, []uuid.UUID{grace, alan})
 	require.NoError(t, err)
 	require.ErrorIs(t, small.AddMember(t.Context(), ada, group.ID, linus), ErrGroupSize)
+}
+
+// A server audience is a group the delivery service carries, but never a
+// conversation its members see.
+func TestAudiencesAreNotConversations(t *testing.T) {
+	f := newFixture(t)
+	ada := f.user(t, "ada")
+	serverID, audienceID := uuid.New(), uuid.New()
+	for _, statement := range []struct {
+		sql  string
+		args []any
+	}{
+		{"INSERT INTO servers (id, name, owner_id, created_at) VALUES ($1, 'Club', $2, $3)", []any{serverID, ada, now}},
+		{"INSERT INTO conversations (id, kind, mls_group_id, server_id, created_at) VALUES ($1, 'audience', $2, $3, $4)", []any{audienceID, []byte("audience-group-1"), serverID, now}},
+		{"INSERT INTO conversation_members (conversation_id, user_id, joined_at) VALUES ($1, $2, $3)", []any{audienceID, ada, now}},
+	} {
+		_, err := f.pool.Exec(t.Context(), statement.sql, statement.args...)
+		require.NoError(t, err)
+	}
+
+	_, err := f.service.Get(t.Context(), ada, audienceID)
+	require.ErrorIs(t, err, ErrNotFound)
+	list, err := f.service.List(t.Context(), ada)
+	require.NoError(t, err)
+	assert.Empty(t, list)
+	_, err = f.service.TypingRecipients(t.Context(), audienceID, ada)
+	require.ErrorIs(t, err, ErrNotFound)
+
+	group, err := f.service.Lookup(t.Context(), audienceID)
+	require.NoError(t, err)
+	assert.Equal(t, KindAudience, group.Kind)
+	allowed, err := f.service.MaySend(t.Context(), audienceID, ada)
+	require.NoError(t, err)
+	assert.True(t, allowed, "members commit to the audience's group")
 }

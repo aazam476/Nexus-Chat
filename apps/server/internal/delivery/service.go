@@ -33,6 +33,9 @@ type GroupState struct {
 	GroupID   []byte
 	Epoch     int64
 	GroupInfo []byte
+	// kind is the conversation's kind; a server audience's application
+	// messages always name a channel.
+	kind string
 }
 
 // Message is a live copy as devices fetch it.
@@ -43,6 +46,9 @@ type Message struct {
 	SenderID  *uuid.UUID
 	Data      []byte
 	CreatedAt time.Time
+	// ChannelID is the server channel of an application message sent in an
+	// audience's group.
+	ChannelID *uuid.UUID
 }
 
 // Membership is what the delivery service asks the conversations feature.
@@ -60,6 +66,7 @@ type deliveryStore interface {
 	InsertMessage(ctx context.Context, params store.InsertMessageParams) (int64, error)
 	MessagesAfter(ctx context.Context, params store.MessagesAfterParams) ([]store.MessagesAfterRow, error)
 	ArchiveBefore(ctx context.Context, params store.ArchiveBeforeParams) ([]store.ArchiveBeforeRow, error)
+	ChannelArchiveBefore(ctx context.Context, params store.ChannelArchiveBeforeParams) ([]store.ChannelArchiveBeforeRow, error)
 	readStore
 }
 
@@ -73,9 +80,11 @@ type Notifier interface {
 // Dependencies are what the service needs. DirectiveKey signs membership
 // directives; it is the instance's federation key, which is public.
 type Dependencies struct {
-	Store        deliveryStore
-	Members      Membership
-	Notifier     Notifier
+	Store    deliveryStore
+	Members  Membership
+	Notifier Notifier
+	// Channels answers what a user may do with a server channel's messages.
+	Channels     ChannelAccess
 	DirectiveKey ed25519.PrivateKey
 	Clock        clock.Clock
 }
@@ -111,7 +120,7 @@ func (service *Service) state(ctx context.Context, conversationID uuid.UUID) (Gr
 	if err != nil {
 		return GroupState{}, err
 	}
-	return GroupState{GroupID: conversation.MLSGroupID, Epoch: row.Epoch, GroupInfo: row.GroupInfo}, nil
+	return GroupState{GroupID: conversation.MLSGroupID, Epoch: row.Epoch, GroupInfo: row.GroupInfo, kind: conversation.Kind}, nil
 }
 
 // State returns the group's epoch and latest GroupInfo.

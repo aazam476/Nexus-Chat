@@ -75,12 +75,15 @@ type Override struct {
 
 // Channel is a category, text or voice channel, with what the caller may do in it.
 type Channel struct {
-	ID          uuid.UUID
-	Kind        string
-	Name        string
-	Topic       string
-	ParentID    *uuid.UUID
-	Position    int32
+	ID       uuid.UUID
+	Kind     string
+	Name     string
+	Topic    string
+	ParentID *uuid.UUID
+	Position int32
+	// AudienceID and MLSGroupID are a text channel's audience and the MLS
+	// group that encrypts it; nil for categories and voice channels.
+	AudienceID  *uuid.UUID
 	MLSGroupID  []byte
 	Overrides   []Override
 	Permissions permissions.Permission
@@ -105,23 +108,30 @@ type Notifier interface {
 type Dependencies struct {
 	Store    *store.Writer
 	Notifier Notifier
-	Clock    clock.Clock
+	// Audiences hears when someone must leave an audience's MLS group.
+	Audiences AudienceListener
+	Clock     clock.Clock
 }
 
 // Service manages servers.
 type Service struct {
-	store    *store.Writer
-	notifier Notifier
-	clock    clock.Clock
+	store     *store.Writer
+	notifier  Notifier
+	audiences AudienceListener
+	clock     clock.Clock
 }
 
 // NewService returns a Service.
 func NewService(dependencies Dependencies) *Service {
-	return &Service{store: dependencies.Store, notifier: dependencies.Notifier, clock: dependencies.Clock}
+	return &Service{store: dependencies.Store, notifier: dependencies.Notifier, audiences: dependencies.Audiences, clock: dependencies.Clock}
 }
 
-// notify tells every member of the server that it changed.
+// notify brings the server's audiences up to date after a change, then
+// tells every member that the server changed.
 func (service *Service) notify(ctx context.Context, serverID uuid.UUID) error {
+	if err := service.reconcile(ctx, serverID); err != nil {
+		return err
+	}
 	members, err := service.store.ServerMemberIDs(ctx, serverID)
 	if err != nil {
 		return err

@@ -62,9 +62,6 @@ func (service *Service) CreateChannel(ctx context.Context, scope Scope, spec New
 		ID: uuid.Must(uuid.NewV7()), ServerID: scope.ServerID, Kind: spec.Kind, Name: name, Topic: spec.Topic,
 		ParentID: spec.ParentID, Position: position, CreatedAt: service.clock.Now(),
 	}
-	if spec.Kind == KindText {
-		params.MlsGroupID = newMLSGroupID()
-	}
 	if err := service.store.InsertChannel(ctx, params); err != nil {
 		return uuid.Nil, err
 	}

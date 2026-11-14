@@ -87,6 +87,64 @@ func (q *Queries) ArchiveBefore(ctx context.Context, arg ArchiveBeforeParams) ([
 	return items, nil
 }
 
+const channelArchiveBefore = `-- name: ChannelArchiveBefore :many
+SELECT a.message_id, c.mls_group_id, a.epoch, a.sender_id, a.sealed, a.created_at
+FROM archived_messages a JOIN conversations c ON c.id = a.conversation_id
+WHERE a.channel_id = $1 AND a.created_at < $2 AND a.created_at >= $3
+ORDER BY a.created_at DESC, a.message_id LIMIT $4
+`
+
+type ChannelArchiveBeforeParams struct {
+	ChannelID *uuid.UUID
+	Before    time.Time
+	Since     time.Time
+	RowLimit  int32
+}
+
+type ChannelArchiveBeforeRow struct {
+	MessageID  uuid.UUID
+	MlsGroupID []byte
+	Epoch      int64
+	SenderID   *uuid.UUID
+	Sealed     []byte
+	CreatedAt  time.Time
+}
+
+// A server channel's archive copies from `since` up to `before`, newest
+// first, with the MLS group each was sent in: a channel moves between
+// audience groups as its audience changes.
+func (q *Queries) ChannelArchiveBefore(ctx context.Context, arg ChannelArchiveBeforeParams) ([]ChannelArchiveBeforeRow, error) {
+	rows, err := q.db.Query(ctx, channelArchiveBefore,
+		arg.ChannelID,
+		arg.Before,
+		arg.Since,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChannelArchiveBeforeRow
+	for rows.Next() {
+		var i ChannelArchiveBeforeRow
+		if err := rows.Scan(
+			&i.MessageID,
+			&i.MlsGroupID,
+			&i.Epoch,
+			&i.SenderID,
+			&i.Sealed,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteExpiredMessages = `-- name: DeleteExpiredMessages :execrows
 DELETE FROM mls_messages WHERE created_at < $1
 `
@@ -125,8 +183,8 @@ func (q *Queries) EnsureGroup(ctx context.Context, arg EnsureGroupParams) (MlsGr
 }
 
 const insertArchive = `-- name: InsertArchive :exec
-INSERT INTO archived_messages (conversation_id, message_id, epoch, sender_id, sealed, created_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO archived_messages (conversation_id, message_id, epoch, sender_id, sealed, created_at, channel_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertArchiveParams struct {
@@ -136,6 +194,7 @@ type InsertArchiveParams struct {
 	SenderID       *uuid.UUID
 	Sealed         []byte
 	CreatedAt      time.Time
+	ChannelID      *uuid.UUID
 }
 
 func (q *Queries) InsertArchive(ctx context.Context, arg InsertArchiveParams) error {
@@ -146,13 +205,14 @@ func (q *Queries) InsertArchive(ctx context.Context, arg InsertArchiveParams) er
 		arg.SenderID,
 		arg.Sealed,
 		arg.CreatedAt,
+		arg.ChannelID,
 	)
 	return err
 }
 
 const insertMessage = `-- name: InsertMessage :one
-INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id
 `
 
@@ -163,6 +223,7 @@ type InsertMessageParams struct {
 	SenderID       *uuid.UUID
 	Data           []byte
 	CreatedAt      time.Time
+	ChannelID      *uuid.UUID
 }
 
 func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (int64, error) {
@@ -173,6 +234,7 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (i
 		arg.SenderID,
 		arg.Data,
 		arg.CreatedAt,
+		arg.ChannelID,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -213,7 +275,7 @@ func (q *Queries) MarkRead(ctx context.Context, arg MarkReadParams) (int64, erro
 }
 
 const messagesAfter = `-- name: MessagesAfter :many
-SELECT id, kind, epoch, sender_id, data, created_at FROM mls_messages
+SELECT id, kind, epoch, sender_id, data, created_at, channel_id FROM mls_messages
 WHERE conversation_id = $1 AND id > $2
 ORDER BY id LIMIT $3
 `
@@ -231,6 +293,7 @@ type MessagesAfterRow struct {
 	SenderID  *uuid.UUID
 	Data      []byte
 	CreatedAt time.Time
+	ChannelID *uuid.UUID
 }
 
 func (q *Queries) MessagesAfter(ctx context.Context, arg MessagesAfterParams) ([]MessagesAfterRow, error) {
@@ -249,6 +312,7 @@ func (q *Queries) MessagesAfter(ctx context.Context, arg MessagesAfterParams) ([
 			&i.SenderID,
 			&i.Data,
 			&i.CreatedAt,
+			&i.ChannelID,
 		); err != nil {
 			return nil, err
 		}
@@ -275,6 +339,7 @@ SELECT
         ) AS unread
     )::bigint AS unread_count
 FROM conversation_members AS members
+JOIN conversations AS conversation ON conversation.id = members.conversation_id AND conversation.kind <> 'audience'
 LEFT JOIN conversation_reads AS reads
     ON reads.conversation_id = members.conversation_id AND reads.user_id = members.user_id
 WHERE members.user_id = $1

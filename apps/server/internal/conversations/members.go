@@ -44,6 +44,8 @@ func (service *Service) MemberIDs(ctx context.Context, conversationID uuid.UUID)
 }
 
 // member returns the conversation if the caller is in it, else ErrNotFound.
+// Server audiences are not conversations to their members, so they are
+// never found here.
 func (service *Service) member(ctx context.Context, me uuid.UUID, id uuid.UUID) (store.Conversation, error) {
 	isMember, err := service.IsMember(ctx, id, me)
 	if err != nil {
@@ -53,7 +55,7 @@ func (service *Service) member(ctx context.Context, me uuid.UUID, id uuid.UUID) 
 		return store.Conversation{}, ErrNotFound
 	}
 	row, err := service.dependencies.Store.GetConversation(ctx, id)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && row.Kind == KindAudience) {
 		return store.Conversation{}, ErrNotFound
 	}
 	return row, err

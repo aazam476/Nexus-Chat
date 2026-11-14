@@ -49,6 +49,26 @@ func (fake *recorder) ServerChanged(_ context.Context, userIDs []uuid.UUID, _ uu
 	fake.changed = append(fake.changed, userIDs...)
 }
 
+// removal is someone asked to leave an audience's MLS group.
+type removal struct {
+	audienceID uuid.UUID
+	userID     uuid.UUID
+}
+
+// leaves records the removals the service asks for.
+type leaves struct {
+	mutex    sync.Mutex
+	removals []removal
+	fail     error
+}
+
+func (fake *leaves) MemberLeft(_ context.Context, audienceID uuid.UUID, userID uuid.UUID) error {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
+	fake.removals = append(fake.removals, removal{audienceID: audienceID, userID: userID})
+	return fake.fail
+}
+
 type fixture struct {
 	service  *Service
 	events   *recorder
@@ -56,6 +76,7 @@ type fixture struct {
 	accounts *accountsstore.Queries
 	store    *store.Writer
 	pool     *pgxpool.Pool
+	leaves   *leaves
 }
 
 func newFixture(t *testing.T) fixture {
@@ -64,8 +85,9 @@ func newFixture(t *testing.T) fixture {
 	require.NoError(t, database.Migrate(context.Background(), pool, slog.New(slog.DiscardHandler)))
 	events, now := &recorder{}, &testClock{now: start}
 	writer := store.NewWriter(pool)
-	service := NewService(Dependencies{Store: writer, Notifier: events, Clock: now})
-	return fixture{service: service, events: events, clock: now, accounts: accountsstore.New(pool), store: writer, pool: pool}
+	removals := &leaves{}
+	service := NewService(Dependencies{Store: writer, Notifier: events, Audiences: removals, Clock: now})
+	return fixture{service: service, events: events, clock: now, accounts: accountsstore.New(pool), store: writer, pool: pool, leaves: removals}
 }
 
 func (f fixture) user(t *testing.T, name string) uuid.UUID {

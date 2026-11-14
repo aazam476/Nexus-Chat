@@ -12,6 +12,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const addAudienceMember = `-- name: AddAudienceMember :exec
+INSERT INTO conversation_members (conversation_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+`
+
+type AddAudienceMemberParams struct {
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+	JoinedAt       time.Time
+}
+
+func (q *Queries) AddAudienceMember(ctx context.Context, arg AddAudienceMemberParams) error {
+	_, err := q.db.Exec(ctx, addAudienceMember, arg.ConversationID, arg.UserID, arg.JoinedAt)
+	return err
+}
+
 const addMemberRole = `-- name: AddMemberRole :exec
 INSERT INTO server_member_roles (server_id, user_id, role_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
 `
@@ -118,7 +133,7 @@ func (q *Queries) DeleteServer(ctx context.Context, id uuid.UUID) error {
 }
 
 const getChannel = `-- name: GetChannel :one
-SELECT id, server_id, kind, name, topic, parent_id, position, mls_group_id, created_at FROM server_channels WHERE id = $1
+SELECT id, server_id, kind, name, topic, parent_id, position, created_at, audience_id FROM server_channels WHERE id = $1
 `
 
 func (q *Queries) GetChannel(ctx context.Context, id uuid.UUID) (ServerChannel, error) {
@@ -132,8 +147,8 @@ func (q *Queries) GetChannel(ctx context.Context, id uuid.UUID) (ServerChannel, 
 		&i.Topic,
 		&i.ParentID,
 		&i.Position,
-		&i.MlsGroupID,
 		&i.CreatedAt,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -216,22 +231,42 @@ func (q *Queries) GetServerMember(ctx context.Context, arg GetServerMemberParams
 	return i, err
 }
 
+const insertAudience = `-- name: InsertAudience :exec
+INSERT INTO conversations (id, kind, mls_group_id, server_id, created_at) VALUES ($1, 'audience', $2, $3, $4)
+`
+
+type InsertAudienceParams struct {
+	ID         uuid.UUID
+	MlsGroupID []byte
+	ServerID   *uuid.UUID
+	CreatedAt  time.Time
+}
+
+func (q *Queries) InsertAudience(ctx context.Context, arg InsertAudienceParams) error {
+	_, err := q.db.Exec(ctx, insertAudience,
+		arg.ID,
+		arg.MlsGroupID,
+		arg.ServerID,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertChannel = `-- name: InsertChannel :exec
 
-INSERT INTO server_channels (id, server_id, kind, name, topic, parent_id, position, mls_group_id, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO server_channels (id, server_id, kind, name, topic, parent_id, position, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertChannelParams struct {
-	ID         uuid.UUID
-	ServerID   uuid.UUID
-	Kind       string
-	Name       string
-	Topic      string
-	ParentID   *uuid.UUID
-	Position   int32
-	MlsGroupID []byte
-	CreatedAt  time.Time
+	ID        uuid.UUID
+	ServerID  uuid.UUID
+	Kind      string
+	Name      string
+	Topic     string
+	ParentID  *uuid.UUID
+	Position  int32
+	CreatedAt time.Time
 }
 
 // Channels
@@ -244,7 +279,6 @@ func (q *Queries) InsertChannel(ctx context.Context, arg InsertChannelParams) er
 		arg.Topic,
 		arg.ParentID,
 		arg.Position,
-		arg.MlsGroupID,
 		arg.CreatedAt,
 	)
 	return err
@@ -333,8 +367,68 @@ func (q *Queries) InsertServer(ctx context.Context, arg InsertServerParams) erro
 	return err
 }
 
+const listAudienceMembers = `-- name: ListAudienceMembers :many
+SELECT m.conversation_id, m.user_id FROM conversation_members m
+JOIN conversations c ON c.id = m.conversation_id
+WHERE c.server_id = $1 AND c.kind = 'audience'
+`
+
+type ListAudienceMembersRow struct {
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+}
+
+func (q *Queries) ListAudienceMembers(ctx context.Context, serverID *uuid.UUID) ([]ListAudienceMembersRow, error) {
+	rows, err := q.db.Query(ctx, listAudienceMembers, serverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAudienceMembersRow
+	for rows.Next() {
+		var i ListAudienceMembersRow
+		if err := rows.Scan(&i.ConversationID, &i.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAudiences = `-- name: ListAudiences :many
+SELECT id, mls_group_id FROM conversations WHERE server_id = $1 AND kind = 'audience' ORDER BY id
+`
+
+type ListAudiencesRow struct {
+	ID         uuid.UUID
+	MlsGroupID []byte
+}
+
+func (q *Queries) ListAudiences(ctx context.Context, serverID *uuid.UUID) ([]ListAudiencesRow, error) {
+	rows, err := q.db.Query(ctx, listAudiences, serverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAudiencesRow
+	for rows.Next() {
+		var i ListAudiencesRow
+		if err := rows.Scan(&i.ID, &i.MlsGroupID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listChannels = `-- name: ListChannels :many
-SELECT id, server_id, kind, name, topic, parent_id, position, mls_group_id, created_at FROM server_channels WHERE server_id = $1 ORDER BY position, id
+SELECT id, server_id, kind, name, topic, parent_id, position, created_at, audience_id FROM server_channels WHERE server_id = $1 ORDER BY position, id
 `
 
 func (q *Queries) ListChannels(ctx context.Context, serverID uuid.UUID) ([]ServerChannel, error) {
@@ -354,8 +448,8 @@ func (q *Queries) ListChannels(ctx context.Context, serverID uuid.UUID) ([]Serve
 			&i.Topic,
 			&i.ParentID,
 			&i.Position,
-			&i.MlsGroupID,
 			&i.CreatedAt,
+			&i.AudienceID,
 		); err != nil {
 			return nil, err
 		}
@@ -566,6 +660,21 @@ func (q *Queries) ListServersOf(ctx context.Context, userID uuid.UUID) ([]Server
 	return items, nil
 }
 
+const lockServer = `-- name: LockServer :one
+
+SELECT id FROM servers WHERE id = $1 FOR UPDATE
+`
+
+// Audiences (docs/e2ee-design.md §3.1)
+// Taken before audiences are worked out, so two changes to one server do so
+// one after the other.
+func (q *Queries) LockServer(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockServer, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const memberRoleIDs = `-- name: MemberRoleIDs :many
 SELECT role_id FROM server_member_roles WHERE server_id = $1 AND user_id = $2
 `
@@ -627,6 +736,20 @@ func (q *Queries) NextChannelPosition(ctx context.Context, arg NextChannelPositi
 	return column_1, err
 }
 
+const removeAudienceMember = `-- name: RemoveAudienceMember :exec
+DELETE FROM conversation_members WHERE conversation_id = $1 AND user_id = $2
+`
+
+type RemoveAudienceMemberParams struct {
+	ConversationID uuid.UUID
+	UserID         uuid.UUID
+}
+
+func (q *Queries) RemoveAudienceMember(ctx context.Context, arg RemoveAudienceMemberParams) error {
+	_, err := q.db.Exec(ctx, removeAudienceMember, arg.ConversationID, arg.UserID)
+	return err
+}
+
 const removeMemberRole = `-- name: RemoveMemberRole :exec
 DELETE FROM server_member_roles WHERE server_id = $1 AND user_id = $2 AND role_id = $3
 `
@@ -681,6 +804,20 @@ func (q *Queries) ServerMemberIDs(ctx context.Context, serverID uuid.UUID) ([]uu
 		return nil, err
 	}
 	return items, nil
+}
+
+const setChannelAudience = `-- name: SetChannelAudience :exec
+UPDATE server_channels SET audience_id = $2 WHERE id = $1
+`
+
+type SetChannelAudienceParams struct {
+	ID         uuid.UUID
+	AudienceID *uuid.UUID
+}
+
+func (q *Queries) SetChannelAudience(ctx context.Context, arg SetChannelAudienceParams) error {
+	_, err := q.db.Exec(ctx, setChannelAudience, arg.ID, arg.AudienceID)
+	return err
 }
 
 const setRolePosition = `-- name: SetRolePosition :exec

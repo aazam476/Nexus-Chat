@@ -80,17 +80,17 @@ func (app *application) addEncryptionFeatures(features *httpserver.Features) {
 // realtime hub, so it must exist already.
 func (app *application) addSocialFeatures(features *httpserver.Features, configuration config.Config) {
 	system := clock.System{}
-	serverService := servers.NewService(servers.Dependencies{Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Clock: system})
+	// Conversations and servers tell the delivery service when someone
+	// leaves a group, and the delivery service asks conversations who is in
+	// them; the forwarder lets each be built with the other.
+	leaves := &leaveForwarder{}
+	serverService := servers.NewService(servers.Dependencies{Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Audiences: leaves, Clock: system})
 	features.Servers = servers.NewHandler(serverService)
 	socialService := social.NewService(social.Dependencies{
 		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: serverService,
 		Limiter: ratelimit.New(ratelimit.PerMinute(30, 10), system), Clock: system,
 	})
 	features.Social = social.NewHandler(socialService)
-	// Conversations tell the delivery service when someone leaves, and the
-	// delivery service asks conversations who is in them; the forwarder
-	// lets each be built with the other.
-	leaves := &leaveForwarder{}
 	conversationService := conversations.NewService(conversations.Dependencies{
 		Store: conversationsstore.NewWriter(app.pool), Policy: socialService, Notifier: app.hub, Members: leaves, Clock: system,
 		MaximumGroupMembers: configuration.GroupDMMaxMembers,
@@ -101,7 +101,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 		},
 	})
 	deliveryService := delivery.NewService(delivery.Dependencies{
-		Store: deliverystore.NewWriter(app.pool), Members: conversationService, Notifier: app.hub,
+		Store: deliverystore.NewWriter(app.pool), Members: conversationService, Channels: serverService, Notifier: app.hub,
 		DirectiveKey: app.secrets.FederationKey, Clock: system,
 	})
 	leaves.delivery = deliveryService
@@ -121,12 +121,14 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	features.Delivery = delivery.NewHandler(deliveryService)
 }
 
-// leaveForwarder passes conversations' leave events to the delivery service.
+// leaveForwarder passes conversations' and servers' leave events to the
+// delivery service.
 type leaveForwarder struct {
 	delivery *delivery.Service
 }
 
-// MemberLeft implements conversations.MembershipListener.
+// MemberLeft implements conversations.MembershipListener and
+// servers.AudienceListener.
 func (forwarder *leaveForwarder) MemberLeft(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) error {
 	return forwarder.delivery.MemberLeft(ctx, conversationID, userID)
 }

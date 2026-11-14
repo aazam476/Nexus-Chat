@@ -33,7 +33,7 @@ ORDER BY m.joined_at, u.id;
 -- name: ListConversations :many
 SELECT c.* FROM conversations c
 JOIN conversation_members m ON m.conversation_id = c.id
-WHERE m.user_id = $1
+WHERE m.user_id = $1 AND c.kind <> 'audience'
 ORDER BY c.created_at DESC, c.id;
 
 -- name: RenameConversation :exec

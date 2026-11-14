@@ -92,6 +92,8 @@ type SendParams struct {
 	Archive        []byte
 	SenderID       uuid.UUID
 	Now            time.Time
+	// ChannelID is set for a server channel's message in its audience's group.
+	ChannelID *uuid.UUID
 }
 
 // Send stores both copies of an application message together.
@@ -102,12 +104,14 @@ func (writer *Writer) Send(ctx context.Context, params SendParams) (int64, error
 		var err error
 		id, err = queries.InsertMessage(ctx, InsertMessageParams{
 			ConversationID: params.ConversationID, Kind: "application", Epoch: params.Epoch, SenderID: &params.SenderID, Data: params.Message, CreatedAt: params.Now,
+			ChannelID: params.ChannelID,
 		})
 		if err != nil || params.ArchiveID == nil {
 			return err
 		}
 		err = queries.InsertArchive(ctx, InsertArchiveParams{
 			ConversationID: params.ConversationID, MessageID: *params.ArchiveID, Epoch: params.Epoch, SenderID: &params.SenderID, Sealed: params.Archive, CreatedAt: params.Now,
+			ChannelID: params.ChannelID,
 		})
 		if isDuplicateArchive(err) {
 			return ErrDuplicateMessage

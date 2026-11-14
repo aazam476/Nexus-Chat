@@ -62,8 +62,12 @@ func (service *Service) MaySend(ctx context.Context, id uuid.UUID, userID uuid.U
 // TypingRecipients returns the members other than userID, who hear that
 // userID is typing in the conversation. It returns ErrNotFound when userID
 // may not send there, so typing never reaches a blocked user or reveals a
-// conversation to a non-member.
+// conversation to a non-member, and for server audiences, whose typing is
+// per channel.
 func (service *Service) TypingRecipients(ctx context.Context, id uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
+	if _, err := service.member(ctx, userID, id); err != nil {
+		return nil, err
+	}
 	allowed, err := service.MaySend(ctx, id, userID)
 	if err != nil {
 		return nil, err

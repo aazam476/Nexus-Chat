@@ -83,8 +83,8 @@ SELECT role_id FROM server_member_roles WHERE server_id = $1 AND user_id = $2;
 -- Channels
 
 -- name: InsertChannel :exec
-INSERT INTO server_channels (id, server_id, kind, name, topic, parent_id, position, mls_group_id, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+INSERT INTO server_channels (id, server_id, kind, name, topic, parent_id, position, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: GetChannel :one
 SELECT * FROM server_channels WHERE id = $1;
@@ -138,3 +138,30 @@ DELETE FROM server_invites WHERE code = $1 AND server_id = $2;
 UPDATE server_invites SET uses = uses + 1
 WHERE code = $1 AND (max_uses IS NULL OR uses < max_uses) AND (expires_at IS NULL OR expires_at > sqlc.arg(now)::timestamptz)
 RETURNING server_id;
+
+-- Audiences (docs/e2ee-design.md §3.1)
+
+-- name: LockServer :one
+-- Taken before audiences are worked out, so two changes to one server do so
+-- one after the other.
+SELECT id FROM servers WHERE id = $1 FOR UPDATE;
+
+-- name: ListAudiences :many
+SELECT id, mls_group_id FROM conversations WHERE server_id = $1 AND kind = 'audience' ORDER BY id;
+
+-- name: ListAudienceMembers :many
+SELECT m.conversation_id, m.user_id FROM conversation_members m
+JOIN conversations c ON c.id = m.conversation_id
+WHERE c.server_id = $1 AND c.kind = 'audience';
+
+-- name: InsertAudience :exec
+INSERT INTO conversations (id, kind, mls_group_id, server_id, created_at) VALUES ($1, 'audience', $2, $3, $4);
+
+-- name: AddAudienceMember :exec
+INSERT INTO conversation_members (conversation_id, user_id, joined_at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
+
+-- name: RemoveAudienceMember :exec
+DELETE FROM conversation_members WHERE conversation_id = $1 AND user_id = $2;
+
+-- name: SetChannelAudience :exec
+UPDATE server_channels SET audience_id = $2 WHERE id = $1;

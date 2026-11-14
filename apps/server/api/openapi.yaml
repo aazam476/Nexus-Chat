@@ -3012,6 +3012,128 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/messages:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: sendChannelMessage
+      summary: Send a message in a server text channel
+      description: |
+        The live copy goes to the channel's audience group, for its current
+        epoch, and names the channel (docs/e2ee-design.md §3.1). Members'
+        devices fetch it from that group's conversation, `audienceId`.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MlsSend"
+      responses:
+        "201":
+          description: Stored and delivered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MlsMessageId"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack SEND_MESSAGES in this channel, or are timed out (`cannot_send`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server or text channel, or you cannot see it (`channel_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Not for the group's current epoch (`wrong_epoch`), or the message ID was already used (`duplicate_message`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not an application message for the audience's group, or too large (`invalid_mls_message`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/archive:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listChannelArchive
+      summary: A text channel's archive copies, newest first
+      description: |
+        Across every audience group the channel has been in; each copy names
+        its group, whose exporter derives the history key. Without
+        READ_HISTORY_BEFORE_JOIN in the channel, only copies from after you
+        joined the server.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          description: Only copies made before this time; now if missing.
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: The archive copies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChannelArchivedMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such server or text channel, or you cannot see it (`channel_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/avatars/{avatarId}:
     get:
       operationId: getAvatar
@@ -4368,7 +4490,14 @@ components:
         mlsGroupId:
           type: string
           format: byte
-          description: Text channels only; the MLS group that encrypts it.
+          description: Text channels only; the MLS group of its audience, which encrypts it.
+        audienceId:
+          type: string
+          format: uuid
+          description: |
+            Text channels only; the conversation of its audience group, whose
+            `/mls` endpoints carry its commits and live messages. It changes
+            when the channel's audience does.
         overrides:
           type: array
           items:
@@ -5222,6 +5351,33 @@ components:
             `{"directive": base64, "signature": base64}`, signed with the
             instance key over "nexus-chat membership directive v1\n" and the
             directive bytes.
+        createdAt:
+          type: string
+          format: date-time
+        channelId:
+          type: string
+          format: uuid
+          description: In a server audience's group, the channel an application message is for.
+    ChannelArchivedMessage:
+      type: object
+      required: [messageId, mlsGroupId, epoch, sealed, createdAt]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        mlsGroupId:
+          type: string
+          format: byte
+          description: The audience group the message was sent in.
+        epoch:
+          type: integer
+          format: int64
+        senderId:
+          type: string
+          format: uuid
+        sealed:
+          type: string
+          format: byte
         createdAt:
           type: string
           format: date-time

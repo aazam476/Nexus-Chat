@@ -46,11 +46,7 @@ func (service *Service) Create(ctx context.Context, ownerID uuid.UUID, name stri
 	now := service.clock.Now()
 	id := uuid.Must(uuid.NewV7())
 	channel := func(kind string, name string, parent *uuid.UUID, position int32) store.InsertChannelParams {
-		params := store.InsertChannelParams{ID: uuid.Must(uuid.NewV7()), ServerID: id, Kind: kind, Name: name, ParentID: parent, Position: position, CreatedAt: now}
-		if kind == KindText {
-			params.MlsGroupID = newMLSGroupID()
-		}
-		return params
+		return store.InsertChannelParams{ID: uuid.Must(uuid.NewV7()), ServerID: id, Kind: kind, Name: name, ParentID: parent, Position: position, CreatedAt: now}
 	}
 	textCategory, voiceCategory := channel(KindCategory, "Text channels", nil, 0), channel(KindCategory, "Voice channels", nil, 1)
 	err = service.store.CreateServer(ctx, store.NewServer{
@@ -63,6 +59,9 @@ func (service *Service) Create(ctx context.Context, ownerID uuid.UUID, name stri
 		},
 	})
 	if err != nil {
+		return Details{}, err
+	}
+	if err := service.reconcile(ctx, id); err != nil {
 		return Details{}, err
 	}
 	return service.Details(ctx, Scope{ServerID: id, UserID: ownerID})
@@ -98,6 +97,10 @@ func (service *Service) Details(ctx context.Context, scope Scope) (Details, erro
 	if err != nil {
 		return Details{}, err
 	}
+	groups, err := service.audienceGroups(ctx, scope.ServerID)
+	if err != nil {
+		return Details{}, err
+	}
 	details := Details{Server: serverOf(a.server), Permissions: a.inServer()}
 	for _, role := range a.roles {
 		details.Roles = append(details.Roles, roleOf(role))
@@ -107,7 +110,7 @@ func (service *Service) Details(ctx context.Context, scope Scope) (Details, erro
 	}
 	for _, row := range channels {
 		if mine := a.inChannel(row.ID); mine.Has(permissions.ViewChannel) {
-			details.Channels = append(details.Channels, channelOf(row, a.overrides, mine))
+			details.Channels = append(details.Channels, channelOf(row, a.overrides, mine, groups))
 		}
 	}
 	return details, nil
@@ -120,10 +123,23 @@ func roleOf(row store.ServerRole) Role {
 	}
 }
 
-func channelOf(row store.ServerChannel, overrides []store.ServerChannelOverride, mine permissions.Permission) Channel {
+// audienceGroups maps the server's audiences to their MLS group IDs.
+func (service *Service) audienceGroups(ctx context.Context, serverID uuid.UUID) (map[uuid.UUID][]byte, error) {
+	rows, err := service.store.ListAudiences(ctx, &serverID)
+	groups := map[uuid.UUID][]byte{}
+	for _, row := range rows {
+		groups[row.ID] = row.MlsGroupID
+	}
+	return groups, err
+}
+
+func channelOf(row store.ServerChannel, overrides []store.ServerChannelOverride, mine permissions.Permission, groups map[uuid.UUID][]byte) Channel {
 	channel := Channel{
 		ID: row.ID, Kind: row.Kind, Name: row.Name, Topic: row.Topic, ParentID: row.ParentID,
-		Position: row.Position, MLSGroupID: row.MlsGroupID, Permissions: mine, Overrides: []Override{},
+		Position: row.Position, AudienceID: row.AudienceID, Permissions: mine, Overrides: []Override{},
+	}
+	if row.AudienceID != nil {
+		channel.MLSGroupID = groups[*row.AudienceID]
 	}
 	for _, o := range overrides {
 		if o.ChannelID == row.ID {

@@ -51,7 +51,7 @@ func (q *Queries) FindDirectMessage(ctx context.Context, dmPair *string) (uuid.U
 }
 
 const getConversation = `-- name: GetConversation :one
-SELECT id, kind, name, dm_pair, mls_group_id, created_by, created_at, icon_id, icon_format FROM conversations WHERE id = $1
+SELECT id, kind, name, dm_pair, mls_group_id, created_by, created_at, icon_id, icon_format, server_id FROM conversations WHERE id = $1
 `
 
 func (q *Queries) GetConversation(ctx context.Context, id uuid.UUID) (Conversation, error) {
@@ -67,6 +67,7 @@ func (q *Queries) GetConversation(ctx context.Context, id uuid.UUID) (Conversati
 		&i.CreatedAt,
 		&i.IconID,
 		&i.IconFormat,
+		&i.ServerID,
 	)
 	return i, err
 }
@@ -128,9 +129,9 @@ func (q *Queries) IsMember(ctx context.Context, arg IsMemberParams) (bool, error
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT c.id, c.kind, c.name, c.dm_pair, c.mls_group_id, c.created_by, c.created_at, c.icon_id, c.icon_format FROM conversations c
+SELECT c.id, c.kind, c.name, c.dm_pair, c.mls_group_id, c.created_by, c.created_at, c.icon_id, c.icon_format, c.server_id FROM conversations c
 JOIN conversation_members m ON m.conversation_id = c.id
-WHERE m.user_id = $1
+WHERE m.user_id = $1 AND c.kind <> 'audience'
 ORDER BY c.created_at DESC, c.id
 `
 
@@ -153,6 +154,7 @@ func (q *Queries) ListConversations(ctx context.Context, userID uuid.UUID) ([]Co
 			&i.CreatedAt,
 			&i.IconID,
 			&i.IconFormat,
+			&i.ServerID,
 		); err != nil {
 			return nil, err
 		}

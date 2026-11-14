@@ -98,13 +98,36 @@ flowchart TB
 A large server with 40 channels, 35 of them visible to `@everyone`, gets one
 group for those 35 plus one per distinct restricted audience, instead of 40
 groups. Channel-specific keys are derived inside the group with the MLS
-exporter, using a label that includes the channel ID (§4). When a permission
-change alters a channel's audience, the channel moves to the group matching its
-new audience (creating one if needed). Old history keys stay with the old
-group's members, which matches the permission semantics: losing
-`VIEW_CHANNEL` takes effect for future messages. The server cannot read or
+exporter, using a label that includes the channel ID (§4). After every change
+to a server, the server works its audiences out again:
+
+- Channels whose audience is the same share one group. Each such set of
+  channels keeps the group most of them are already in (the larger audience
+  wins a tie), so a member joining, leaving, or gaining or losing a role only
+  adds or removes them in the groups concerned.
+- When a permission change splits a group's channels, the channel whose
+  audience changed moves to a group with exactly its new audience: an unused
+  one if it exists, or a new one.
+- A group no channel uses any more keeps its members, because they hold its
+  history keys; people who leave the server are removed from it.
+
+Old history keys stay with the old group's members, which matches the
+permission semantics: losing `VIEW_CHANNEL` takes effect for future messages. The server cannot read or
 change messages, so it cannot "remove" history a member already decrypted; the
 UI states this.
+
+The server stores each audience as a conversation of kind `audience` that
+belongs to the server, so its group uses the same delivery service, external
+joins and membership directives as a group DM; those conversations are hidden
+from the DM list. A server channel's application messages are sent with
+`POST /servers/{id}/channels/{channelId}/messages`, which checks
+`SEND_MESSAGES` in that channel, and each live and archive copy names its
+channel in the clear. Members check that name against the channel ID inside
+the encrypted message and drop a message whose two names differ. A channel's
+archive (`GET /servers/{id}/channels/{channelId}/archive`) spans every group
+the channel has been in, and each copy names the group whose exporter derives
+its history key. Without `READ_HISTORY_BEFORE_JOIN`, it starts when the member
+joined the server.
 
 ### 3.2 Who changes membership
 

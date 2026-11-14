@@ -77,9 +77,16 @@ export type ServerChannel = {
     parentId?: string;
     position: number;
     /**
-     * Text channels only; the MLS group that encrypts it.
+     * Text channels only; the MLS group of its audience, which encrypts it.
      */
     mlsGroupId?: string;
+    /**
+     * Text channels only; the conversation of its audience group, whose
+     * `/mls` endpoints carry its commits and live messages. It changes
+     * when the channel's audience does.
+     *
+     */
+    audienceId?: string;
     overrides: Array<ChannelOverride>;
     /**
      * What you may do in this channel.
@@ -670,6 +677,22 @@ export type MlsMessage = {
      *
      */
     data: string;
+    createdAt: string;
+    /**
+     * In a server audience's group, the channel an application message is for.
+     */
+    channelId?: string;
+};
+
+export type ChannelArchivedMessage = {
+    messageId: string;
+    /**
+     * The audience group the message was sent in.
+     */
+    mlsGroupId: string;
+    epoch: number;
+    senderId?: string;
+    sealed: string;
     createdAt: string;
 };
 
@@ -4445,6 +4468,96 @@ export type ListArchivedMessagesResponses = {
 };
 
 export type ListArchivedMessagesResponse = ListArchivedMessagesResponses[keyof ListArchivedMessagesResponses];
+
+export type SendChannelMessageData = {
+    body: MlsSend;
+    path: {
+        serverId: string;
+        channelId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/messages';
+};
+
+export type SendChannelMessageErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack SEND_MESSAGES in this channel, or are timed out (`cannot_send`).
+     */
+    403: Error;
+    /**
+     * No such server or text channel, or you cannot see it (`channel_not_found`).
+     */
+    404: Error;
+    /**
+     * Not for the group's current epoch (`wrong_epoch`), or the message ID was already used (`duplicate_message`).
+     */
+    409: Error;
+    /**
+     * Not an application message for the audience's group, or too large (`invalid_mls_message`).
+     */
+    422: Error;
+};
+
+export type SendChannelMessageError = SendChannelMessageErrors[keyof SendChannelMessageErrors];
+
+export type SendChannelMessageResponses = {
+    /**
+     * Stored and delivered.
+     */
+    201: MlsMessageId;
+};
+
+export type SendChannelMessageResponse = SendChannelMessageResponses[keyof SendChannelMessageResponses];
+
+export type ListChannelArchiveData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+    };
+    query?: {
+        /**
+         * Only copies made before this time; now if missing.
+         */
+        before?: string;
+        limit?: number;
+    };
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/archive';
+};
+
+export type ListChannelArchiveErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such server or text channel, or you cannot see it (`channel_not_found`).
+     */
+    404: Error;
+};
+
+export type ListChannelArchiveError = ListChannelArchiveErrors[keyof ListChannelArchiveErrors];
+
+export type ListChannelArchiveResponses = {
+    /**
+     * The archive copies.
+     */
+    200: Array<ChannelArchivedMessage>;
+};
+
+export type ListChannelArchiveResponse = ListChannelArchiveResponses[keyof ListChannelArchiveResponses];
 
 export type GetAvatarData = {
     body?: never;

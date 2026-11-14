@@ -13,24 +13,33 @@ WHERE conversation_id = sqlc.arg(conversation_id) AND epoch = sqlc.arg(expected_
 RETURNING epoch;
 
 -- name: InsertMessage :one
-INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id))
 RETURNING id;
 
 -- name: MessagesAfter :many
-SELECT id, kind, epoch, sender_id, data, created_at FROM mls_messages
+SELECT id, kind, epoch, sender_id, data, created_at, channel_id FROM mls_messages
 WHERE conversation_id = $1 AND id > sqlc.arg(after_id)
 ORDER BY id LIMIT sqlc.arg(row_limit);
 
 -- name: InsertArchive :exec
-INSERT INTO archived_messages (conversation_id, message_id, epoch, sender_id, sealed, created_at)
-VALUES ($1, $2, $3, $4, $5, $6);
+INSERT INTO archived_messages (conversation_id, message_id, epoch, sender_id, sealed, created_at, channel_id)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id));
 
 -- name: ArchiveBefore :many
 -- Archive copies older than `before`, newest first, for scrolling back.
 SELECT message_id, epoch, sender_id, sealed, created_at FROM archived_messages
 WHERE conversation_id = $1 AND created_at < sqlc.arg(before)
 ORDER BY created_at DESC, message_id LIMIT sqlc.arg(row_limit);
+
+-- name: ChannelArchiveBefore :many
+-- A server channel's archive copies from `since` up to `before`, newest
+-- first, with the MLS group each was sent in: a channel moves between
+-- audience groups as its audience changes.
+SELECT a.message_id, c.mls_group_id, a.epoch, a.sender_id, a.sealed, a.created_at
+FROM archived_messages a JOIN conversations c ON c.id = a.conversation_id
+WHERE a.channel_id = sqlc.arg(channel_id) AND a.created_at < sqlc.arg(before) AND a.created_at >= sqlc.arg(since)
+ORDER BY a.created_at DESC, a.message_id LIMIT sqlc.arg(row_limit);
 
 -- name: DeleteExpiredMessages :execrows
 -- Live copies older than the cut-off; archive copies stay.
@@ -66,6 +75,7 @@ SELECT
         ) AS unread
     )::bigint AS unread_count
 FROM conversation_members AS members
+JOIN conversations AS conversation ON conversation.id = members.conversation_id AND conversation.kind <> 'audience'
 LEFT JOIN conversation_reads AS reads
     ON reads.conversation_id = members.conversation_id AND reads.user_id = members.user_id
 WHERE members.user_id = sqlc.arg(user_id)

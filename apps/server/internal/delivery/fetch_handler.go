@@ -32,7 +32,7 @@ func (handler *Handler) ListMlsMessages(ctx context.Context, request api.ListMls
 	for _, message := range messages {
 		out = append(out, api.MlsMessage{
 			Id: message.ID, Kind: api.MlsMessageKind(message.Kind), Epoch: message.Epoch, SenderId: message.SenderID,
-			Data: message.Data, CreatedAt: message.CreatedAt,
+			Data: message.Data, CreatedAt: message.CreatedAt, ChannelId: message.ChannelID,
 		})
 	}
 	return out, nil
