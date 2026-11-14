@@ -467,6 +467,15 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   each copy with its channel; a channel's archive spans every group it has
   been in. Unread counts and typing in channels come with the channel
   screens.
+- Channels in the messaging engine: a device joins an audience's group,
+  sends in its channels, and syncs it once for all of them. Each message
+  carries its channel inside the encryption, and one whose server tag names
+  another channel is dropped. History keys are kept per channel, by group
+  and epoch, in the device and the key backup. When someone new joins, a
+  member device sends a history bundle for each channel whose permissions
+  let them read earlier messages (worked out on the device with the same
+  rules as the server), unless another member's came first; the newcomer
+  then reads that history from the channel's archive.
 
 ## Known issues
 

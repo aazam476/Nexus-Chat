@@ -273,6 +273,11 @@ export function epoch(group: Group): bigint {
   return group.state.groupContext.epoch;
 }
 
+/** The group's ID. */
+export function groupId(group: Group): Uint8Array {
+  return group.state.groupContext.groupId;
+}
+
 /** The identities of the group's members, by leaf index; removed leaves are absent. */
 export function members(group: Group): Map<number, Uint8Array> {
   const result = new Map<number, Uint8Array>();

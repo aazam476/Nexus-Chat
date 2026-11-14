@@ -6,7 +6,14 @@
  */
 import { messageEpoch, type PublishedIdentity } from "@nexus-chat/crypto";
 
-import type { DeliveredMessage, MessagingApi, Outcome, StoredArchive } from "../messaging/engine/api";
+import type {
+  ChannelAddress,
+  DeliveredMessage,
+  MessagingApi,
+  Outcome,
+  StoredArchive,
+  StoredChannelArchive,
+} from "../messaging/engine/api";
 
 interface Group {
   groupId: Uint8Array;
@@ -32,7 +39,21 @@ export class FakeInstance {
   messages = new Map<string, DeliveredMessage[]>();
   /** Archive copies per conversation, oldest first. */
   archives = new Map<string, StoredArchive[]>();
+  /** Each server channel's audience conversation; `moveChannel` changes it. */
+  channels = new Map<string, string>();
+  /** Archive copies per channel, oldest first. */
+  channelArchives = new Map<string, StoredChannelArchive[]>();
+  /** Channel messages sent without an archive copy: history bundles. */
+  bundles = 0;
   private nextId = 1;
+
+  /** Adds a text channel whose messages go to the audience's group. */
+  addChannel(channelId: string, audienceId: string): void {
+    if (!this.groups.has(audienceId)) {
+      this.addConversation(audienceId);
+    }
+    this.channels.set(channelId, audienceId);
+  }
 
   /** Adds a conversation, as the server does when a DM is opened. */
   addConversation(conversationId: string): void {
@@ -111,6 +132,42 @@ export class FakeInstance {
       createdAt: new Date(id * 1000).toISOString(),
     });
     this.archives.set(conversationId, copies);
+    return { accepted: true, id };
+  }
+
+  private sendToChannel(
+    channel: ChannelAddress,
+    userId: string,
+    sent: { message: Uint8Array; archive?: { messageId: string; sealed: Uint8Array } },
+  ): Outcome {
+    const audienceId = this.channels.get(channel.channelId);
+    const group = audienceId === undefined ? undefined : this.groups.get(audienceId);
+    if (audienceId === undefined || group === undefined) {
+      return { accepted: false, reason: "refused" };
+    }
+    if (epochOf(sent.message) !== group.epoch) {
+      return { accepted: false, reason: "stale" };
+    }
+    const id = this.deliver(audienceId, {
+      kind: "application",
+      epoch: group.epoch,
+      senderId: userId,
+      data: sent.message,
+      channelId: channel.channelId,
+    });
+    if (sent.archive === undefined) {
+      this.bundles += 1;
+    } else {
+      const copies = this.channelArchives.get(channel.channelId) ?? [];
+      copies.push({
+        ...sent.archive,
+        groupId: group.groupId,
+        epoch: group.epoch,
+        senderId: userId,
+        createdAt: new Date(id * 1000).toISOString(),
+      });
+      this.channelArchives.set(channel.channelId, copies);
+    }
     return { accepted: true, id };
   }
 
@@ -215,6 +272,17 @@ export class FakeInstance {
       messages: (conversationId, afterId) =>
         Promise.resolve((this.messages.get(conversationId) ?? []).filter((message) => message.id > afterId)),
       archive: (conversationId, before) => Promise.resolve(this.archiveBefore(conversationId, before)),
+      sendChannelMessage: (channel, message, archive) =>
+        Promise.resolve(
+          this.sendToChannel(channel, userId, { message, ...(archive === undefined ? {} : { archive }) }),
+        ),
+      channelArchive: (channel, before) =>
+        Promise.resolve(
+          (this.channelArchives.get(channel.channelId) ?? [])
+            .filter((copy) => before === undefined || copy.createdAt < before)
+            .reverse()
+            .slice(0, 2),
+        ),
     };
   }
 }

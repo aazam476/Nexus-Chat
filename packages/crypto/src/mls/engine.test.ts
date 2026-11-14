@@ -4,6 +4,7 @@ import {
   createMember,
   encrypt,
   epoch,
+  groupId,
   epochAuthenticator,
   joinFromWelcome,
   members,
@@ -42,6 +43,7 @@ describe("an MLS group", () => {
     const carolDevice = await createMember(text("carol"));
     let alice = await createGroup(text("channel-1"), aliceDevice);
     expect(epoch(alice)).toBe(0n);
+    expect(groupId(alice)).toEqual(text("channel-1"));
 
     const added = await addMembers(alice, [bobDevice.keyPackage, carolDevice.keyPackage]);
     alice = added.group;

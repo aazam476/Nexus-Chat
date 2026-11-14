@@ -38,6 +38,24 @@ export interface DecryptedMessage {
   sentAt: string;
   /** The live copy's ID on the delivery service, which read state counts by; missing in messages saved before it was kept. */
   deliveryId?: number;
+  /** In a server audience's group, the channel the message is in. */
+  channelId?: string;
+}
+
+/**
+ * What syncing a server audience's group does differently from a
+ * conversation (see channels.ts): messages and history keys go to their
+ * channels, and joins and history bundles are watched.
+ */
+export interface AudienceHooks {
+  /** Takes a decrypted application message from `sender`. */
+  received(plaintext: Uint8Array, message: DeliveredMessage, sender: string, out: DecryptedMessage[]): void;
+  /** Hears that a commit moved the group from `before` to `after`. */
+  committed(before: Group, after: Group): void;
+  /** Notes the history keys of the group's current epoch. */
+  noteKeys(group: Group): Promise<void>;
+  /** Keeps what the pass decrypted and learned, and returns the group as it then is. */
+  finish(group: Group | undefined, out: DecryptedMessage[]): Promise<Group | undefined>;
 }
 
 async function tryWelcome(context: EngineContext, welcome: Uint8Array): Promise<Group | undefined> {
@@ -53,15 +71,23 @@ async function tryWelcome(context: EngineContext, welcome: Uint8Array): Promise<
   return undefined;
 }
 
-async function decrypt(group: Group, message: DeliveredMessage, out: DecryptedMessage[]): Promise<Group> {
+async function decrypt(pass: Pass, group: Group, message: DeliveredMessage): Promise<Group> {
+  const { out, audience } = pass;
   const received = await receive(group, message.data).catch(() => undefined);
   if (received?.kind !== "message") {
     return received?.group ?? group;
   }
-  const envelope = decodePayload(received.plaintext);
   const sender =
     received.sender === undefined ? undefined : decodeDeviceCredential(received.sender)?.identity;
-  if (envelope !== undefined && sender !== undefined) {
+  if (audience !== undefined) {
+    if (sender !== undefined) {
+      audience.received(received.plaintext, message, sender, out);
+    }
+    return received.group;
+  }
+  const envelope = decodePayload(received.plaintext);
+  // A conversation's messages never name a channel.
+  if (envelope !== undefined && envelope.channel === undefined && sender !== undefined) {
     out.push({
       id: envelope.id,
       sender,
@@ -88,6 +114,18 @@ async function directiveTarget(context: EngineContext, data: Uint8Array): Promis
 function userIdOf(context: EngineContext, address: string | undefined): string | undefined {
   const user = address === undefined ? undefined : userOf(address);
   return user === undefined ? undefined : context.userOfAddress(user);
+}
+
+/** The users whose devices are in the group, as far as this device knows them. */
+export function memberUsers(context: EngineContext, group: Group): Set<string> {
+  const users = new Set<string>();
+  for (const [, identity] of members(group)) {
+    const user = userIdOf(context, decodeDeviceCredential(identity)?.identity);
+    if (user !== undefined) {
+      users.add(user);
+    }
+  }
+  return users;
 }
 
 /** The leaves of the group that belong to userId's devices. */
@@ -135,6 +173,7 @@ interface Pass {
   context: EngineContext;
   conversationId: string;
   out: DecryptedMessage[];
+  audience?: AudienceHooks;
 }
 
 async function apply(
@@ -142,7 +181,7 @@ async function apply(
   group: Group | undefined,
   message: DeliveredMessage,
 ): Promise<Group | undefined> {
-  const { context, conversationId, out } = pass;
+  const { context, conversationId } = pass;
   if (group === undefined) {
     return message.kind === "welcome" ? tryWelcome(context, message.data) : undefined;
   }
@@ -153,10 +192,13 @@ async function apply(
         return group;
       }
       const received = await receive(group, message.data).catch(() => undefined);
+      if (received !== undefined) {
+        pass.audience?.committed(group, received.group);
+      }
       return received?.group ?? group;
     }
     case "application":
-      return decrypt(group, message, out);
+      return decrypt(pass, group, message);
     case "directive":
       return applyDirective(context, conversationId, group, message.data);
     default:
@@ -164,22 +206,35 @@ async function apply(
   }
 }
 
-/** Applies everything new in the conversation and returns the messages decrypted. */
+/**
+ * Applies everything new in the conversation and returns the messages
+ * decrypted. A server audience's group passes its `audience` hooks.
+ */
 export async function syncConversation(
   context: EngineContext,
   conversationId: string,
+  audience?: AudienceHooks,
 ): Promise<DecryptedMessage[]> {
   const state = await loadState(context, conversationId);
   const out: DecryptedMessage[] = [];
   const keys: Record<string, string> = {};
+  const pass: Pass =
+    audience === undefined ? { context, conversationId, out } : { context, conversationId, out, audience };
   for (const message of await context.api.messages(conversationId, state.cursor)) {
-    state.group = await apply({ context, conversationId, out }, state.group, message);
+    state.group = await apply(pass, state.group, message);
     // Outside the group the cursor stays put: a Welcome that could not be
     // checked yet (its sender not known on this device) is tried again.
     if (state.group !== undefined) {
       state.cursor = message.id;
-      await noteHistoryKey(conversationId, state.group, keys);
+      await (audience === undefined
+        ? noteHistoryKey(conversationId, state.group, keys)
+        : audience.noteKeys(state.group));
     }
+  }
+  if (audience !== undefined) {
+    state.group = await audience.finish(state.group, out);
+    await saveState(context, conversationId, state);
+    return out;
   }
   await storeMessages(context, conversationId, out);
   await saveState(context, conversationId, state);

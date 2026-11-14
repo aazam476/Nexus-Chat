@@ -56,11 +56,19 @@ const version = 1;
 export interface Envelope {
   id: string;
   payload: Payload;
+  /**
+   * In a server channel, the channel. It is inside the encryption, so the
+   * server's tag on the message can be checked against it.
+   */
+  channel?: string;
 }
 
 /** The bytes to encrypt. */
 export function encodePayload(envelope: Envelope): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify({ v: version, id: envelope.id, ...envelope.payload }));
+  const channel = envelope.channel === undefined ? {} : { channel: envelope.channel };
+  return new TextEncoder().encode(
+    JSON.stringify({ v: version, id: envelope.id, ...channel, ...envelope.payload }),
+  );
 }
 
 type Fields = Record<string, unknown>;
@@ -135,7 +143,12 @@ export function decodePayload(bytes: Uint8Array): Envelope | undefined {
     return undefined;
   }
   const payload = payloadOf(parsed);
-  return payload === undefined ? undefined : { id: parsed.id, payload };
+  if (payload === undefined) {
+    return undefined;
+  }
+  return isId(parsed.channel)
+    ? { id: parsed.id, payload, channel: parsed.channel }
+    : { id: parsed.id, payload };
 }
 
 function parse(bytes: Uint8Array): Fields | undefined {

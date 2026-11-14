@@ -12,6 +12,8 @@ import {
   getKeyPackageStock,
   getMlsGroupState,
   listArchivedMessages,
+  listChannelArchive,
+  sendChannelMessage,
   listMlsMessages,
   publishIdentity,
   putBackupBlob,
@@ -185,6 +187,35 @@ function fetchCalls(client: Client): Calls<"messages" | "archive"> {
   };
 }
 
+function channelCalls(client: Client): Calls<"sendChannelMessage" | "channelArchive"> {
+  return {
+    sendChannelMessage: async (channel, message, archive) => {
+      const copy =
+        archive === undefined
+          ? {}
+          : { archive: { messageId: archive.messageId, sealed: toBase64(archive.sealed) } };
+      const result = await sendChannelMessage({
+        client,
+        path: channel,
+        body: { message: toBase64(message), ...copy },
+      });
+      return outcome(result.response?.status ?? 0, result.data?.id);
+    },
+    channelArchive: async (channel, before) => {
+      const result = await listChannelArchive({
+        client,
+        path: channel,
+        query: before === undefined ? {} : { before },
+      });
+      return required(result.data, "hand out the channel's archive").map(({ mlsGroupId, ...copy }) => ({
+        ...copy,
+        groupId: fromBase64(mlsGroupId),
+        sealed: fromBase64(copy.sealed),
+      }));
+    },
+  };
+}
+
 /** The messaging API on top of an instance's HTTP client. */
 export function createMessagingApi(client: Client): MessagingApi {
   return {
@@ -193,5 +224,6 @@ export function createMessagingApi(client: Client): MessagingApi {
     ...keyPackageCalls(client),
     ...groupCalls(client),
     ...fetchCalls(client),
+    ...channelCalls(client),
   };
 }

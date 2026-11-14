@@ -56,6 +56,7 @@ describe("encodings round-trip", () => {
 
   it("history bundles", () => {
     const entry = fc.record({
+      groupId: fc.uint8Array({ minLength: 16, maxLength: 16 }),
       epoch: fc.bigInt({ min: 0n, max: 2n ** 64n - 1n }),
       key: fc.uint8Array({ minLength: 32, maxLength: 32 }),
     });

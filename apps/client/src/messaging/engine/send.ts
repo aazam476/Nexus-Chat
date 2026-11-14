@@ -26,7 +26,7 @@ import { noteHistoryKey, saveHistoryKeys } from "./archive";
 import { utf8 } from "./bytes";
 import { loadState, saveState, type EngineContext } from "./context";
 import { storeMessages } from "./history";
-import { syncConversation } from "./sync";
+import { syncConversation, type AudienceHooks } from "./sync";
 
 /** Thrown when the conversation cannot be joined or sent to now. */
 export class ConversationError extends Error {
@@ -84,18 +84,20 @@ async function backUpCurrentKey(context: EngineContext, conversationId: string, 
 /**
  * Makes this device a member of the conversation's group: catching up on
  * a Welcome, creating the group, or joining it. Tries twice, since another
- * device may change the group at the same moment.
+ * device may change the group at the same moment. A server audience's
+ * group passes its `audience` hooks, which keep its history keys.
  */
 export async function startConversation(
   context: EngineContext,
   conversationId: string,
   memberIds: string[],
+  audience?: AudienceHooks,
 ): Promise<void> {
   for (let attempt = 0; attempt < 2; attempt++) {
     // The group state first: a Welcome for this device that came with it is
     // then always applied by the sync, rather than joining a second time.
     const server = await context.api.groupState(conversationId);
-    await syncConversation(context, conversationId);
+    await syncConversation(context, conversationId, audience);
     const state = await loadState(context, conversationId);
     if (state.group !== undefined) {
       return;
@@ -106,7 +108,12 @@ export async function startConversation(
         : await join(context, conversationId, server.groupInfo);
     if (group !== undefined) {
       await saveState(context, conversationId, { ...state, group });
-      await backUpCurrentKey(context, conversationId, group);
+      if (audience === undefined) {
+        await backUpCurrentKey(context, conversationId, group);
+      } else {
+        await audience.noteKeys(group);
+        await saveState(context, conversationId, { ...state, group: await audience.finish(group, []) });
+      }
       return;
     }
   }

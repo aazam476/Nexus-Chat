@@ -35,7 +35,8 @@ const maximumPages = 50;
 
 const parse = (bytes: Uint8Array): HistoryKeys => JSON.parse(new TextDecoder().decode(bytes)) as HistoryKeys;
 
-async function localKeys(context: EngineContext, conversationId: string): Promise<HistoryKeys> {
+/** The history keys this device keeps for a conversation or channel. */
+export async function keptHistoryKeys(context: EngineContext, conversationId: string): Promise<HistoryKeys> {
   const stored = await context.database.get(local.collection, conversationId);
   return stored === undefined ? {} : parse(stored);
 }
@@ -72,7 +73,7 @@ export async function saveHistoryKeys(
   conversationId: string,
   noted: HistoryKeys,
 ): Promise<void> {
-  const kept = await localKeys(context, conversationId);
+  const kept = await keptHistoryKeys(context, conversationId);
   if (Object.keys(noted).every((at) => kept[at] !== undefined)) {
     return;
   }
@@ -83,8 +84,11 @@ export async function saveHistoryKeys(
   await context.database.put(local.collection, conversationId, encoded);
 }
 
-/** Opens one archive copy, or undefined when it has no key or fails a check. */
-async function openCopy(
+/**
+ * Opens one archive copy, or undefined when it has no key or fails a check.
+ * A server channel's copies are addressed by the channel's ID.
+ */
+export async function openCopy(
   context: EngineContext,
   conversationId: string,
   copy: StoredArchive,
@@ -144,7 +148,7 @@ export async function readMissedHistory(context: EngineContext, conversationId: 
   }
   const keys = {
     ...(await backedUpKeys(context, conversationId)),
-    ...(await localKeys(context, conversationId)),
+    ...(await keptHistoryKeys(context, conversationId)),
   };
   if (Object.keys(keys).length > 0) {
     const held = new Set((await loadMessages(context, conversationId)).map((message) => message.id));

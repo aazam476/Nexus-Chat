@@ -2,14 +2,8 @@ import { createIdentity } from "@nexus-chat/crypto";
 import sodium from "libsodium-wrappers-sumo";
 
 import { toBase64, utf8 } from "../messaging/engine/bytes";
-import type { EngineContext } from "../messaging/engine/context";
 import { heldMembers, refillKeyPackages, setUpDevice } from "../messaging/engine/device";
-import {
-  restoreWithPhrase,
-  RestoreError,
-  setUpIdentity,
-  type StoredIdentity,
-} from "../messaging/engine/identity";
+import { restoreWithPhrase, RestoreError, setUpIdentity } from "../messaging/engine/identity";
 import {
   currentHistoryKey,
   ConversationError,
@@ -19,64 +13,10 @@ import {
 import { syncConversation } from "../messaging/engine/sync";
 import { acceptIdentityChange, credentialCheck, pinnedMasterKey } from "../messaging/engine/trust";
 import { createMemoryDatabase } from "../storage/localDatabase";
+import { device, instanceKeys, users } from "../testing/engineDevices";
 import { FakeInstance } from "../testing/fakeDelivery";
 
 jest.setTimeout(60_000);
-
-const users: Record<string, string> = {
-  "@ada@test": "user-ada",
-  "@grace@test": "user-grace",
-  "@alan@test": "user-alan",
-};
-
-interface TestDevice {
-  context: EngineContext;
-  identity: StoredIdentity;
-  phrase?: string;
-}
-
-async function instanceKeys(): Promise<{ publicKey: Uint8Array; privateKey: Uint8Array }> {
-  await sodium.ready;
-  return sodium.crypto_sign_keypair();
-}
-
-/** Sets up a user's device the way the app does after login. */
-async function device(
-  instance: FakeInstance,
-  who: { name: string; deviceId: string; phrase?: string },
-  key: Uint8Array,
-): Promise<TestDevice> {
-  const { name, deviceId, phrase } = who;
-  const userId = users[`@${name}@test`] ?? "";
-  const api = instance.api(userId, deviceId);
-  const database = createMemoryDatabase();
-  const setUp = await setUpIdentity(api, database, userId);
-  const identity =
-    setUp.status === "ready" ? setUp.identity : await restoreWithPhrase(api, database, userId, phrase ?? "");
-  const own = await setUpDevice(database, identity, { user: `@${name}@test`, deviceId });
-  await refillKeyPackages(api, database, own);
-  const context: EngineContext = {
-    api,
-    database,
-    device: own,
-    check: credentialCheck(
-      api,
-      database,
-      (user) => users[user],
-      () => undefined,
-    ),
-    instanceKey: key,
-    backupKey: identity.backupKey,
-    userOfAddress: (user) => users[user],
-  };
-  return {
-    context,
-    identity,
-    ...(setUp.status === "ready" && setUp.recoveryPhrase !== undefined
-      ? { phrase: setUp.recoveryPhrase }
-      : {}),
-  };
-}
 
 const texts = (messages: Awaited<ReturnType<typeof syncConversation>>): string[] =>
   messages.map((message) => (message.payload.kind === "text" ? message.payload.text : message.payload.kind));

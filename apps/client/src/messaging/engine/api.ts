@@ -14,6 +14,24 @@ export interface DeliveredMessage {
   senderId?: string;
   data: Uint8Array;
   createdAt: string;
+  /** In a server audience's group, the channel an application message is for. */
+  channelId?: string;
+}
+
+/** A server text channel, as channel calls address it. */
+export interface ChannelAddress {
+  serverId: string;
+  channelId: string;
+}
+
+/** A channel's archive copy, with the MLS group it was sent in. */
+export interface StoredChannelArchive {
+  messageId: string;
+  groupId: Uint8Array;
+  epoch: number;
+  senderId?: string;
+  sealed: Uint8Array;
+  createdAt: string;
 }
 
 /** An archive copy as stored. */
@@ -59,4 +77,11 @@ export interface MessagingApi {
   ): Promise<Outcome>;
   messages(conversationId: string, afterId: number): Promise<DeliveredMessage[]>;
   archive(conversationId: string, before?: string): Promise<StoredArchive[]>;
+  /** Sends in a server channel, through its audience's group; history bundles have no archive copy. */
+  sendChannelMessage(
+    channel: ChannelAddress,
+    message: Uint8Array,
+    archive?: { messageId: string; sealed: Uint8Array },
+  ): Promise<Outcome>;
+  channelArchive(channel: ChannelAddress, before?: string): Promise<StoredChannelArchive[]>;
 }

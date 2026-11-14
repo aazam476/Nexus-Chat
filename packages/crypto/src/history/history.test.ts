@@ -128,8 +128,8 @@ describe("member signatures", () => {
 describe("history bundles", () => {
   it("round-trip and refuse anything else", () => {
     const entries = [
-      { epoch: 1n, key: new Uint8Array(32).fill(1) },
-      { epoch: 7n, key: new Uint8Array(32).fill(7) },
+      { groupId: new Uint8Array(16).fill(9), epoch: 1n, key: new Uint8Array(32).fill(1) },
+      { groupId: new Uint8Array(16).fill(8), epoch: 7n, key: new Uint8Array(32).fill(7) },
     ];
     const bytes = encodeHistoryBundle(text("channel-1"), entries);
 
@@ -140,22 +140,31 @@ describe("history bundles", () => {
     });
     expect(decodeHistoryBundle(bytes.slice(0, -1))).toBeUndefined();
     expect(decodeHistoryBundle(text("hello"))).toBeUndefined();
-    expect(() => encodeHistoryBundle(text("c"), [{ epoch: 1n, key: new Uint8Array(16) }])).toThrow(
+    const groupId = new Uint8Array(16);
+    expect(() => encodeHistoryBundle(text("c"), [{ groupId, epoch: 1n, key: new Uint8Array(16) }])).toThrow(
       RangeError,
     );
+    expect(() =>
+      encodeHistoryBundle(text("c"), [{ groupId: new Uint8Array(8), epoch: 1n, key: new Uint8Array(32) }]),
+    ).toThrow(RangeError);
   });
 
   it("refuse another label or a record of the wrong size", async () => {
     const { lengthPrefixed } = await import("../encoding.js");
 
     expect(
-      decodeHistoryBundle(lengthPrefixed(text("other v1"), text("c"), new Uint8Array(40))),
+      decodeHistoryBundle(lengthPrefixed(text("other v1"), text("c"), new Uint8Array(56))),
     ).toBeUndefined();
     expect(
       decodeHistoryBundle(
-        lengthPrefixed(text("nexus-chat history bundle v1"), text("c"), new Uint8Array(39)),
+        lengthPrefixed(text("nexus-chat history bundle v1"), text("c"), new Uint8Array(55)),
       ),
     ).toBeUndefined();
+    // The label is fixed: a bundle built by hand with it is read.
+    expect(
+      decodeHistoryBundle(lengthPrefixed(text("nexus-chat history bundle v1"), text("c"), new Uint8Array(56)))
+        ?.entries,
+    ).toHaveLength(1);
   });
 });
 

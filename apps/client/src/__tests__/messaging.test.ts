@@ -161,6 +161,14 @@ describe("message payloads", () => {
     for (const payload of payloads) {
       expect(decodePayload(encodePayload({ id, payload }))).toEqual({ id, payload });
     }
+    // A server channel's messages carry the channel inside the encryption.
+    const channel = "0195f0e0-0000-7000-8000-00000000c001";
+    const payload: Payload = { kind: "text", text: "hi" };
+    expect(decodePayload(encodePayload({ id, payload, channel }))).toEqual({ id, payload, channel });
+    const raw = new TextEncoder().encode(
+      JSON.stringify({ v: 1, id, kind: "text", text: "hi", channel: "x" }),
+    );
+    expect(decodePayload(raw)).toEqual({ id, payload });
   });
 
   it("drop anything malformed, unknown or too large", () => {

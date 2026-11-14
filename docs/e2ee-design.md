@@ -258,13 +258,19 @@ method:
 Full analysis in [ADR 0003](adr/0003-history-sharing.md). Summary of the
 recommended design:
 
-1. When a device commits a join or sees a new member join a channel whose
-   audience has `READ_HISTORY_BEFORE_JOIN`, the first online member device with
-   history keys for that channel creates a **history bundle**: the list of
-   `(epoch, historyKey)` pairs for the channel.
+1. When a member device sees a new user join an audience's group, it works
+   out, for each of the group's channels, whether the newcomer holds
+   `READ_HISTORY_BEFORE_JOIN` there, with the same rules as the server
+   ([permissions.md](permissions.md)). For each such channel, a device that
+   holds history keys for it creates a **history bundle**: the list of
+   `(group, epoch, historyKey)` triples for the channel. The group is part of
+   each entry because a channel moves between groups and each group counts
+   its own epochs.
 2. The bundle is sent as an MLS application message in the new epoch,
    addressed by channel ID, so only current members (including the new one)
-   can decrypt it.
+   can decrypt it. A device skips the bundle if another member's bundle for
+   that channel already came after the join, so one member's devices usually
+   answer, and the first of them to be online does.
 3. The new member's device fetches archive copies and decrypts them with the
    bundle's keys, lazily, as the user scrolls or search backfills.
 
