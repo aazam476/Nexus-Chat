@@ -21,7 +21,7 @@ RUN pnpm --filter @nexus-chat/api-client build && pnpm --filter @nexus-chat/clie
 
 # The build stage runs on the build machine's own architecture and
 # cross-compiles, which is much faster than emulating arm64.
-FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie@sha256:f18c3d73a184fb0582828510722e723b63a93f7188d11dd223d9be6f6880e65d AS build
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /src
