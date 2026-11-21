@@ -5,7 +5,7 @@
 # The web client (spec §2: the server also serves it). The bundle is plain
 # JavaScript and the same for every architecture, so it is built once on
 # the build machine.
-FROM --platform=$BUILDPLATFORM node:26.13.0-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS web
+FROM --platform=$BUILDPLATFORM node:26.13.1-trixie-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS web
 WORKDIR /src
 RUN npm install --global pnpm@12.18.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
