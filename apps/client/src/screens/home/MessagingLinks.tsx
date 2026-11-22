@@ -38,7 +38,14 @@ function NextStep({ restore }: { restore: boolean }): ReactNode {
   );
 }
 
-/** The way to conversations and friends, once encryption is set up on this device. */
+/** Where messaging leads; the first is the main way in. */
+const destinations = [
+  { label: "home.messages", path: "/conversations", testID: "open-messages" },
+  { label: "home.servers", path: "/servers", testID: "open-servers" },
+  { label: "home.friends", path: "/friends", testID: "open-friends" },
+] as const;
+
+/** The way to conversations, servers and friends, once encryption is set up on this device. */
 export function MessagingLinks(): ReactNode {
   const { t } = useTranslation();
   const messaging = useMessaging();
@@ -56,21 +63,17 @@ export function MessagingLinks(): ReactNode {
   }
   return (
     <Stack gap="sm">
-      <Button
-        label={t("home.messages")}
-        onPress={() => {
-          router.push("/conversations");
-        }}
-        testID="open-messages"
-      />
-      <Button
-        label={t("home.friends")}
-        variant="secondary"
-        onPress={() => {
-          router.push("/friends");
-        }}
-        testID="open-friends"
-      />
+      {destinations.map(({ label, path, testID }, index) => (
+        <Button
+          key={path}
+          label={t(label)}
+          variant={index === 0 ? "primary" : "secondary"}
+          onPress={() => {
+            router.push(path);
+          }}
+          testID={testID}
+        />
+      ))}
     </Stack>
   );
 }

@@ -1,7 +1,8 @@
 /**
  * The release gate's smoke test (spec §7.4) in a real browser: setup
  * wizard → admin → second user, with several people and devices at once.
- * Two people then message each other, end-to-end encrypted; voice join
+ * Two people then message each other, end-to-end encrypted, and a server's
+ * channel carries messages to someone who joins it by invite; voice join
  * comes with milestone M9.
  */
 import { expect, test, type Page } from "@playwright/test";
@@ -17,6 +18,7 @@ import {
   signUpForMessaging,
 } from "../src/messaging.js";
 import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
+import { joinWith, makeInvite, makeServer, openChannel } from "../src/servers.js";
 import { accounts, settings } from "../src/settings.js";
 
 test.describe.configure({ mode: "serial" });
@@ -124,6 +126,38 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
     timeout: 30_000,
   });
   await Promise.all([...contexts, tabletContext].map((context) => context.close()));
+});
+
+test("a server's channel carries messages, with history for those who join later", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
+  const [ruth, sami] = await Promise.all(contexts.map((context) => context.newPage()));
+  if (ruth === undefined || sami === undefined) {
+    throw new Error("could not open the devices");
+  }
+  await signUpForMessaging(ruth, accounts.ruth);
+  await signUpForMessaging(sami, accounts.sami);
+  await makeServer(ruth, "Release club");
+  await openChannel(ruth, "general");
+  await sendMessage(ruth, "Before you came");
+  await shown(ruth, "channel-back").click();
+  const invite = await makeInvite(ruth);
+
+  // Sami joins later; Ruth's device sends him the channel's history.
+  await joinWith(sami, invite, "Release club");
+  await openChannel(sami, "general");
+  await expect(sami.getByText("Before you came", { exact: true }).filter({ visible: true })).toBeVisible({
+    timeout: 60_000,
+  });
+  await sendMessage(sami, "Hello from the guest");
+  await openChannel(ruth, "general");
+  await expect(ruth.getByText("Hello from the guest", { exact: true }).filter({ visible: true })).toBeVisible(
+    {
+      timeout: 30_000,
+    },
+  );
+  await expectAccessible(sami);
+  await Promise.all(contexts.map((context) => context.close()));
 });
 
 test("status changes reach the user's other devices at once", async ({ browser }) => {

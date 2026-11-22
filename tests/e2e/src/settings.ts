@@ -70,4 +70,17 @@ export const accounts = {
     email: "omar@example.com",
     password: "omar messaging password",
   },
+  // A server's owner and someone who joins it with an invite.
+  ruth: {
+    username: "ruth",
+    displayName: "Ruth Host",
+    email: "ruth@example.com",
+    password: "ruth server password",
+  },
+  sami: {
+    username: "sami",
+    displayName: "Sami Guest",
+    email: "sami@example.com",
+    password: "sami server password",
+  },
 };

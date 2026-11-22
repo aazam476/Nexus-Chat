@@ -1,13 +1,20 @@
 /**
  * A signed-in device's messaging, without React: it sets up the user's
  * identity and this device's keys, then opens, syncs and sends in
- * conversations through the engine. Work on one conversation runs one
- * step at a time, since a sync and a send at once would both move the
- * same MLS group. Listeners hear which conversation changed.
+ * conversations and server channels through the engine. Work on one
+ * conversation (or one server audience's group) runs one step at a time,
+ * since a sync and a send at once would both move the same MLS group.
+ * Listeners hear which conversation or channel changed.
+ *
+ * The messenger remembers which groups are server audiences, on the
+ * device, so that a sync after a restart applies them as channels even
+ * before the server screens load them again.
  */
 import type { LocalDatabase } from "../storage/localDatabase";
 import type { MessagingApi } from "./engine/api";
 import { utf8 } from "./engine/bytes";
+import { syncAudience, type Audience } from "./engine/channels";
+import { joinAudience, readChannelHistory, sendToChannel } from "./engine/channelSend";
 import type { EngineContext } from "./engine/context";
 import { refillKeyPackages, setUpDevice } from "./engine/device";
 import { readMissedHistory } from "./engine/archive";
@@ -41,12 +48,16 @@ export type MessengerStart =
 
 type Listener = (conversationId: string) => void;
 
+/** Where the messenger keeps what it knows about audiences and their history. */
+const stored = { audiences: "audiences", historyRead: "history-read" } as const;
+
 /** Messaging for one signed-in device. */
 export class Messenger {
   private readonly directory = new Map<string, string>();
   private readonly queues = new Map<string, Promise<unknown>>();
   private readonly listeners = new Set<Listener>();
   private readonly changedIdentities = new Set<string>();
+  private readonly audiences = new Map<string, Audience>();
   readonly context: EngineContext;
 
   constructor(
@@ -96,11 +107,81 @@ export class Messenger {
     });
   }
 
-  /** Applies what is new in the conversation. */
-  sync(conversationId: string): Promise<void> {
+  /** Applies what is new in the conversation, or in the server audience's group. */
+  async sync(conversationId: string): Promise<void> {
+    const audience = this.audiences.get(conversationId) ?? (await this.storedAudience(conversationId));
+    if (audience !== undefined) {
+      return this.syncChannels(audience);
+    }
     return this.run(conversationId, async () => {
       await syncConversation(this.context, conversationId);
     });
+  }
+
+  /**
+   * Makes this device a member of a server audience's group and reads the
+   * history of its channels that it has not read yet.
+   */
+  openAudience(audience: Audience, members: Person[]): Promise<void> {
+    this.learn(members);
+    this.audiences.set(audience.audienceId, audience);
+    const remembered = utf8(JSON.stringify({ serverId: audience.serverId, channelIds: audience.channelIds }));
+    return this.run(
+      audience.audienceId,
+      async () => {
+        await this.context.database.put(stored.audiences, audience.audienceId, remembered);
+        await joinAudience(this.context, audience);
+        for (const channelId of audience.channelIds) {
+          await this.readHistoryOnce(audience, channelId);
+        }
+      },
+      audience.channelIds,
+    );
+  }
+
+  /** Sends a payload in a server channel and returns its message ID. */
+  sendInChannel(audience: Audience, channelId: string, payload: Payload): Promise<string> {
+    return this.run(audience.audienceId, () => sendToChannel(this.context, audience, channelId, payload), [
+      channelId,
+    ]);
+  }
+
+  private syncChannels(audience: Audience): Promise<void> {
+    return this.run(
+      audience.audienceId,
+      async () => {
+        const { newHistory } = await syncAudience(this.context, audience);
+        for (const channelId of newHistory) {
+          await readChannelHistory(this.context, audience, channelId);
+        }
+      },
+      audience.channelIds,
+    );
+  }
+
+  /** Reads a channel's archive the first time this device is in it. */
+  private async readHistoryOnce(audience: Audience, channelId: string): Promise<void> {
+    if ((await this.context.database.get(stored.historyRead, channelId)) === undefined) {
+      await readChannelHistory(this.context, audience, channelId);
+      await this.context.database.put(stored.historyRead, channelId, utf8("1"));
+    }
+  }
+
+  /**
+   * An audience this device joined before the app last started. Until the
+   * server screens load it again, nobody new is sent its history: who may
+   * read it is not known yet, and another member's device will.
+   */
+  private async storedAudience(audienceId: string): Promise<Audience | undefined> {
+    const remembered = await this.context.database.get(stored.audiences, audienceId);
+    if (remembered === undefined) {
+      return undefined;
+    }
+    const { serverId, channelIds } = JSON.parse(new TextDecoder().decode(remembered)) as {
+      serverId: string;
+      channelIds: string[];
+    };
+    return { serverId, audienceId, channelIds, mayReadHistory: () => false };
   }
 
   /** Sends a payload and returns its message ID. */
@@ -108,19 +189,28 @@ export class Messenger {
     return this.run(conversationId, () => sendPayload(this.context, conversationId, payload));
   }
 
-  /** Every message this device holds for the conversation. */
+  /** Every message this device holds for the conversation or channel. */
   messages(conversationId: string): Promise<DecryptedMessage[]> {
     return loadMessages(this.context, conversationId);
   }
 
-  /** Runs `task` after the conversation's earlier work, then tells listeners. */
-  private run<T>(conversationId: string, task: () => Promise<T>): Promise<T> {
+  /**
+   * Runs `task` after the group's earlier work, then tells listeners about
+   * the group and the `channels` it may have changed.
+   */
+  private run<T>(
+    conversationId: string,
+    task: () => Promise<T>,
+    channels: readonly string[] = [],
+  ): Promise<T> {
     const previous = this.queues.get(conversationId) ?? Promise.resolve();
     const next = previous.catch(() => undefined).then(task);
     this.queues.set(conversationId, next);
     return next.finally(() => {
       for (const listener of this.listeners) {
-        listener(conversationId);
+        for (const changed of [conversationId, ...channels]) {
+          listener(changed);
+        }
       }
     });
   }

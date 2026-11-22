@@ -6,7 +6,7 @@ import { View } from "react-native";
 import type { Payload } from "../../messaging/payload";
 import type { TimelineItem } from "../../messaging/timeline";
 import type { ConversationAttachments } from "../../messaging/useAttachments";
-import type { OpenConversation } from "../../messaging/useConversation";
+import type { ConversationPeople } from "../../messaging/useConversation";
 import { useTypingReporter, useTypists } from "../../messaging/useTyping";
 import { ComposerBar } from "./ComposerBar";
 import type { Composer } from "./useComposer";
@@ -14,8 +14,10 @@ import type { Composer } from "./useComposer";
 /** Props of {@link ConversationFooter}. */
 export interface ConversationFooterProps {
   conversationId: string;
-  open: OpenConversation;
+  open: ConversationPeople;
   timeline: TimelineItem[] | undefined;
+  /** Whether typing is shared here; not yet in server channels. */
+  typing?: boolean;
   compose: {
     composer: Composer;
     send: (payload: Payload) => Promise<unknown>;
@@ -54,15 +56,16 @@ export function ConversationFooter({
   open,
   timeline,
   compose,
+  typing = true,
 }: ConversationFooterProps): ReactNode {
   const latest = timeline?.at(-1);
   const selfId = open.userIdOf(open.self) ?? "";
   const typists = useTypists(
-    conversationId,
+    typing ? conversationId : "",
     selfId,
     latest === undefined ? undefined : { id: latest.id, senderId: open.userIdOf(latest.sender) },
   );
-  const report = useTypingReporter(conversationId);
+  const report = useTypingReporter(typing ? conversationId : "");
   const { composer, send, attachments } = compose;
   const typingComposer: Composer = {
     ...composer,
@@ -80,7 +83,7 @@ export function ConversationFooter({
         nameOf={open.nameOf}
         send={send}
         attachments={attachments}
-        mention={{ people: open.conversation?.members ?? [], selfId }}
+        mention={{ people: open.members, selfId }}
       />
     </View>
   );

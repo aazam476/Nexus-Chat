@@ -476,6 +476,18 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   let them read earlier messages (worked out on the device with the same
   rules as the server), unless another member's came first; the newcomer
   then reads that history from the channel's archive.
+- Server screens: the server list (from Home), creating a server, joining
+  with an invite code or link (`/invite/<code>` links open the app on the
+  invite), a server's channels under their categories, a text channel with
+  the same messages, replies, reactions and attachments as a DM, inviting
+  people with links that expire and run out, and leaving. The app keeps the
+  groups of every server's channels open, remembers which groups are
+  channels across restarts, and reloads a server when the gateway says it
+  changed. The release gate's browser test makes a server, posts in it,
+  and has someone join by invite and read that earlier message from the
+  history bundle. Voice channels are listed but open with calls (M9).
+  Server settings, channel and role management, permission overrides and
+  member roles in the app are next; until then they are only in the API.
 
 ## Known issues
 

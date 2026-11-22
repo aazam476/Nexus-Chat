@@ -15,6 +15,8 @@ export interface TextProps {
   nativeID?: string;
   /** Announce changes to screen readers, for errors that appear later. */
   live?: boolean;
+  /** Lets the user select and copy the text, such as a link to share. */
+  selectable?: boolean;
   /** Passed through for tests. */
   testID?: NativeTextProps["testID"];
 }
@@ -29,6 +31,7 @@ export function Text({
   tone = "default",
   nativeID,
   live = false,
+  selectable = false,
   testID,
 }: TextProps): ReactNode {
   const { colors } = useTheme();
@@ -38,6 +41,7 @@ export function Text({
       nativeID={nativeID}
       testID={testID}
       accessibilityLiveRegion={live ? "polite" : "none"}
+      selectable={selectable}
       style={[type[variant], { color }]}
     >
       {children}

@@ -2,7 +2,7 @@
  * One conversation for its screen: its details from the server, opened on
  * this device, and how to name its members.
  */
-import { getConversation, type Conversation } from "@nexus-chat/api-client";
+import { getConversation, type Conversation, type UserSummary } from "@nexus-chat/api-client";
 import { useEffect, useMemo, useState } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
@@ -11,9 +11,10 @@ import { useGatewayEvents } from "../realtime/GatewayContext";
 import { isolate } from "../i18n/bidi";
 import { messengerOf, useMessaging } from "./MessagingContext";
 
-/** The conversation and the display name of each member's `@name@instance`. */
-export interface OpenConversation {
-  conversation: Conversation | undefined;
+/** The people of a conversation or server channel, and how to name them. */
+export interface ConversationPeople {
+  /** Everyone who can be mentioned there. */
+  members: UserSummary[];
   /** The signed-in user's `@name@instance`. */
   self: string;
   nameOf: (user: string) => string;
@@ -22,6 +23,33 @@ export interface OpenConversation {
   /** A member's display name, isolated for right-to-left text, by user ID. */
   nameOfId: (userId: string) => string | undefined;
 }
+
+/** The conversation and the display name of each member's `@name@instance`. */
+export interface OpenConversation extends ConversationPeople {
+  conversation: Conversation | undefined;
+}
+
+/** Names the members, by the address their devices use and by user ID. */
+export function usePeople(members: UserSummary[]): ConversationPeople {
+  const { user, instance, address } = useConnection();
+  const domain = instance?.info.domain ?? hostOf(address ?? "http://localhost");
+  const names = useMemo(
+    () => new Map(members.map((member) => [`@${member.username}@${domain}`, member.displayName])),
+    [members, domain],
+  );
+  return {
+    members,
+    self: `@${user?.username ?? ""}@${domain}`,
+    nameOf: (sender) => isolate(names.get(sender) ?? sender),
+    userIdOf: (sender) => members.find((member) => `@${member.username}@${domain}` === sender)?.id,
+    nameOfId: (userId) => {
+      const member = members.find((candidate) => candidate.id === userId);
+      return member === undefined ? undefined : isolate(member.displayName);
+    },
+  };
+}
+
+const noMembers: UserSummary[] = [];
 
 /** Counts conversation_update events for the conversation, to reload it. */
 function useChangeCount(conversationId: string): number {
@@ -37,7 +65,7 @@ function useChangeCount(conversationId: string): number {
 
 /** Loads the conversation and makes sure this device is in it. */
 export function useConversation(conversationId: string): OpenConversation {
-  const { client, user, instance, address } = useConnection();
+  const { client } = useConnection();
   const messenger = messengerOf(useMessaging());
   const [conversation, setConversation] = useState<Conversation>();
   const version = useChangeCount(conversationId);
@@ -56,23 +84,5 @@ export function useConversation(conversationId: string): OpenConversation {
       current = false;
     };
   }, [client, messenger, conversationId, version]);
-  const domain = instance?.info.domain ?? hostOf(address ?? "http://localhost");
-  const names = useMemo(
-    () =>
-      new Map(
-        (conversation?.members ?? []).map((member) => [`@${member.username}@${domain}`, member.displayName]),
-      ),
-    [conversation, domain],
-  );
-  const members = conversation?.members ?? [];
-  return {
-    conversation,
-    self: `@${user?.username ?? ""}@${domain}`,
-    nameOf: (sender) => isolate(names.get(sender) ?? sender),
-    userIdOf: (sender) => members.find((member) => `@${member.username}@${domain}` === sender)?.id,
-    nameOfId: (userId) => {
-      const member = members.find((candidate) => candidate.id === userId);
-      return member === undefined ? undefined : isolate(member.displayName);
-    },
-  };
+  return { conversation, ...usePeople(conversation?.members ?? noMembers) };
 }

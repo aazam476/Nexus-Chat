@@ -63,14 +63,17 @@ export function useTypists(
   return typing;
 }
 
-/** Call with each change of the draft; reports typing at most every few seconds. */
+/**
+ * Call with each change of the draft; reports typing at most every few
+ * seconds. An empty `conversationId` reports nothing.
+ */
 export function useTypingReporter(conversationId: string): (draft: string) => void {
   const report = useReportTyping();
   const lastRef = useRef<number | undefined>(undefined);
   return useCallback(
     (draft: string) => {
       const now = Date.now();
-      if (draft.trim() !== "" && shouldReportTyping(lastRef.current, now)) {
+      if (conversationId !== "" && draft.trim() !== "" && shouldReportTyping(lastRef.current, now)) {
         lastRef.current = now;
         report(conversationId);
       }

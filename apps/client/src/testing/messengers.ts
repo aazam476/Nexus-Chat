@@ -23,7 +23,8 @@ export const dm: Conversation = {
   members: [{ id: ada.id, username: ada.username, displayName: ada.displayName }, grace],
 };
 
-async function ready(
+/** A ready messenger for one device of `user` on the instance. */
+export async function readyMessenger(
   instance: FakeInstance,
   user: { id: string; username: string },
   deviceId: string,
@@ -44,8 +45,8 @@ async function ready(
 /** Ada's and Grace's messengers, both in the DM. */
 export async function messengersInDm(): Promise<{ ada: Messenger; grace: Messenger }> {
   const instance = new FakeInstance();
-  const adaMessenger = await ready(instance, ada, "ada-laptop");
-  const graceMessenger = await ready(instance, grace, "grace-phone");
+  const adaMessenger = await readyMessenger(instance, ada, "ada-laptop");
+  const graceMessenger = await readyMessenger(instance, grace, "grace-phone");
   instance.addConversation(dm.id);
   await adaMessenger.open(dm.id, dm.members);
   await graceMessenger.open(dm.id, dm.members);
