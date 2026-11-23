@@ -500,6 +500,9 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   buttons stay for keyboards and screen readers. The release gate's
   browser test drags a channel to the top, and the other member's list
   follows.
+- Visual checks of the server screens (the list, a server, its settings,
+  and the channel, role and member settings) with demo, worst-case and
+  right-to-left servers, in both themes and at every checked width.
 - Typing and unread counts in channels: `typing` can name a channel, and
   reaches everyone who can see it when the typist may send there. Each member's read
   position is kept per channel; the channel list shows unread counts, the
@@ -507,6 +510,11 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   message, and `read_update` tells the user's other devices.
 
 ## Known issues
+
+- The mobile end-to-end flows (Maestro) cover setup, login and sign-up,
+  but not messaging or servers yet: setting up encryption asks for
+  randomly chosen words of the recovery phrase, which a flow cannot read
+  off the screen. The browser release gate covers those steps meanwhile.
 
 - Video compression (ADR 0014) is not built yet: it needs the platforms'
   own encoders (AVFoundation, Media3 Transformer, WebCodecs). Until then,
