@@ -34,15 +34,21 @@ function RoleMoves({
   const { user } = useConnection();
   const { details, runner } = props;
   const moves = [
-    { by: -1 as const, label: "servers.roleAdmin.moveUp", id: "up" },
-    { by: 1 as const, label: "servers.roleAdmin.moveDown", id: "down" },
+    { by: -1 as const, label: "servers.roleAdmin.moveUp", named: "servers.roleAdmin.moveUpNamed", id: "up" },
+    {
+      by: 1 as const,
+      label: "servers.roleAdmin.moveDown",
+      named: "servers.roleAdmin.moveDownNamed",
+      id: "down",
+    },
   ];
-  return moves.map(({ by, label, id }) => {
+  return moves.map(({ by, label, named, id }) => {
     const order = movedRole(details, user?.id ?? "", role.id, by);
     return order === undefined ? null : (
       <Button
         key={id}
-        label={t(label, { name })}
+        label={t(label)}
+        accessibilityLabel={t(named, { name })}
         variant="secondary"
         disabled={runner.busy}
         onPress={() => {
@@ -73,7 +79,8 @@ function RoleRow({ role, props }: { role: ServerRole; props: RoleAdminListProps 
         <RoleMoves role={role} name={name} props={props} />
         {mayManageRole(details, user?.id ?? "", role) ? (
           <Button
-            label={t("servers.channelAdmin.edit", { name })}
+            label={t("servers.channelAdmin.edit")}
+            accessibilityLabel={t("servers.channelAdmin.editNamed", { name })}
             variant="secondary"
             onPress={() => {
               router.push({

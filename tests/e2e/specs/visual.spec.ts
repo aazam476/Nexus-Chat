@@ -13,6 +13,7 @@ import { env } from "node:process";
 import { expectAccessible } from "../src/accessibility.js";
 import { fakeInstance, type FakeInstanceOptions } from "../src/fakeInstance.js";
 import { dmId } from "../src/fakeMessaging.js";
+import { serverId } from "../src/fakeServers.js";
 import { expectSoundLayout } from "../src/layout.js";
 import { sendMessage, shown, writeDownRecoveryPhrase } from "../src/messaging.js";
 import { field } from "../src/screens.js";
@@ -62,6 +63,56 @@ async function openConversations(page: Page): Promise<void> {
   await shown(page, "open-messages").click();
   await expect(shown(page, `conversation-${dmId}`)).toBeVisible();
 }
+
+/** Sets encryption up, then opens the servers list. */
+async function openServers(page: Page): Promise<void> {
+  await logIn(page);
+  await writeDownRecoveryPhrase(page);
+  await shown(page, "open-servers").click();
+  await expect(shown(page, `server-${serverId}`)).toBeVisible();
+}
+
+/** Opens the server's screen, with its channels and their unread counts. */
+async function openServer(page: Page, dataset: Dataset): Promise<void> {
+  await openServers(page);
+  await shown(page, `server-${serverId}`).click();
+  await expect(page.getByText(dataset.servers.textChannels[0]?.topic ?? "").first()).toBeAttached();
+  await expect(shown(page, "server-settings")).toBeVisible();
+}
+
+/** Opens one part of the server's settings, waiting for `ready` to show. */
+function serverSettings(testID: string, ready: (dataset: Dataset) => string): Screen["open"] {
+  return async (page, dataset) => {
+    await openServer(page, dataset);
+    await shown(page, "server-settings").click();
+    await shown(page, testID).click();
+    await expect(page.getByText(ready(dataset)).filter({ visible: true }).first()).toBeVisible();
+  };
+}
+
+const serverScreens = (
+  [
+    { name: "servers", open: openServers },
+    { name: "server", open: openServer },
+    {
+      name: "server-settings",
+      open: async (page, dataset) => {
+        await openServer(page, dataset);
+        await shown(page, "server-settings").click();
+        await expect(shown(page, "manage-members")).toBeVisible();
+      },
+    },
+    {
+      name: "server-channels",
+      open: serverSettings("manage-channels", (data) => data.servers.categories[1]),
+    },
+    { name: "server-roles", open: serverSettings("manage-roles", () => "@everyone") },
+    {
+      name: "server-members",
+      open: serverSettings("manage-members", (data) => data.messaging.contacts.at(-1)?.displayName ?? ""),
+    },
+  ] satisfies Screen[]
+).map((screen): Screen => ({ ...screen, instance: { messaging: true, servers: true } }));
 
 const screens: Screen[] = [
   {
@@ -130,6 +181,7 @@ const screens: Screen[] = [
       await expect(page.getByTestId("upload-limit")).toBeVisible();
     },
   },
+  ...serverScreens,
 ];
 
 /**

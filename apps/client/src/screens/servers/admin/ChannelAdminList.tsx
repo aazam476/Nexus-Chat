@@ -37,15 +37,26 @@ function MoveButtons({
 }: ChannelControlsProps & { name: string }): ReactNode {
   const { t } = useTranslation();
   const buttons = [
-    { by: -1 as const, label: "servers.channelAdmin.moveUp", id: "up" },
-    { by: 1 as const, label: "servers.channelAdmin.moveDown", id: "down" },
+    {
+      by: -1 as const,
+      label: "servers.channelAdmin.moveUp",
+      named: "servers.channelAdmin.moveUpNamed",
+      id: "up",
+    },
+    {
+      by: 1 as const,
+      label: "servers.channelAdmin.moveDown",
+      named: "servers.channelAdmin.moveDownNamed",
+      id: "down",
+    },
   ];
-  return buttons.map(({ by, label, id }) => {
+  return buttons.map(({ by, label, named, id }) => {
     const order = moved(channels, channel.id, by);
     return order === undefined ? null : (
       <Button
         key={id}
-        label={t(label, { name })}
+        label={t(label)}
+        accessibilityLabel={t(named, { name })}
         variant="secondary"
         onPress={() => {
           runner.run((client) => placeChannels(client, serverId, order));
@@ -68,7 +79,8 @@ function ChannelControls(props: ChannelControlsProps): ReactNode {
       <Stack gap="xs" direction="row">
         <MoveButtons {...props} name={name} />
         <Button
-          label={t("servers.channelAdmin.edit", { name })}
+          label={t("servers.channelAdmin.edit")}
+          accessibilityLabel={t("servers.channelAdmin.editNamed", { name })}
           variant="secondary"
           onPress={() => {
             router.push({

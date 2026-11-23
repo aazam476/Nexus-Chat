@@ -76,7 +76,7 @@ export function NewChannelForm(props: NewChannelFormProps): ReactNode {
         testID="new-channel-kind"
       />
       <TextField
-        label={t("servers.name")}
+        label={t("servers.channelAdmin.name")}
         hint={t("servers.nameHint")}
         value={form.name}
         onChangeText={form.setName}

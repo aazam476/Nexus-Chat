@@ -42,6 +42,12 @@ describe("Button", () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it("can say more than its visible label, for context the screen shows around it", async () => {
+    await render(themed(<Button label="Edit" accessibilityLabel="Edit #general" onPress={jest.fn()} />));
+
+    expect(screen.getByRole("button", { name: "Edit #general" })).toHaveTextContent("Edit");
+  });
+
   it("ignores presses while busy or disabled, and says so", async () => {
     const onPress = jest.fn();
     await render(

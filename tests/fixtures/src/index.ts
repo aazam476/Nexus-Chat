@@ -39,6 +39,19 @@ export interface Dataset {
     /** Sent in the DM, in order. */
     messages: string[];
   };
+  /** The server screens: one server the user owns, its channels and roles. */
+  servers: {
+    name: string;
+    description: string;
+    /** The text category, then the voice category. */
+    categories: [string, string];
+    textChannels: { name: string; topic: string }[];
+    voiceChannels: string[];
+    /** Highest first; the user has the first, every contact the last. */
+    roles: { name: string; color?: number }[];
+    /** Unread messages in the first text channel, for its badge. */
+    channelUnread: number;
+  };
 }
 
 /** The time the checks run at, so dates and "expires in" counts never change. */
@@ -87,6 +100,21 @@ export const demo: Dataset = {
     groupName: "Book club",
     groupUnread: 2,
     messages: ["Are we still on for Thursday?", "I'll bring the **second** volume."],
+  },
+  servers: {
+    name: "Reading Room",
+    description: "Books, tea and Thursday meetups.",
+    categories: ["Text channels", "Voice channels"],
+    textChannels: [
+      { name: "general", topic: "Say hello" },
+      { name: "books", topic: "What we are reading" },
+    ],
+    voiceChannels: ["Lounge"],
+    roles: [
+      { name: "Moderators", color: 0x3e63dd },
+      { name: "Readers", color: 0x30a46c },
+    ],
+    channelUnread: 3,
   },
 };
 
@@ -193,6 +221,33 @@ export const worstCase: Dataset = {
       "1",
     ],
   },
+  servers: {
+    // 100 characters, the maximum for names.
+    name: "Northwind Industries Holdings — Engineering, Operations & Regional Infrastructure Coordination Hub 2",
+    description:
+      "Where the platform, operations and regional infrastructure teams coordinate releases, incidents and the quarterly offsites. Read the pinned guidelines in #announcements before posting, keep incident chatter in the incident channels, and remember that everything here is end-to-end encrypted, so nobody can recover messages you lose with your devices.",
+    categories: ["Incident response, postmortems and on-call handovers for every region we operate", "🎧"],
+    textChannels: [
+      {
+        name: "supercalifragilisticexpialidocious-antidisestablishmentarianism-pneumonoultramicroscopic-silicovolca",
+        topic:
+          "Read https://northwind-industries-holdings.example.com/wiki/engineering/incident-response/runbooks/regional-failover-procedures-2026-revision-final before paging anyone; escalate to the on-call lead only after fifteen minutes without an acknowledgement.",
+      },
+      { name: "q", topic: "" },
+      { name: "الإعلانات", topic: "إعلانات الفريق" },
+    ],
+    voiceChannels: ["Standup room for the Wrocław, Manchester and Jeddah offices, weekdays at nine", "x"],
+    roles: [
+      {
+        name: "Regional infrastructure leads and incident commanders on the weekday rotation",
+        color: 0xe5484d,
+      },
+      { name: "Q" },
+      { name: "مشرفو المجتمع", color: 0x8e4ec6 },
+      { name: "🦄", color: 0xffc53d },
+    ],
+    channelUnread: 1,
+  },
 };
 
 /** Right-to-left text in every name, and the shortest names allowed. */
@@ -213,5 +268,17 @@ export const rightToLeft: Dataset = {
     ...worstCase.messaging,
     groupName: "مجموعة الشطرنج",
     messages: ["مرحبا، هل نلتقي يوم الخميس؟", "نعم، في الساعة ٧ مساءً 👍"],
+  },
+  servers: {
+    name: "نادي الشطرنج",
+    description: "نلتقي كل خميس في المقهى.",
+    categories: ["القنوات النصية", "القنوات الصوتية"],
+    textChannels: [
+      { name: "عام", topic: "قل مرحبا" },
+      { name: "مباريات", topic: "نتائج الأسبوع" },
+    ],
+    voiceChannels: ["الردهة"],
+    roles: [{ name: "المشرفون", color: 0x3e63dd }, { name: "الأعضاء" }],
+    channelUnread: 12,
   },
 };

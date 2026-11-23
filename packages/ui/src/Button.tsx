@@ -17,8 +17,14 @@ import { useInteraction } from "./useInteraction";
 
 /** Props of {@link Button}. */
 export interface ButtonProps {
-  /** The visible text, which is also the accessible name. */
+  /** The visible text, which is also the accessible name unless `accessibilityLabel` is given. */
   label: string;
+  /**
+   * What screen readers say, when the visible label leans on what is around
+   * it ("Edit" next to a channel's name). Start it with the visible label,
+   * so voice control finds the button by the words on it.
+   */
+  accessibilityLabel?: string;
   onPress: () => void;
   /** Primary for the screen's main action; one per screen. */
   variant?: "primary" | "secondary" | "danger";
@@ -34,6 +40,7 @@ export interface ButtonProps {
  */
 export function Button({
   label,
+  accessibilityLabel,
   onPress,
   variant = "primary",
   disabled = false,
@@ -47,13 +54,14 @@ export function Button({
   return (
     <Pressable
       role="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
       onPress={onPress}
       {...handlers}
       pressRetentionOffset={16}
       testID={testID}
+      style={styles.pressable}
     >
       <ButtonFace
         label={label}
@@ -153,6 +161,9 @@ const pressTransition: CSSTransitionProperties<ViewStyle> = {
 };
 
 const styles = StyleSheet.create({
+  // Never wider than its container: a long label wraps instead of running
+  // off the screen, also when buttons sit side by side in a row.
+  pressable: { maxWidth: "100%" },
   // A label that wraps stays centered line by line, like a one-line label.
   label: { textAlign: "center" },
   box: {
