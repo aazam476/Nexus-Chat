@@ -12,9 +12,14 @@ import (
 
 // grants answers ChannelGrant with whatever the test sets.
 type grants struct {
-	grant ChannelGrant
-	err   error
-	asked []ChannelRef
+	grant    ChannelGrant
+	err      error
+	asked    []ChannelRef
+	channels []uuid.UUID
+}
+
+func (fake *grants) TextChannels(context.Context, uuid.UUID, uuid.UUID) ([]uuid.UUID, error) {
+	return fake.channels, fake.err
 }
 
 func (fake *grants) ChannelGrant(_ context.Context, ref ChannelRef) (ChannelGrant, error) {
@@ -113,4 +118,50 @@ func TestChannelMessagesFollowTheGrant(t *testing.T) {
 	_, err = f.service.ChannelArchive(t.Context(), ref, ArchivePage{Before: now})
 	require.Error(t, err)
 	require.NotErrorIs(t, err, ErrNotFound)
+}
+
+func TestChannelReadState(t *testing.T) {
+	f := newFixture(t)
+	ada, sam := f.user(t, "ada"), f.user(t, "sam")
+	audienceID, channelID, group := f.audience(t, ada, ada, sam)
+	f.grants.grant = ChannelGrant{AudienceID: audienceID, MaySend: true}
+	f.grants.channels = []uuid.UUID{channelID}
+	fromAda := ChannelRef{ChannelID: channelID, UserID: ada}
+	forSam := ChannelRef{ChannelID: channelID, UserID: sam}
+
+	first, err := f.service.SendToChannel(t.Context(), fromAda, Outgoing{Message: privateMessage(group, 0, 1)})
+	require.NoError(t, err)
+	_, err = f.service.SendToChannel(t.Context(), fromAda, Outgoing{Message: privateMessage(group, 0, 1)})
+	require.NoError(t, err)
+	states, err := f.service.ChannelReadStates(t.Context(), uuid.New(), sam)
+	require.NoError(t, err)
+	assert.Equal(t, []ChannelReadState{{ChannelID: channelID, UnreadCount: 2}}, states)
+	own, err := f.service.ChannelReadStates(t.Context(), uuid.New(), ada)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), own[0].UnreadCount, "your own messages are not unread")
+
+	position, err := f.service.MarkChannelRead(t.Context(), forSam, first)
+	require.NoError(t, err)
+	assert.Equal(t, first, position)
+	assert.Equal(t, []int64{first}, f.events.reads)
+	position, err = f.service.MarkChannelRead(t.Context(), forSam, 1_000_000)
+	require.NoError(t, err)
+	assert.Equal(t, first+1, position, "never past the newest message")
+	position, err = f.service.MarkChannelRead(t.Context(), forSam, 0)
+	require.NoError(t, err)
+	assert.Equal(t, first+1, position, "never back")
+
+	_, err = f.service.MarkChannelRead(t.Context(), forSam, -1)
+	require.Error(t, err)
+	f.grants.err = ErrNotFound
+	_, err = f.service.MarkChannelRead(t.Context(), forSam, 1)
+	require.ErrorIs(t, err, ErrNotFound)
+	_, err = f.service.ChannelReadStates(t.Context(), uuid.New(), sam)
+	require.ErrorIs(t, err, ErrNotFound)
+	f.grants.err = nil
+	f.pool.Close()
+	_, err = f.service.MarkChannelRead(t.Context(), forSam, 1)
+	require.Error(t, err)
+	_, err = f.service.ChannelReadStates(t.Context(), uuid.New(), sam)
+	require.Error(t, err)
 }

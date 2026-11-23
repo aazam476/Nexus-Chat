@@ -145,6 +145,58 @@ func (q *Queries) ChannelArchiveBefore(ctx context.Context, arg ChannelArchiveBe
 	return items, nil
 }
 
+const channelReadStates = `-- name: ChannelReadStates :many
+SELECT
+    channel.id::uuid AS channel_id,
+    COALESCE(reads.last_read_id, 0)::bigint AS last_read_id,
+    (
+        SELECT count(*) FROM (
+            SELECT 1 FROM mls_messages AS messages
+            WHERE messages.channel_id = channel.id
+              AND messages.kind = 'application'
+              AND messages.id > COALESCE(reads.last_read_id, 0)
+              AND messages.sender_id IS DISTINCT FROM $1::uuid
+            LIMIT 1000
+        ) AS unread
+    )::bigint AS unread_count
+FROM unnest($2::uuid[]) AS channel(id)
+LEFT JOIN channel_reads AS reads ON reads.channel_id = channel.id AND reads.user_id = $1::uuid
+ORDER BY channel.id
+`
+
+type ChannelReadStatesParams struct {
+	UserID     uuid.UUID
+	ChannelIds []uuid.UUID
+}
+
+type ChannelReadStatesRow struct {
+	ChannelID   uuid.UUID
+	LastReadID  int64
+	UnreadCount int64
+}
+
+// For each of the given channels: how far the user read it, and how many
+// application messages from others came after, counting up to 1000.
+func (q *Queries) ChannelReadStates(ctx context.Context, arg ChannelReadStatesParams) ([]ChannelReadStatesRow, error) {
+	rows, err := q.db.Query(ctx, channelReadStates, arg.UserID, arg.ChannelIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChannelReadStatesRow
+	for rows.Next() {
+		var i ChannelReadStatesRow
+		if err := rows.Scan(&i.ChannelID, &i.LastReadID, &i.UnreadCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteExpiredMessages = `-- name: DeleteExpiredMessages :execrows
 DELETE FROM mls_messages WHERE created_at < $1
 `
@@ -239,6 +291,38 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (i
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const markChannelRead = `-- name: MarkChannelRead :one
+INSERT INTO channel_reads AS reads (channel_id, user_id, last_read_id, updated_at)
+VALUES (
+    $1, $2,
+    LEAST($3::bigint, (SELECT COALESCE(MAX(id), 0) FROM mls_messages WHERE channel_id = $1)),
+    $4
+)
+ON CONFLICT (channel_id, user_id) DO UPDATE
+SET last_read_id = GREATEST(reads.last_read_id, EXCLUDED.last_read_id), updated_at = EXCLUDED.updated_at
+RETURNING last_read_id
+`
+
+type MarkChannelReadParams struct {
+	ChannelID  uuid.UUID
+	UserID     uuid.UUID
+	LastReadID int64
+	Now        time.Time
+}
+
+// Like MarkRead, for a server channel's messages in its audience's group.
+func (q *Queries) MarkChannelRead(ctx context.Context, arg MarkChannelReadParams) (int64, error) {
+	row := q.db.QueryRow(ctx, markChannelRead,
+		arg.ChannelID,
+		arg.UserID,
+		arg.LastReadID,
+		arg.Now,
+	)
+	var last_read_id int64
+	err := row.Scan(&last_read_id)
+	return last_read_id, err
 }
 
 const markRead = `-- name: MarkRead :one

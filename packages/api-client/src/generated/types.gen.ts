@@ -656,6 +656,15 @@ export type ReadMark = {
     lastReadId: number;
 };
 
+export type ChannelReadState = {
+    channelId: string;
+    lastReadId: number;
+    /**
+     * Application messages from others after `lastReadId`, counted up to 1000.
+     */
+    unreadCount: number;
+};
+
 export type ReadState = {
     conversationId: string;
     lastReadId: number;
@@ -5636,6 +5645,81 @@ export type RevokeServerInviteResponses = {
 };
 
 export type RevokeServerInviteResponse = RevokeServerInviteResponses[keyof RevokeServerInviteResponses];
+
+export type MarkChannelReadData = {
+    body: ReadMark;
+    path: {
+        serverId: string;
+        channelId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/read';
+};
+
+export type MarkChannelReadErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such server or text channel, or you cannot see it (`channel_not_found`).
+     */
+    404: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type MarkChannelReadError = MarkChannelReadErrors[keyof MarkChannelReadErrors];
+
+export type MarkChannelReadResponses = {
+    /**
+     * The read position now.
+     */
+    200: ChannelReadState;
+};
+
+export type MarkChannelReadResponse = MarkChannelReadResponses[keyof MarkChannelReadResponses];
+
+export type ListChannelReadStatesData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/read-state';
+};
+
+export type ListChannelReadStatesErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type ListChannelReadStatesError = ListChannelReadStatesErrors[keyof ListChannelReadStatesErrors];
+
+export type ListChannelReadStatesResponses = {
+    /**
+     * One entry per text channel you can see.
+     */
+    200: Array<ChannelReadState>;
+};
+
+export type ListChannelReadStatesResponse = ListChannelReadStatesResponses[keyof ListChannelReadStatesResponses];
 
 export type RemoveServerIconData = {
     body?: never;

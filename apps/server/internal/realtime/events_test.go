@@ -53,3 +53,16 @@ func TestServerChangesReachMembers(t *testing.T) {
 	require.NoError(t, json.Unmarshal(frame.Data, &data))
 	assert.Equal(t, serverData{ServerID: server}, data)
 }
+
+func TestChannelReadChangesReachTheUsersOwnDevices(t *testing.T) {
+	fixture := newGatewayFixture(t, time.Second)
+	laptop := fixture.dial(t)
+	laptop.identify(aliceToken)
+	channel := uuid.New()
+
+	fixture.hub.ChannelReadChanged(t.Context(), fixture.user.ID, channel, 7)
+
+	var data channelReadData
+	require.NoError(t, json.Unmarshal(laptop.receiveType(TypeReadUpdate).Data, &data))
+	assert.Equal(t, channelReadData{ChannelID: channel, LastReadID: 7}, data)
+}

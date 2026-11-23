@@ -80,3 +80,35 @@ LEFT JOIN conversation_reads AS reads
     ON reads.conversation_id = members.conversation_id AND reads.user_id = members.user_id
 WHERE members.user_id = sqlc.arg(user_id)
 ORDER BY members.conversation_id;
+
+-- name: MarkChannelRead :one
+-- Like MarkRead, for a server channel's messages in its audience's group.
+INSERT INTO channel_reads AS reads (channel_id, user_id, last_read_id, updated_at)
+VALUES (
+    sqlc.arg(channel_id), sqlc.arg(user_id),
+    LEAST(sqlc.arg(last_read_id)::bigint, (SELECT COALESCE(MAX(id), 0) FROM mls_messages WHERE channel_id = sqlc.arg(channel_id))),
+    sqlc.arg(now)
+)
+ON CONFLICT (channel_id, user_id) DO UPDATE
+SET last_read_id = GREATEST(reads.last_read_id, EXCLUDED.last_read_id), updated_at = EXCLUDED.updated_at
+RETURNING last_read_id;
+
+-- name: ChannelReadStates :many
+-- For each of the given channels: how far the user read it, and how many
+-- application messages from others came after, counting up to 1000.
+SELECT
+    channel.id::uuid AS channel_id,
+    COALESCE(reads.last_read_id, 0)::bigint AS last_read_id,
+    (
+        SELECT count(*) FROM (
+            SELECT 1 FROM mls_messages AS messages
+            WHERE messages.channel_id = channel.id
+              AND messages.kind = 'application'
+              AND messages.id > COALESCE(reads.last_read_id, 0)
+              AND messages.sender_id IS DISTINCT FROM sqlc.arg(user_id)::uuid
+            LIMIT 1000
+        ) AS unread
+    )::bigint AS unread_count
+FROM unnest(sqlc.arg(channel_ids)::uuid[]) AS channel(id)
+LEFT JOIN channel_reads AS reads ON reads.channel_id = channel.id AND reads.user_id = sqlc.arg(user_id)::uuid
+ORDER BY channel.id;

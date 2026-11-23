@@ -62,6 +62,30 @@ func (q *Queries) AddServerMember(ctx context.Context, arg AddServerMemberParams
 	return result.RowsAffected(), nil
 }
 
+const audienceMemberIDs = `-- name: AudienceMemberIDs :many
+SELECT user_id FROM conversation_members WHERE conversation_id = $1 ORDER BY user_id
+`
+
+func (q *Queries) AudienceMemberIDs(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, audienceMemberIDs, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var user_id uuid.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countServerMembers = `-- name: CountServerMembers :one
 SELECT count(*) FROM server_members WHERE server_id = $1
 `

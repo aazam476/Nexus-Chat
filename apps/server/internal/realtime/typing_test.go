@@ -32,6 +32,10 @@ func (fake *fakeTyping) TypingRecipients(_ context.Context, conversationID uuid.
 	return fake.recipients, nil
 }
 
+func (fake *fakeTyping) ChannelTypingRecipients(ctx context.Context, channelID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
+	return fake.TypingRecipients(ctx, channelID, userID)
+}
+
 func (fake *fakeTyping) callCount() int {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
@@ -75,6 +79,26 @@ func TestTypingReachesTheOtherMembersOncePerFewSeconds(t *testing.T) {
 	phone.send(typing)
 	laptop.receiveType(TypeTypingStart)
 	assert.Equal(t, 2, relay.callCount())
+}
+
+func TestTypingInAServerChannel(t *testing.T) {
+	base := newGatewayFixture(t, time.Second)
+	relay := &fakeTyping{recipients: []uuid.UUID{base.user.ID}}
+	fixture := withTyping(t, base, relay)
+	phone, laptop := fixture.dial(t), fixture.dial(t)
+	phone.identify(aliceToken)
+	laptop.identify(aliceToken)
+	channel := uuid.New()
+
+	phone.send(`{"type":"typing","data":{"channelId":"` + channel.String() + `"}}`)
+	frame := laptop.receiveType(TypeTypingStart)
+	var data channelTypingStartData
+	require.NoError(t, json.Unmarshal(frame.Data, &data))
+	assert.Equal(t, channelTypingStartData{ChannelID: channel, UserID: fixture.user.ID}, data)
+	assert.NotContains(t, string(frame.Data), "conversationId")
+
+	phone.send(`{"type":"typing","id":"t","data":{"channelId":"nope"}}`)
+	assert.Contains(t, string(phone.receiveType(typeError).Data), "invalid_conversation")
 }
 
 func TestTypingFramesAreChecked(t *testing.T) {

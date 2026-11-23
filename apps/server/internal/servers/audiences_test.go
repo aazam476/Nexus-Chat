@@ -195,3 +195,53 @@ func TestPlanningReusesAnUnusedGroup(t *testing.T) {
 	assert.Empty(t, plan.Add, "the timed-out member is already in the reused group")
 	assert.Equal(t, []store.RemoveAudienceMemberParams{{ConversationID: retired, UserID: departed}}, plan.Remove)
 }
+
+func TestTypingInAChannelReachesItsAudience(t *testing.T) {
+	f := newFixture(t)
+	ada, grace, sam := f.user(t, "ada"), f.user(t, "grace"), f.user(t, "sam")
+	details := f.server(t, ada, grace, sam)
+	owner := Scope{details.Server.ID, ada}
+	general, voice := channelNamed(t, details, "general"), channelNamed(t, details, "General")
+
+	recipients, err := f.service.ChannelTypingRecipients(t.Context(), general.ID, ada)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []uuid.UUID{grace, sam}, recipients)
+
+	// Sam can no longer send there; Grace no longer sees it.
+	require.NoError(t, f.service.SetOverride(t.Context(), owner, general.ID, Override{TargetKind: TargetMember, TargetID: sam, Deny: permissions.SendMessages}))
+	require.NoError(t, f.service.SetOverride(t.Context(), owner, general.ID, Override{TargetKind: TargetMember, TargetID: grace, Deny: permissions.ViewChannel}))
+	_, err = f.service.ChannelTypingRecipients(t.Context(), general.ID, sam)
+	require.ErrorIs(t, err, ErrCannotType)
+	recipients, err = f.service.ChannelTypingRecipients(t.Context(), general.ID, ada)
+	require.NoError(t, err)
+	assert.Equal(t, []uuid.UUID{sam}, recipients)
+
+	_, err = f.service.ChannelTypingRecipients(t.Context(), voice.ID, ada)
+	require.ErrorIs(t, err, ErrCannotType, "voice channels have no group")
+	_, err = f.service.ChannelTypingRecipients(t.Context(), uuid.New(), ada)
+	require.ErrorIs(t, err, ErrNoChannel)
+	_, err = f.service.ChannelTypingRecipients(t.Context(), general.ID, f.user(t, "eve"))
+	require.ErrorIs(t, err, ErrNotFound)
+	f.pool.Close()
+	_, err = f.service.ChannelTypingRecipients(t.Context(), general.ID, ada)
+	require.Error(t, err)
+}
+
+func TestTextChannelsAreTheOnesTheUserSees(t *testing.T) {
+	f := newFixture(t)
+	ada, sam := f.user(t, "ada"), f.user(t, "sam")
+	details := f.server(t, ada, sam)
+	general := channelNamed(t, details, "general")
+	channels, err := f.service.TextChannels(t.Context(), details.Server.ID, sam)
+	require.NoError(t, err)
+	assert.Equal(t, []uuid.UUID{general.ID}, channels)
+	require.NoError(t, f.service.SetOverride(t.Context(), Scope{details.Server.ID, ada}, general.ID, Override{TargetKind: TargetMember, TargetID: sam, Deny: permissions.ViewChannel}))
+	channels, err = f.service.TextChannels(t.Context(), details.Server.ID, sam)
+	require.NoError(t, err)
+	assert.Empty(t, channels)
+	_, err = f.service.TextChannels(t.Context(), details.Server.ID, f.user(t, "eve"))
+	require.ErrorIs(t, err, delivery.ErrNotFound)
+	f.pool.Close()
+	_, err = f.service.TextChannels(t.Context(), details.Server.ID, sam)
+	require.Error(t, err)
+}

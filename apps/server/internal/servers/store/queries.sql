@@ -174,3 +174,6 @@ UPDATE servers SET icon_id = sqlc.narg(icon_id), icon_format = sqlc.narg(icon_fo
 -- name: GetServerIconFormat :one
 -- A server with an icon ID always has its format (a table CHECK).
 SELECT COALESCE(icon_format, '')::text FROM servers WHERE icon_id = sqlc.arg(icon_id)::uuid;
+
+-- name: AudienceMemberIDs :many
+SELECT user_id FROM conversation_members WHERE conversation_id = $1 ORDER BY user_id;

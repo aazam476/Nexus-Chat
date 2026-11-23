@@ -7,6 +7,7 @@ import type { Payload } from "../../src/messaging/payload";
 import { AttachmentsContext, useAttachments } from "../../src/messaging/useAttachments";
 import { useConversation } from "../../src/messaging/useConversation";
 import { useTimeline } from "../../src/messaging/useConversations";
+import { useConversationReads } from "../../src/messaging/useReadState";
 import { useReadTracking } from "../../src/messaging/useReadTracking";
 import { ConversationFooter } from "../../src/screens/conversation/ConversationFooter";
 import { ConversationHeader } from "../../src/screens/conversation/ConversationHeader";
@@ -21,7 +22,7 @@ export default function ConversationScreen(): ReactNode {
   const open = useConversation(id);
   const view = useTimeline(id);
   const timeline = view?.items;
-  const firstUnreadId = useReadTracking(id, view, open.self);
+  const firstUnreadId = useReadTracking(id, view, { self: open.self, source: useConversationReads() });
   const composer = useComposer();
   const attachments = useAttachments(id);
   const send = (payload: Payload): Promise<unknown> =>
@@ -36,7 +37,7 @@ export default function ConversationScreen(): ReactNode {
           header={<ConversationHeader open={open} messenger={messenger} />}
           footer={
             <ConversationFooter
-              conversationId={id}
+              typingIn={{ conversationId: id }}
               open={open}
               timeline={timeline}
               compose={{ composer, send, attachments }}

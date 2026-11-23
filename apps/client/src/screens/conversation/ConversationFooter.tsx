@@ -7,17 +7,17 @@ import type { Payload } from "../../messaging/payload";
 import type { TimelineItem } from "../../messaging/timeline";
 import type { ConversationAttachments } from "../../messaging/useAttachments";
 import type { ConversationPeople } from "../../messaging/useConversation";
-import { useTypingReporter, useTypists } from "../../messaging/useTyping";
+import { placeId, useTypingReporter, useTypists } from "../../messaging/useTyping";
+import type { TypingPlace } from "../../realtime/gatewayClient";
 import { ComposerBar } from "./ComposerBar";
 import type { Composer } from "./useComposer";
 
 /** Props of {@link ConversationFooter}. */
 export interface ConversationFooterProps {
-  conversationId: string;
+  /** Where typing is shared: the conversation, or a server channel. */
+  typingIn: TypingPlace;
   open: ConversationPeople;
   timeline: TimelineItem[] | undefined;
-  /** Whether typing is shared here; not yet in server channels. */
-  typing?: boolean;
   compose: {
     composer: Composer;
     send: (payload: Payload) => Promise<unknown>;
@@ -52,20 +52,19 @@ function TypingLine({ names }: { names: string[] }): ReactNode {
  * members; it shows no animation, since it changes many times a minute.
  */
 export function ConversationFooter({
-  conversationId,
+  typingIn,
   open,
   timeline,
   compose,
-  typing = true,
 }: ConversationFooterProps): ReactNode {
   const latest = timeline?.at(-1);
   const selfId = open.userIdOf(open.self) ?? "";
   const typists = useTypists(
-    typing ? conversationId : "",
+    placeId(typingIn),
     selfId,
     latest === undefined ? undefined : { id: latest.id, senderId: open.userIdOf(latest.sender) },
   );
-  const report = useTypingReporter(typing ? conversationId : "");
+  const report = useTypingReporter(typingIn);
   const { composer, send, attachments } = compose;
   const typingComposer: Composer = {
     ...composer,

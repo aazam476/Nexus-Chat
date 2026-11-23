@@ -521,6 +521,15 @@ type ChannelPlacement struct {
 	ParentId *openapi_types.UUID `json:"parentId,omitempty"`
 }
 
+// ChannelReadState defines model for ChannelReadState.
+type ChannelReadState struct {
+	ChannelId  openapi_types.UUID `json:"channelId"`
+	LastReadId int64              `json:"lastReadId"`
+
+	// UnreadCount Application messages from others after `lastReadId`, counted up to 1000.
+	UnreadCount int64 `json:"unreadCount"`
+}
+
 // ChannelText defines model for ChannelText.
 type ChannelText struct {
 	Name  string  `json:"name"`
@@ -1706,6 +1715,9 @@ type SendChannelMessageJSONRequestBody = MlsSend
 // SetChannelOverrideJSONRequestBody defines body for SetChannelOverride for application/json ContentType.
 type SetChannelOverrideJSONRequestBody = OverrideSpec
 
+// MarkChannelReadJSONRequestBody defines body for MarkChannelRead for application/json ContentType.
+type MarkChannelReadJSONRequestBody = ReadMark
+
 // CreateServerInviteJSONRequestBody defines body for CreateServerInvite for application/json ContentType.
 type CreateServerInviteJSONRequestBody = NewServerInvite
 
@@ -2050,6 +2062,9 @@ type ServerInterface interface {
 	// SetChannelOverride Allow or deny permissions in a channel for a role or member (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	SetChannelOverride(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, targetKind OverrideTargetKind, targetId openapi_types.UUID)
+	// MarkChannelRead Mark a text channel read up to a live message
+	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/read)
+	MarkChannelRead(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
 	// RemoveServerIcon Remove the server's icon (MANAGE_SERVER)
 	// (DELETE /api/v1/servers/{serverId}/icon)
 	RemoveServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -2077,6 +2092,9 @@ type ServerInterface interface {
 	// GiveServerRole Give a member a role (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/members/{userId}/roles/{roleId})
 	GiveServerRole(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID, roleId openapi_types.UUID)
+	// ListChannelReadStates Your read state in each text channel of the server you can see
+	// (GET /api/v1/servers/{serverId}/read-state)
+	ListChannelReadStates(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
 	// OrderServerRoles Order the roles (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/role-order)
 	OrderServerRoles(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -4519,6 +4537,41 @@ func (siw *ServerInterfaceWrapper) SetChannelOverride(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// MarkChannelRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkChannelRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkChannelRead(w, r, serverId, channelId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveServerIcon operation middleware
 func (siw *ServerInterfaceWrapper) RemoveServerIcon(w http.ResponseWriter, r *http.Request) {
 
@@ -4789,6 +4842,32 @@ func (siw *ServerInterfaceWrapper) GiveServerRole(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GiveServerRole(w, r, serverId, userId, roleId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListChannelReadStates operation middleware
+func (siw *ServerInterfaceWrapper) ListChannelReadStates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListChannelReadStates(w, r, serverId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5416,6 +5495,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.ListServerInvites)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.CreateServerInvite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites/{code}", wrapper.RevokeServerInvite)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/read", wrapper.MarkChannelRead)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/read-state", wrapper.ListChannelReadStates)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.RemoveServerIcon)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.SetServerIcon)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/server-icons/{iconId}", wrapper.GetServerIcon)
@@ -12641,6 +12722,86 @@ func (response SetChannelOverride422JSONResponse) VisitSetChannelOverrideRespons
 	return err
 }
 
+type MarkChannelReadRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	Body      *MarkChannelReadJSONRequestBody
+}
+
+type MarkChannelReadResponseObject interface {
+	VisitMarkChannelReadResponse(w http.ResponseWriter) error
+}
+
+type MarkChannelRead200JSONResponse ChannelReadState
+
+func (response MarkChannelRead200JSONResponse) VisitMarkChannelReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkChannelRead400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response MarkChannelRead400JSONResponse) VisitMarkChannelReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkChannelRead401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response MarkChannelRead401JSONResponse) VisitMarkChannelReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkChannelRead404JSONResponse Error
+
+func (response MarkChannelRead404JSONResponse) VisitMarkChannelReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkChannelRead422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response MarkChannelRead422JSONResponse) VisitMarkChannelReadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RemoveServerIconRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 }
@@ -13422,6 +13583,70 @@ func (response GiveServerRole422JSONResponse) VisitGiveServerRoleResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelReadStatesRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+}
+
+type ListChannelReadStatesResponseObject interface {
+	VisitListChannelReadStatesResponse(w http.ResponseWriter) error
+}
+
+type ListChannelReadStates200JSONResponse []ChannelReadState
+
+func (response ListChannelReadStates200JSONResponse) VisitListChannelReadStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelReadStates400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListChannelReadStates400JSONResponse) VisitListChannelReadStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelReadStates401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListChannelReadStates401JSONResponse) VisitListChannelReadStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelReadStates404JSONResponse Error
+
+func (response ListChannelReadStates404JSONResponse) VisitListChannelReadStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14694,6 +14919,9 @@ type StrictServerInterface interface {
 	// SetChannelOverride Allow or deny permissions in a channel for a role or member (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	SetChannelOverride(ctx context.Context, request SetChannelOverrideRequestObject) (SetChannelOverrideResponseObject, error)
+	// MarkChannelRead Mark a text channel read up to a live message
+	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/read)
+	MarkChannelRead(ctx context.Context, request MarkChannelReadRequestObject) (MarkChannelReadResponseObject, error)
 	// RemoveServerIcon Remove the server's icon (MANAGE_SERVER)
 	// (DELETE /api/v1/servers/{serverId}/icon)
 	RemoveServerIcon(ctx context.Context, request RemoveServerIconRequestObject) (RemoveServerIconResponseObject, error)
@@ -14721,6 +14949,9 @@ type StrictServerInterface interface {
 	// GiveServerRole Give a member a role (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/members/{userId}/roles/{roleId})
 	GiveServerRole(ctx context.Context, request GiveServerRoleRequestObject) (GiveServerRoleResponseObject, error)
+	// ListChannelReadStates Your read state in each text channel of the server you can see
+	// (GET /api/v1/servers/{serverId}/read-state)
+	ListChannelReadStates(ctx context.Context, request ListChannelReadStatesRequestObject) (ListChannelReadStatesResponseObject, error)
 	// OrderServerRoles Order the roles (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/role-order)
 	OrderServerRoles(ctx context.Context, request OrderServerRolesRequestObject) (OrderServerRolesResponseObject, error)
@@ -17818,6 +18049,40 @@ func (sh *strictHandler) SetChannelOverride(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// MarkChannelRead operation middleware
+func (sh *strictHandler) MarkChannelRead(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID) {
+	var request MarkChannelReadRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+
+	var body MarkChannelReadJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkChannelRead(ctx, request.(MarkChannelReadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkChannelRead")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkChannelReadResponseObject); ok {
+		if err := validResponse.VisitMarkChannelReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RemoveServerIcon operation middleware
 func (sh *strictHandler) RemoveServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
 	var request RemoveServerIconRequestObject
@@ -18059,6 +18324,32 @@ func (sh *strictHandler) GiveServerRole(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GiveServerRoleResponseObject); ok {
 		if err := validResponse.VisitGiveServerRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListChannelReadStates operation middleware
+func (sh *strictHandler) ListChannelReadStates(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
+	var request ListChannelReadStatesRequestObject
+
+	request.ServerId = serverId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListChannelReadStates(ctx, request.(ListChannelReadStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListChannelReadStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListChannelReadStatesResponseObject); ok {
+		if err := validResponse.VisitListChannelReadStatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

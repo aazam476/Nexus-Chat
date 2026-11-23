@@ -4,6 +4,9 @@
  * the app. It has no React in it, so it is easy to test with a fake socket.
  */
 
+/** Where the user is typing: a DM or group DM, or a server text channel. */
+export type TypingPlace = { conversationId: string } | { channelId: string };
+
 /** The subprotocol of protocol version 1. */
 export const subprotocol = "nexus-chat.v1";
 
@@ -76,9 +79,9 @@ export class GatewayClient {
     this.send({ type: "activity", data: { idle } });
   }
 
-  /** Tells the conversation's other members that the user is typing (protocol §4.1). */
-  reportTyping(conversationId: string): void {
-    this.send({ type: "typing", data: { conversationId } });
+  /** Tells the other members of a conversation or server channel that the user is typing (protocol §4.1). */
+  reportTyping(place: TypingPlace): void {
+    this.send({ type: "typing", data: place });
   }
 
   private open(): void {

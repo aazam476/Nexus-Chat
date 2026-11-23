@@ -165,3 +165,30 @@ func TestChannelEndpoints(t *testing.T) {
 	require.Error(t, second(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &api.MlsSend{}})))
 	require.Error(t, second(handler.ListChannelArchive(as(t, ada), api.ListChannelArchiveRequestObject{ChannelId: channelID})))
 }
+
+func TestChannelReadEndpoints(t *testing.T) {
+	f := newFixture(t)
+	handler := NewHandler(f.service)
+	ada := f.user(t, "ada")
+	audienceID, channelID, group := f.audience(t, ada, ada)
+	f.grants.grant = ChannelGrant{AudienceID: audienceID, MaySend: true}
+	f.grants.channels = []uuid.UUID{channelID}
+	sent := must(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &api.MlsSend{Message: privateMessage(group, 0, 1)}}))
+	id := sent.(api.SendChannelMessage201JSONResponse).Id //nolint:forcetypeassert // the success type
+
+	marked := must(handler.MarkChannelRead(as(t, ada), api.MarkChannelReadRequestObject{ChannelId: channelID, Body: &api.ReadMark{LastReadId: id}}))
+	assert.Equal(t, api.MarkChannelRead200JSONResponse{ChannelId: channelID, LastReadId: id}, marked)
+	assert.IsType(t, api.MarkChannelRead422JSONResponse{}, must(handler.MarkChannelRead(as(t, ada), api.MarkChannelReadRequestObject{ChannelId: channelID, Body: &api.ReadMark{LastReadId: -1}})))
+	listed := must(handler.ListChannelReadStates(as(t, ada), api.ListChannelReadStatesRequestObject{}))
+	assert.Len(t, listed.(api.ListChannelReadStates200JSONResponse), 1) //nolint:forcetypeassert // the success type
+
+	f.grants.err = ErrNotFound
+	assert.IsType(t, api.MarkChannelRead404JSONResponse{}, must(handler.MarkChannelRead(as(t, ada), api.MarkChannelReadRequestObject{ChannelId: channelID, Body: &api.ReadMark{LastReadId: 1}})))
+	assert.IsType(t, api.ListChannelReadStates404JSONResponse{}, must(handler.ListChannelReadStates(as(t, ada), api.ListChannelReadStatesRequestObject{})))
+	f.grants.err = errors.New("database is down")
+	require.Error(t, second(handler.ListChannelReadStates(as(t, ada), api.ListChannelReadStatesRequestObject{})))
+	require.Error(t, second(handler.MarkChannelRead(as(t, ada), api.MarkChannelReadRequestObject{ChannelId: channelID, Body: &api.ReadMark{LastReadId: 1}})))
+	ctx := t.Context()
+	require.ErrorIs(t, second(handler.MarkChannelRead(ctx, api.MarkChannelReadRequestObject{Body: &api.ReadMark{}})), errNoPrincipal)
+	require.ErrorIs(t, second(handler.ListChannelReadStates(ctx, api.ListChannelReadStatesRequestObject{})), errNoPrincipal)
+}

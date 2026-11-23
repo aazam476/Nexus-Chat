@@ -6,7 +6,7 @@
 import { createContext, use, useEffect, useMemo, useRef, type ReactNode } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
-import type { GatewayEvent } from "./gatewayClient";
+import type { GatewayEvent, TypingPlace } from "./gatewayClient";
 import { useGateway } from "./useGateway";
 
 type Listener = (event: GatewayEvent) => void;
@@ -15,7 +15,7 @@ interface Gateway {
   /** The user's presence as others see it, once the gateway reported it. */
   status: string | undefined;
   subscribe: (listener: Listener) => () => void;
-  reportTyping: (conversationId: string) => void;
+  reportTyping: (place: TypingPlace) => void;
 }
 
 const GatewayContext = createContext<Gateway | undefined>(undefined);
@@ -80,7 +80,7 @@ export function useGatewayEvents(handler: Listener): void {
   );
 }
 
-/** Tells a conversation's other members that the user is typing. */
-export function useReportTyping(): (conversationId: string) => void {
+/** Tells the other members of a conversation or channel that the user is typing. */
+export function useReportTyping(): (place: TypingPlace) => void {
   return useGatewayContext().reportTyping;
 }

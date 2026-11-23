@@ -1,5 +1,5 @@
-import type { ServerChannel } from "@nexus-chat/api-client";
-import { Heading, ListRow, Stack, Text } from "@nexus-chat/ui";
+import type { ChannelReadState, ServerChannel } from "@nexus-chat/api-client";
+import { Badge, Heading, ListRow, Stack, Text } from "@nexus-chat/ui";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,8 +7,16 @@ import { useTranslation } from "react-i18next";
 import { isolate } from "../../i18n/bidi";
 import { channelSections } from "../../servers/channelTree";
 
-/** One channel: a text channel opens; a voice channel waits for calls. */
-function ChannelRow({ serverId, channel }: { serverId: string; channel: ServerChannel }): ReactNode {
+/** Props of {@link ChannelRow}. */
+interface ChannelRowProps {
+  serverId: string;
+  channel: ServerChannel;
+  /** Messages from others since the user last read it. */
+  unread: number;
+}
+
+/** One channel: a text channel opens, with its unread count; a voice channel waits for calls. */
+function ChannelRow({ serverId, channel, unread }: ChannelRowProps): ReactNode {
   const { t } = useTranslation();
   if (channel.kind === "voice") {
     return (
@@ -23,6 +31,8 @@ function ChannelRow({ serverId, channel }: { serverId: string; channel: ServerCh
     <ListRow
       title={t("servers.textChannel", { name: isolate(channel.name) })}
       {...(channel.topic === "" ? {} : { subtitle: isolate(channel.topic) })}
+      trailing={<Badge count={unread} label={t("conversations.unread", { count: unread })} />}
+      emphasized={unread > 0}
       onPress={() => {
         router.push({
           pathname: "/server/[id]/channel/[channelId]",
@@ -34,14 +44,16 @@ function ChannelRow({ serverId, channel }: { serverId: string; channel: ServerCh
   );
 }
 
-/** The channels the user can see, under their categories. */
-export function ChannelList({
-  serverId,
-  channels,
-}: {
+/** Props of {@link ChannelList}. */
+export interface ChannelListProps {
   serverId: string;
   channels: readonly ServerChannel[];
-}): ReactNode {
+  /** Each channel's read state, once loaded. */
+  reads: ReadonlyMap<string, ChannelReadState> | undefined;
+}
+
+/** The channels the user can see, under their categories. */
+export function ChannelList({ serverId, channels, reads }: ChannelListProps): ReactNode {
   const { t } = useTranslation();
   const sections = channelSections(channels);
   if (sections.every((section) => section.channels.length === 0)) {
@@ -56,7 +68,12 @@ export function ChannelList({
               {category === undefined ? t("servers.uncategorized") : isolate(category.name)}
             </Heading>
             {inSection.map((channel) => (
-              <ChannelRow key={channel.id} serverId={serverId} channel={channel} />
+              <ChannelRow
+                key={channel.id}
+                serverId={serverId}
+                channel={channel}
+                unread={reads?.get(channel.id)?.unreadCount ?? 0}
+              />
             ))}
           </Stack>
         ),

@@ -61,6 +61,17 @@ func (hub *Hub) MessagesArrived(_ context.Context, userIDs []uuid.UUID, conversa
 	hub.SendToUsers(userIDs, TypeMlsMessages, messagesData{ConversationID: conversationID, LastID: lastID})
 }
 
+type channelReadData struct {
+	ChannelID  uuid.UUID `json:"channelId"`
+	LastReadID int64     `json:"lastReadId"`
+}
+
+// ChannelReadChanged tells the user's devices how far they have now read
+// a server channel.
+func (hub *Hub) ChannelReadChanged(_ context.Context, userID uuid.UUID, channelID uuid.UUID, lastReadID int64) {
+	hub.SendToUsers([]uuid.UUID{userID}, TypeReadUpdate, channelReadData{ChannelID: channelID, LastReadID: lastReadID})
+}
+
 type readData struct {
 	ConversationID uuid.UUID `json:"conversationId"`
 	LastReadID     int64     `json:"lastReadId"`

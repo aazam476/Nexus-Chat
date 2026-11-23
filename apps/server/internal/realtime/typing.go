@@ -9,8 +9,9 @@ import (
 )
 
 // Typing (docs/realtime-protocol.md §4–5): a device says its user is typing
-// in a conversation, and the other members' devices get typing_start. The
-// server keeps no typing state; devices show it for a few seconds.
+// in a conversation or a server channel, and the other members' devices get
+// typing_start. The server keeps no typing state; devices show it for a few
+// seconds.
 
 const typeTyping = "typing"
 
@@ -28,18 +29,26 @@ const (
 )
 
 // TypingRelay says who hears that a user is typing: the conversation's
-// other members, or nobody when the user may not send there.
+// (or channel's) other members, or nobody when the user may not send there.
 type TypingRelay interface {
 	TypingRecipients(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error)
+	ChannelTypingRecipients(ctx context.Context, channelID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error)
 }
 
+// typingData names a conversation or, for a server channel, the channel.
 type typingData struct {
 	ConversationID string `json:"conversationId"`
+	ChannelID      string `json:"channelId"`
 }
 
 type typingStartData struct {
 	ConversationID uuid.UUID `json:"conversationId"`
 	UserID         uuid.UUID `json:"userId"`
+}
+
+type channelTypingStartData struct {
+	ChannelID uuid.UUID `json:"channelId"`
+	UserID    uuid.UUID `json:"userId"`
 }
 
 // typingThrottle remembers when this connection last announced typing in
@@ -66,20 +75,33 @@ func (connection *connection) typing(ctx context.Context, session *gatewaySessio
 	if err := decodeData(frame, &data); err != nil {
 		return &closeReason{closeMalformed, "malformed typing"}
 	}
-	conversationID, err := uuid.Parse(data.ConversationID)
+	inChannel := data.ChannelID != ""
+	where := data.ConversationID
+	if inChannel {
+		where = data.ChannelID
+	}
+	id, err := uuid.Parse(where)
 	if err != nil {
-		connection.send(ctx, serverFrame{Type: typeError, ID: frame.ID, Data: errorData{Code: "invalid_conversation", Message: "conversationId must be a UUID"}})
+		connection.send(ctx, serverFrame{Type: typeError, ID: frame.ID, Data: errorData{Code: "invalid_conversation", Message: "conversationId or channelId must be a UUID"}})
 		return nil
 	}
 	gateway := connection.gateway
-	if !throttle.allow(conversationID, gateway.options.Hub.clock.Now()) {
+	if !throttle.allow(id, gateway.options.Hub.clock.Now()) {
 		return nil
 	}
-	recipients, err := gateway.options.Typing.TypingRecipients(ctx, conversationID, session.userID)
+	relay := gateway.options.Typing
+	var recipients []uuid.UUID
+	var event any = typingStartData{ConversationID: id, UserID: session.userID}
+	if inChannel {
+		recipients, err = relay.ChannelTypingRecipients(ctx, id, session.userID)
+		event = channelTypingStartData{ChannelID: id, UserID: session.userID}
+	} else {
+		recipients, err = relay.TypingRecipients(ctx, id, session.userID)
+	}
 	if err != nil {
 		connection.logger().ErrorContext(ctx, "finding who hears typing failed", slog.Any("error", err))
 		return nil
 	}
-	gateway.options.Hub.SendToUsers(recipients, TypeTypingStart, typingStartData{ConversationID: conversationID, UserID: session.userID})
+	gateway.options.Hub.SendToUsers(recipients, TypeTypingStart, event)
 	return nil
 }

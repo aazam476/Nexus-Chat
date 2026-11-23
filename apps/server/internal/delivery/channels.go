@@ -35,6 +35,9 @@ type ChannelGrant struct {
 // the user cannot see the channel or it is not a text channel.
 type ChannelAccess interface {
 	ChannelGrant(ctx context.Context, ref ChannelRef) (ChannelGrant, error)
+	// TextChannels lists the server's text channels the user can see, or
+	// returns ErrNotFound when they are not in the server.
+	TextChannels(ctx context.Context, serverID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error)
 }
 
 // SendToChannel accepts a message for a server channel, in the current

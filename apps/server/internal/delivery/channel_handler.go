@@ -6,6 +6,7 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/api"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/apiresponse"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/validation"
 )
 
 func channelNotFound(err error) api.Error {
@@ -62,6 +63,56 @@ func (handler *Handler) ListChannelArchive(ctx context.Context, request api.List
 			MessageId: copy.MessageID, MlsGroupId: copy.MLSGroupID, Epoch: copy.Epoch, SenderId: copy.SenderID,
 			Sealed: copy.Sealed, CreatedAt: copy.CreatedAt,
 		})
+	}
+	return out, nil
+}
+
+// MarkChannelRead answers PUT /api/v1/servers/{serverId}/channels/{channelId}/read.
+func (handler *Handler) MarkChannelRead(ctx context.Context, request api.MarkChannelReadRequestObject) (api.MarkChannelReadResponseObject, error) {
+	me, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ref := ChannelRef{ServerID: request.ServerId, ChannelID: request.ChannelId, UserID: me}
+	position, err := handler.service.MarkChannelRead(ctx, ref, request.Body.LastReadId)
+	if errors.Is(err, ErrNotFound) {
+		return api.MarkChannelRead404JSONResponse(channelNotFound(err)), nil
+	}
+	if problems, ok := errors.AsType[*validation.Error](err); ok {
+		return api.MarkChannelRead422JSONResponse{ValidationFailedJSONResponse: api.ValidationFailedJSONResponse(apiresponse.Validation(problems))}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	state := api.ChannelReadState{ChannelId: request.ChannelId, LastReadId: position}
+	states, err := handler.service.ChannelReadStates(ctx, request.ServerId, me)
+	if err != nil {
+		return nil, err
+	}
+	for _, each := range states {
+		if each.ChannelID == request.ChannelId {
+			state.UnreadCount = each.UnreadCount
+		}
+	}
+	return api.MarkChannelRead200JSONResponse(state), nil
+}
+
+// ListChannelReadStates answers GET /api/v1/servers/{serverId}/read-state.
+func (handler *Handler) ListChannelReadStates(ctx context.Context, request api.ListChannelReadStatesRequestObject) (api.ListChannelReadStatesResponseObject, error) {
+	me, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	states, err := handler.service.ChannelReadStates(ctx, request.ServerId, me)
+	if errors.Is(err, ErrNotFound) {
+		return api.ListChannelReadStates404JSONResponse(apiresponse.Error("server_not_found", err)), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out := make(api.ListChannelReadStates200JSONResponse, 0, len(states))
+	for _, state := range states {
+		out = append(out, api.ChannelReadState{ChannelId: state.ChannelID, LastReadId: state.LastReadID, UnreadCount: state.UnreadCount})
 	}
 	return out, nil
 }

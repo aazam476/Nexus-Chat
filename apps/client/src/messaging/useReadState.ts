@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
 import { useGatewayEvents } from "../realtime/GatewayContext";
+import type { ReadSource } from "./useReadTracking";
 
 const reloadOn = new Set(["mls_messages", "read_update", "conversation_update"]);
 
@@ -50,4 +51,9 @@ export function useMarkRead(): (conversationId: string, lastReadId: number) => v
     },
     [client],
   );
+}
+
+/** Conversations' read state, as read tracking takes it. */
+export function useConversationReads(): ReadSource {
+  return { states: useReadStates(), markRead: useMarkRead() };
 }

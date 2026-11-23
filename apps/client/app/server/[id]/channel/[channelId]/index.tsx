@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useTimeline } from "../../../../../src/messaging/useConversations";
+import { useReadTracking } from "../../../../../src/messaging/useReadTracking";
+import { useChannelReads } from "../../../../../src/servers/useChannelReads";
 import { AttachmentsContext, useAttachments } from "../../../../../src/messaging/useAttachments";
 import { ConversationFooter } from "../../../../../src/screens/conversation/ConversationFooter";
 import { MentionNamesContext } from "../../../../../src/screens/conversation/MentionNames";
@@ -21,18 +23,19 @@ export default function ChannelScreen(): ReactNode {
   const { t } = useTranslation();
   const { id, channelId } = useLocalSearchParams<{ id: string; channelId: string }>();
   const open = useChannel(id, channelId);
-  const timeline = useTimeline(channelId)?.items;
+  const view = useTimeline(channelId);
+  const timeline = view?.items;
   const composer = useComposer();
   // Attachments travel with the audience's group, like a group DM's.
   const attachments = useAttachments(open.audience?.audienceId ?? "");
   const { people, send } = open;
+  const firstUnreadId = useReadTracking(channelId, view, { self: people.self, source: useChannelReads(id) });
   const footer = open.mayWrite ? (
     <ConversationFooter
-      conversationId={channelId}
+      typingIn={{ channelId }}
       open={people}
       timeline={timeline}
       compose={{ composer, send, attachments }}
-      typing={false}
     />
   ) : (
     <Text tone="muted">{open.channel === undefined ? "" : t("servers.readOnly")}</Text>
@@ -44,7 +47,13 @@ export default function ChannelScreen(): ReactNode {
           header={<ChannelHeader channel={open.channel} loading={open.loading} />}
           footer={footer}
         >
-          <MessageList timeline={timeline} people={people} composer={composer} send={send} />
+          <MessageList
+            timeline={timeline}
+            people={people}
+            composer={composer}
+            send={send}
+            firstUnreadId={firstUnreadId}
+          />
         </ConversationLayout>
       </MentionNamesContext>
     </AttachmentsContext>

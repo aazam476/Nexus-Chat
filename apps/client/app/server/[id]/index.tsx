@@ -7,6 +7,7 @@ import { HttpsWarning } from "../../../src/components/HttpsWarning";
 import { isolate } from "../../../src/i18n/bidi";
 import { ChannelList } from "../../../src/screens/servers/ChannelList";
 import { ServerActions } from "../../../src/screens/servers/ServerActions";
+import { useChannelReads } from "../../../src/servers/useChannelReads";
 import { useServer } from "../../../src/servers/useServers";
 
 /** A server: its description, its channels, and what the user may do there. */
@@ -14,6 +15,7 @@ export default function ServerScreen(): ReactNode {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { server } = useServer(id);
+  const reads = useChannelReads(id);
   return (
     <Screen>
       <HttpsWarning />
@@ -32,7 +34,7 @@ export default function ServerScreen(): ReactNode {
           <Text tone="muted">{isolate(server.details.server.description)}</Text>
         ) : null}
       </Stack>
-      {server ? <ChannelList serverId={id} channels={server.details.channels} /> : null}
+      {server ? <ChannelList serverId={id} channels={server.details.channels} reads={reads.states} /> : null}
       {server ? <ServerActions details={server.details} /> : null}
     </Screen>
   );

@@ -465,8 +465,7 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   removal directives for those who lost a channel. Channel messages go
   through their own endpoint, which checks `SEND_MESSAGES` there and tags
   each copy with its channel; a channel's archive spans every group it has
-  been in. Unread counts and typing in channels come with the channel
-  screens.
+  been in.
 - Channels in the messaging engine: a device joins an audience's group,
   sends in its channels, and syncs it once for all of them. Each message
   carries its channel inside the encryption, and one whose server tag names
@@ -493,15 +492,17 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   inherit, deny); roles with their colors, permissions and order; and
   giving members roles. The screens only offer what the server will allow:
   roles below the user's own, and permissions they hold themselves.
+- Typing and unread counts in channels: `typing` can name a channel, and
+  reaches everyone who can see it when the typist may send there. Each member's read
+  position is kept per channel; the channel list shows unread counts, the
+  channel screen marks what it shows as read and jumps to the first unread
+  message, and `read_update` tells the user's other devices.
 
 ## Known issues
 
 - Channels and roles are reordered with "move up" and "move down" buttons
   and a category picker, which also work with screen readers and
   keyboards. Dragging them (spec §4.4) is not built yet.
-- Server channels do not show typing or unread counts yet; their messages
-  arrive and read like a DM's otherwise.
-
 - Video compression (ADR 0014) is not built yet: it needs the platforms'
   own encoders (AVFoundation, Media3 Transformer, WebCodecs). Until then,
   videos are sent in original quality and the composer says so, as the ADR

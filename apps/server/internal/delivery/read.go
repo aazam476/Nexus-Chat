@@ -30,11 +30,14 @@ type ReadState struct {
 type readStore interface {
 	MarkRead(ctx context.Context, params store.MarkReadParams) (int64, error)
 	ReadStates(ctx context.Context, userID uuid.UUID) ([]store.ReadStatesRow, error)
+	MarkChannelRead(ctx context.Context, params store.MarkChannelReadParams) (int64, error)
+	ChannelReadStates(ctx context.Context, params store.ChannelReadStatesParams) ([]store.ChannelReadStatesRow, error)
 }
 
 // ReadNotifier tells a user's devices that their read position moved.
 type ReadNotifier interface {
 	ReadChanged(ctx context.Context, userID uuid.UUID, conversationID uuid.UUID, lastReadID int64)
+	ChannelReadChanged(ctx context.Context, userID uuid.UUID, channelID uuid.UUID, lastReadID int64)
 }
 
 // MarkRead moves the caller's read position forward to lastReadID (never

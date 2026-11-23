@@ -5,15 +5,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useGatewayEvents, useReportTyping } from "../realtime/GatewayContext";
+import type { TypingPlace } from "../realtime/gatewayClient";
 import { shouldReportTyping, startedTyping, stillTyping, stoppedTyping, type Typists } from "./typing";
 
-/** A typing_start event's data, if it is one for `conversationId`. */
-function typistIn(data: unknown, conversationId: string): string | undefined {
+/** The ID a typing place goes by: the conversation's or the channel's. */
+export function placeId(place: TypingPlace): string {
+  return "conversationId" in place ? place.conversationId : place.channelId;
+}
+
+/** A typing_start event's data, if it is one for the conversation or channel `id`. */
+function typistIn(data: unknown, id: string): string | undefined {
   if (typeof data !== "object" || data === null) {
     return undefined;
   }
-  const { conversationId: where, userId } = data as { conversationId?: unknown; userId?: unknown };
-  return where === conversationId && typeof userId === "string" ? userId : undefined;
+  const { conversationId, channelId, userId } = data as {
+    conversationId?: unknown;
+    channelId?: unknown;
+    userId?: unknown;
+  };
+  return (conversationId ?? channelId) === id && typeof userId === "string" ? userId : undefined;
 }
 
 /** The conversation's latest message: its sender stops showing as typing when it arrives. */
@@ -63,21 +73,20 @@ export function useTypists(
   return typing;
 }
 
-/**
- * Call with each change of the draft; reports typing at most every few
- * seconds. An empty `conversationId` reports nothing.
- */
-export function useTypingReporter(conversationId: string): (draft: string) => void {
+/** Call with each change of the draft; reports typing at most every few seconds. */
+export function useTypingReporter(place: TypingPlace): (draft: string) => void {
   const report = useReportTyping();
   const lastRef = useRef<number | undefined>(undefined);
+  const id = placeId(place);
+  const inChannel = "channelId" in place;
   return useCallback(
     (draft: string) => {
       const now = Date.now();
-      if (conversationId !== "" && draft.trim() !== "" && shouldReportTyping(lastRef.current, now)) {
+      if (draft.trim() !== "" && shouldReportTyping(lastRef.current, now)) {
         lastRef.current = now;
-        report(conversationId);
+        report(inChannel ? { channelId: id } : { conversationId: id });
       }
     },
-    [conversationId, report],
+    [id, inChannel, report],
   );
 }

@@ -36,10 +36,15 @@ function channelTitle(name: string): RegExp {
   return new RegExp(`^#\u2068?${name}\u2069?$`);
 }
 
+/** A channel row in a server's list: its title, then an unread count when there is one. */
+function channelRow(name: string): RegExp {
+  return new RegExp(`^#\u2068?${name}\u2069?(?![\\w-])`);
+}
+
 /** Opens the text channel `name` of the open server. */
 export async function openChannel(page: Page, name: string): Promise<void> {
   await page
-    .getByRole("button", { name: channelTitle(name) })
+    .getByRole("button", { name: channelRow(name) })
     .filter({ visible: true })
     .first()
     .click();

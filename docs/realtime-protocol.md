@@ -97,13 +97,13 @@ nothing that matters.
 
 ## 4. Client → server frames
 
-| `type`      | `data`                                            | Notes                                                                            |
-| ----------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `identify`  | `{ "token": "nxs_…" }`                            | Starts a new gateway session                                                     |
-| `resume`    | `{ "token", "gatewaySessionId", "lastSequence" }` | Continues a dropped session (§3)                                                 |
-| `heartbeat` | `{ "lastSequence": 41 }`                          | `lastSequence` is informational; 0 before any event                              |
-| `activity`  | `{ "idle": true }`                                | The device's user has been inactive for 10 minutes (`true`) or is back (`false`) |
-| `typing`    | `{ "conversationId": "0195…" }`                   | The user is typing there; sent at most every 3 s while they type (§4.1)          |
+| `type`      | `data`                                                        | Notes                                                                            |
+| ----------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `identify`  | `{ "token": "nxs_…" }`                                        | Starts a new gateway session                                                     |
+| `resume`    | `{ "token", "gatewaySessionId", "lastSequence" }`             | Continues a dropped session (§3)                                                 |
+| `heartbeat` | `{ "lastSequence": 41 }`                                      | `lastSequence` is informational; 0 before any event                              |
+| `activity`  | `{ "idle": true }`                                            | The device's user has been inactive for 10 minutes (`true`) or is back (`false`) |
+| `typing`    | `{ "conversationId": "0195…" }` or `{ "channelId": "0195…" }` | The user is typing there; sent at most every 3 s while they type (§4.1)          |
 
 ### 4.1 Typing
 
@@ -117,6 +117,10 @@ nothing, so typing reveals no conversation to a non-member. An invalid
 server keeps no typing state: devices show "typing" for 6 seconds after
 the last `typing_start`, and hide it at once when a message from that user
 arrives.
+
+In a server text channel the frame names the channel instead. Everyone else
+in the channel's audience group hears it, and only someone with
+`SEND_MESSAGES` there is heard.
 
 ## 5. Server → client frames
 
@@ -137,8 +141,8 @@ replayed. Frames with `seq` are events.
 | `conversation_update` | yes   | `{ "conversationId" }`: a DM or group DM was created, renamed, or gained or lost a member; fetch it again (a 404 means you left)                                                                        |
 | `server_update`       | yes   | `{ "serverId" }`: a server's settings, channels, roles, overrides or members changed, or you joined, left or lost it; fetch it again (a 404 means you are no longer a member)                           |
 | `mls_messages`        | yes   | `{ "conversationId", "lastId" }`: new MLS messages up to `lastId`; fetch those after the last one this device has                                                                                       |
-| `typing_start`        | yes   | `{ "conversationId", "userId" }`: another member is typing there (§4.1)                                                                                                                                 |
-| `read_update`         | yes   | `{ "conversationId", "lastReadId" }`: the user read the conversation up to that live message on one of their devices (`PUT /api/v1/conversations/{id}/read`)                                            |
+| `typing_start`        | yes   | `{ "conversationId", "userId" }`, or `{ "channelId", "userId" }` in a server channel: another member is typing there (§4.1)                                                                             |
+| `read_update`         | yes   | `{ "conversationId", "lastReadId" }`, or `{ "channelId", "lastReadId" }` for a server channel: the user read it up to that live message on one of their devices                                         |
 
 `CurrentUser` is the object from `GET /api/v1/users/me`. `Presence` is:
 

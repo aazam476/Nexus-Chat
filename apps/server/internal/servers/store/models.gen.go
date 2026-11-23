@@ -48,6 +48,13 @@ type Block struct {
 	CreatedAt time.Time
 }
 
+type ChannelRead struct {
+	ChannelID  uuid.UUID
+	UserID     uuid.UUID
+	LastReadID int64
+	UpdatedAt  time.Time
+}
+
 type Conversation struct {
 	ID         uuid.UUID
 	Kind       string

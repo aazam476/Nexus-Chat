@@ -84,14 +84,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	// leaves a group, and the delivery service asks conversations who is in
 	// them; the forwarder lets each be built with the other.
 	leaves := &leaveForwarder{}
-	serverService := servers.NewService(servers.Dependencies{
-		Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Audiences: leaves, Clock: system,
-		// Icon changes are limited per user, like profile pictures and group icons.
-		Icons: servers.Icons{
-			Files:   filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
-			Limiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Logger: app.logger,
-		},
-	})
+	serverService := app.newServers(configuration, leaves, system)
 	features.Servers = servers.NewHandler(serverService)
 	socialService := social.NewService(social.Dependencies{
 		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: serverService,
@@ -113,6 +106,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	})
 	leaves.delivery = deliveryService
 	app.typing.conversations = conversationService
+	app.typing.servers = serverService
 	features.Conversations = conversations.NewHandler(conversationService)
 	features.LinkPreviews = linkpreview.NewHandler(linkpreview.NewService(linkpreview.Options{
 		Switch: instanceconfig.NewService(instanceconfigstore.New(app.pool), system, configuration.Domain),
@@ -128,6 +122,18 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	features.Delivery = delivery.NewHandler(deliveryService)
 }
 
+// newServers makes the servers service. Icon changes are limited per
+// user, like profile pictures and group icons.
+func (app *application) newServers(configuration config.Config, leaves servers.AudienceListener, system clock.Clock) *servers.Service {
+	return servers.NewService(servers.Dependencies{
+		Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Audiences: leaves, Clock: system,
+		Icons: servers.Icons{
+			Files:   filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
+			Limiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Logger: app.logger,
+		},
+	})
+}
+
 // leaveForwarder passes conversations' and servers' leave events to the
 // delivery service.
 type leaveForwarder struct {
@@ -141,16 +147,26 @@ func (forwarder *leaveForwarder) MemberLeft(ctx context.Context, conversationID 
 }
 
 // typingForwarder answers the gateway's typing questions from the
-// conversations feature. Someone who may not send in a conversation is
+// conversations and servers features. Someone who may not send in a conversation is
 // told nothing went wrong, and nobody hears them.
 type typingForwarder struct {
 	conversations *conversations.Service
+	servers       *servers.Service
 }
 
 // TypingRecipients implements realtime.TypingRelay.
 func (forwarder *typingForwarder) TypingRecipients(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
 	recipients, err := forwarder.conversations.TypingRecipients(ctx, conversationID, userID)
 	if errors.Is(err, conversations.ErrNotFound) {
+		return nil, nil
+	}
+	return recipients, err
+}
+
+// ChannelTypingRecipients implements realtime.TypingRelay for server channels.
+func (forwarder *typingForwarder) ChannelTypingRecipients(ctx context.Context, channelID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
+	recipients, err := forwarder.servers.ChannelTypingRecipients(ctx, channelID, userID)
+	if errors.Is(err, servers.ErrNotFound) || errors.Is(err, servers.ErrNoChannel) || errors.Is(err, servers.ErrCannotType) {
 		return nil, nil
 	}
 	return recipients, err

@@ -7,13 +7,13 @@ import type { CurrentUser } from "@nexus-chat/api-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useConnection } from "../connection/ConnectionContext";
-import { GatewayClient, type GatewayEvent } from "./gatewayClient";
+import { GatewayClient, type GatewayEvent, type TypingPlace } from "./gatewayClient";
 
 /** The user's own presence, as the gateway reports it. */
 export interface OwnPresence {
   status: string | undefined;
   /** Sends a typing frame for the conversation while connected. */
-  reportTyping: (conversationId: string) => void;
+  reportTyping: (place: TypingPlace) => void;
 }
 
 /**
@@ -49,8 +49,8 @@ export function useGateway(token: string | undefined, onEvent?: (event: GatewayE
       clientRef.current = undefined;
     };
   }, [address, token, setUser, signOut]);
-  const reportTyping = useCallback((conversationId: string) => {
-    clientRef.current?.reportTyping(conversationId);
+  const reportTyping = useCallback((place: TypingPlace) => {
+    clientRef.current?.reportTyping(place);
   }, []);
   return { status, reportTyping };
 }
