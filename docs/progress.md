@@ -492,6 +492,14 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   inherit, deny); roles with their colors, permissions and order; and
   giving members roles. The screens only offer what the server will allow:
   roles below the user's own, and permissions they hold themselves.
+- Dragging channels and roles into order: a held row lifts and follows the
+  finger or mouse on the UI thread, and drops into place among the others,
+  a channel into the category above it and a category with its channels.
+  The new order shows at once and goes back if the server refuses it.
+  Roles never pass one the user may not manage. "Move up" and "move down"
+  buttons stay for keyboards and screen readers. The release gate's
+  browser test drags a channel to the top, and the other member's list
+  follows.
 - Typing and unread counts in channels: `typing` can name a channel, and
   reaches everyone who can see it when the typist may send there. Each member's read
   position is kept per channel; the channel list shows unread counts, the
@@ -500,9 +508,6 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
 
 ## Known issues
 
-- Channels and roles are reordered with "move up" and "move down" buttons
-  and a category picker, which also work with screen readers and
-  keyboards. Dragging them (spec §4.4) is not built yet.
 - Video compression (ADR 0014) is not built yet: it needs the platforms'
   own encoders (AVFoundation, Media3 Transformer, WebCodecs). Until then,
   videos are sent in original quality and the composer says so, as the ADR

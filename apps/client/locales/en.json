@@ -452,7 +452,7 @@
     },
     "channelAdmin": {
       "title": "Channels",
-      "intro": "Move channels up and down, or into another category. Changes reach members at once.",
+      "intro": "Hold a channel to drag it into place, or use its buttons. Moving a category moves its channels too. Changes reach members at once.",
       "newTitle": "New channel",
       "kind": "Kind",
       "kindText": "Text channel",
@@ -483,7 +483,7 @@
     },
     "roleAdmin": {
       "title": "Roles",
-      "intro": "Higher roles outrank lower ones. You can change roles below your own highest role.",
+      "intro": "Higher roles outrank lower ones. You can change roles below your own highest role, and hold one to drag it into place.",
       "new": "New role",
       "newName": "New role",
       "everyone": "@everyone: what every member may do",

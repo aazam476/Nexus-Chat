@@ -64,3 +64,36 @@ export async function addChannel(page: Page, name: string): Promise<void> {
   await shown(page, "channel-admin-back").click();
   await shown(page, "settings-back").click();
 }
+
+/** The names of the open server's text channels, in the order its channel list shows them. */
+export async function channelOrder(page: Page): Promise<string[]> {
+  const rows = await page.getByRole("button", { name: /^#/ }).filter({ visible: true }).allInnerTexts();
+  return rows.map((row) => /^#⁨?([^⁩\s]+)/.exec(row)?.[1] ?? row);
+}
+
+/**
+ * Drags the text channel `name` above `above` in the open server's channel
+ * settings, as a person would: hold it, move it, let go. Then goes back to
+ * the server.
+ */
+export async function dragChannelAbove(page: Page, name: string, above: string): Promise<void> {
+  await shown(page, "server-settings").click();
+  await shown(page, "manage-channels").click();
+  const row = (channel: string) =>
+    page
+      .locator('[data-testid^="channel-drag-"][data-testid$="-row"]')
+      .filter({ visible: true, has: page.getByText(channelTitle(channel)) });
+  const from = await row(name).boundingBox();
+  const to = await row(above).boundingBox();
+  if (from === null || to === null) {
+    throw new Error("the channel rows are not on the screen");
+  }
+  await page.mouse.move(from.x + from.width / 2, from.y + 10);
+  await page.mouse.down();
+  await page.waitForTimeout(600); // held past the long press that starts a drag
+  await page.mouse.move(from.x + from.width / 2, to.y + 5, { steps: 12 });
+  await page.mouse.up();
+  await expect(row(name).or(row(above)).first()).toContainText(name, { timeout: 15_000 });
+  await shown(page, "channel-admin-back").click();
+  await shown(page, "settings-back").click();
+}

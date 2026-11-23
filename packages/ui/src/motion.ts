@@ -40,3 +40,15 @@ export const appearDuration = "150ms" as const;
 
 /** How long a new step of a form (a second factor, a confirmation) takes to fade in. */
 export const stepDuration = "200ms" as const;
+
+/** How long a row must be held before it can be dragged, in ms, so scrolling never picks one up. */
+export const dragHoldDelay = 300;
+
+/** How much a held row grows, to show it is lifted off the list. */
+export const dragLiftScale = 1.02;
+
+/** With reduced motion, a held row dims instead of growing. */
+export const reducedMotionDragOpacity = 0.85;
+
+/** How a dropped row settles into place: a spring, since a finger moved it. */
+export const dragSettle = { duration: 300, dampingRatio: 0.8 } as const;

@@ -18,7 +18,15 @@ import {
   signUpForMessaging,
 } from "../src/messaging.js";
 import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
-import { addChannel, joinWith, makeInvite, makeServer, openChannel } from "../src/servers.js";
+import {
+  addChannel,
+  channelOrder,
+  dragChannelAbove,
+  joinWith,
+  makeInvite,
+  makeServer,
+  openChannel,
+} from "../src/servers.js";
 import { accounts, settings } from "../src/settings.js";
 
 test.describe.configure({ mode: "serial" });
@@ -163,6 +171,11 @@ test("a server's channel carries messages, with history for those who join later
   await addChannel(ruth, "announcements");
   await shown(sami, "channel-back").click();
   await openChannel(sami, "announcements");
+
+  // Ruth drags it to the top; Sami's list follows.
+  await dragChannelAbove(ruth, "announcements", "general");
+  await shown(sami, "channel-back").click();
+  await expect.poll(() => channelOrder(sami), { timeout: 30_000 }).toEqual(["announcements", "general"]);
   await Promise.all(contexts.map((context) => context.close()));
 });
 

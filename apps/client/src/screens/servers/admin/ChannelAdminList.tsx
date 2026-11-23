@@ -1,13 +1,14 @@
-import type { ServerChannel } from "@nexus-chat/api-client";
+import type { ChannelPlacement, ServerChannel } from "@nexus-chat/api-client";
 import { Button, Heading, Stack, Text } from "@nexus-chat/ui";
 import { router } from "expo-router";
 import type { TFunction } from "i18next";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DraggableRow, useRowLayouts } from "../../../components/DraggableRow";
 import { isolate } from "../../../i18n/bidi";
 import { moved } from "../../../servers/channelOrder";
-import { channelSections } from "../../../servers/channelTree";
+import { channelRows, droppedChannel, placedChannels } from "../../../servers/dropOrder";
 import { placeChannels } from "../../../servers/manageActions";
 import type { ServerRunner } from "../useServerRunner";
 
@@ -82,32 +83,60 @@ function ChannelControls(props: ChannelControlsProps): ReactNode {
   );
 }
 
-/** Every channel the manager can see, under their categories, with its controls. */
+/** The channel order shown: the one just dropped until the server sends the new channels, or it fails. */
+function useShownChannels(channels: readonly ServerChannel[], runner: ServerRunner) {
+  const [dropped, setDropped] = useState<{
+    base: readonly ServerChannel[];
+    placements: ChannelPlacement[];
+  }>();
+  const shown =
+    dropped?.base === channels && runner.error === undefined
+      ? placedChannels(channels, dropped.placements)
+      : channels;
+  const place = (placements: ChannelPlacement[]): void => {
+    setDropped({ base: channels, placements });
+  };
+  return { shown, place };
+}
+
+/**
+ * Every channel the manager can see, under their categories, with its
+ * controls. Rows can also be held and dragged: a channel into another place
+ * or category, a category with its channels.
+ */
 export function ChannelAdminList({
   serverId,
   channels,
   runner,
 }: Omit<ChannelControlsProps, "channel">): ReactNode {
   const { t } = useTranslation();
+  const { shown, place } = useShownChannels(channels, runner);
+  const layouts = useRowLayouts();
+  const rows = channelRows(shown);
+  const drop = (channel: ServerChannel, from: number, translationY: number): void => {
+    const placements = droppedChannel(shown, channel.id, layouts.target(from, translationY));
+    if (placements !== undefined) {
+      place(placements);
+      runner.run((client) => placeChannels(client, serverId, placements));
+    }
+  };
   return (
-    <Stack gap="lg">
-      {channelSections(channels).map(({ category, channels: inSection }) => (
-        <Stack gap="md" key={category?.id ?? "loose"}>
-          {category === undefined ? (
-            <Heading level={2}>{t("servers.uncategorized")}</Heading>
-          ) : (
-            <ChannelControls serverId={serverId} channel={category} channels={channels} runner={runner} />
-          )}
-          {inSection.map((channel) => (
-            <ChannelControls
-              key={channel.id}
-              serverId={serverId}
-              channel={channel}
-              channels={channels}
-              runner={runner}
-            />
-          ))}
-        </Stack>
+    <Stack gap="md">
+      {rows[0] === undefined || rows[0].kind === "category" ? null : (
+        <Heading level={2}>{t("servers.uncategorized")}</Heading>
+      )}
+      {rows.map((channel, index) => (
+        <DraggableRow
+          key={channel.id}
+          enabled={!runner.busy}
+          onLayout={layouts.track(index)}
+          onDrop={(translationY) => {
+            drop(channel, index, translationY);
+          }}
+          testID={`channel-drag-${channel.id}`}
+        >
+          <ChannelControls serverId={serverId} channel={channel} channels={shown} runner={runner} />
+        </DraggableRow>
       ))}
     </Stack>
   );

@@ -1,11 +1,13 @@
 import type { ServerDetails, ServerMember, ServerRole } from "@nexus-chat/api-client";
 import { Button, Stack, Text } from "@nexus-chat/ui";
 import { router } from "expo-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DraggableRow, useRowLayouts } from "../../../components/DraggableRow";
 import { useConnection } from "../../../connection/ConnectionContext";
 import { isolate } from "../../../i18n/bidi";
+import { droppedRole, placedRoles } from "../../../servers/dropOrder";
 import { mayManageRole, rolesHighestFirst } from "../../../servers/hierarchy";
 import { placeRoles } from "../../../servers/manageActions";
 import { movedRole } from "../../../servers/roleOrder";
@@ -87,13 +89,45 @@ function RoleRow({ role, props }: { role: ServerRole; props: RoleAdminListProps 
   );
 }
 
-/** The server's roles, highest first. */
+/**
+ * The server's roles, highest first. Roles the user may move can also be
+ * held and dragged, but never past a role at or above their own.
+ */
 export function RoleAdminList(props: RoleAdminListProps): ReactNode {
+  const { user } = useConnection();
+  const [dropped, setDropped] = useState<{ base: ServerDetails; ids: string[] }>();
+  const details =
+    dropped?.base === props.details && props.runner.error === undefined
+      ? placedRoles(props.details, dropped.ids)
+      : props.details;
+  const layouts = useRowLayouts();
+  const drop = (role: ServerRole, from: number, translationY: number): void => {
+    const ids = droppedRole(details, user?.id ?? "", role.id, layouts.target(from, translationY));
+    if (ids !== undefined) {
+      setDropped({ base: props.details, ids });
+      props.runner.run((client) => placeRoles(client, details.server.id, ids));
+    }
+  };
+  const shownProps = { ...props, details };
   return (
     <Stack gap="md">
-      {rolesHighestFirst(props.details).map((role) => (
-        <RoleRow key={role.id} role={role} props={props} />
-      ))}
+      {rolesHighestFirst(details).map((role, index) =>
+        role.everyone ? (
+          <RoleRow key={role.id} role={role} props={shownProps} />
+        ) : (
+          <DraggableRow
+            key={role.id}
+            enabled={!props.runner.busy && mayManageRole(details, user?.id ?? "", role)}
+            onLayout={layouts.track(index)}
+            onDrop={(translationY) => {
+              drop(role, index, translationY);
+            }}
+            testID={`role-drag-${role.id}`}
+          >
+            <RoleRow role={role} props={shownProps} />
+          </DraggableRow>
+        ),
+      )}
     </Stack>
   );
 }
