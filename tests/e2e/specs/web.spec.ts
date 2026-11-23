@@ -18,7 +18,7 @@ import {
   signUpForMessaging,
 } from "../src/messaging.js";
 import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
-import { joinWith, makeInvite, makeServer, openChannel } from "../src/servers.js";
+import { addChannel, joinWith, makeInvite, makeServer, openChannel } from "../src/servers.js";
 import { accounts, settings } from "../src/settings.js";
 
 test.describe.configure({ mode: "serial" });
@@ -157,6 +157,12 @@ test("a server's channel carries messages, with history for those who join later
     },
   );
   await expectAccessible(sami);
+
+  // Ruth adds a channel in the settings; it shows up for Sami straight away.
+  await shown(ruth, "channel-back").click();
+  await addChannel(ruth, "announcements");
+  await shown(sami, "channel-back").click();
+  await openChannel(sami, "announcements");
   await Promise.all(contexts.map((context) => context.close()));
 });
 

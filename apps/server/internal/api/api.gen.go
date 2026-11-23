@@ -1116,12 +1116,15 @@ type Server struct {
 	AttachmentMaxBytes *int64 `json:"attachmentMaxBytes,omitempty"`
 
 	// CompressMedia Whether members' clients compress photos by default (ADR 0014).
-	CompressMedia bool               `json:"compressMedia"`
-	CreatedAt     time.Time          `json:"createdAt"`
-	Description   string             `json:"description"`
-	Id            openapi_types.UUID `json:"id"`
-	Name          string             `json:"name"`
-	OwnerId       openapi_types.UUID `json:"ownerId"`
+	CompressMedia bool      `json:"compressMedia"`
+	CreatedAt     time.Time `json:"createdAt"`
+	Description   string    `json:"description"`
+
+	// IconUrl The path of the 512×512 icon, when the server has one.
+	IconUrl *string            `json:"iconUrl,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+	Name    string             `json:"name"`
+	OwnerId openapi_types.UUID `json:"ownerId"`
 }
 
 // ServerChannel defines model for ServerChannel.
@@ -2005,6 +2008,9 @@ type ServerInterface interface {
 	// ListReadStates Read position and unread count of each of the caller's conversations
 	// (GET /api/v1/read-state)
 	ListReadStates(w http.ResponseWriter, r *http.Request)
+	// GetServerIcon A server's icon
+	// (GET /api/v1/server-icons/{iconId})
+	GetServerIcon(w http.ResponseWriter, r *http.Request, iconId openapi_types.UUID)
 	// ListServers The servers you are in
 	// (GET /api/v1/servers)
 	ListServers(w http.ResponseWriter, r *http.Request)
@@ -2044,6 +2050,12 @@ type ServerInterface interface {
 	// SetChannelOverride Allow or deny permissions in a channel for a role or member (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	SetChannelOverride(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, targetKind OverrideTargetKind, targetId openapi_types.UUID)
+	// RemoveServerIcon Remove the server's icon (MANAGE_SERVER)
+	// (DELETE /api/v1/servers/{serverId}/icon)
+	RemoveServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
+	// SetServerIcon Set the server's icon (MANAGE_SERVER)
+	// (PUT /api/v1/servers/{serverId}/icon)
+	SetServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
 	// ListServerInvites A server's invites (MANAGE_SERVER)
 	// (GET /api/v1/servers/{serverId}/invites)
 	ListServerInvites(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -4048,6 +4060,32 @@ func (siw *ServerInterfaceWrapper) ListReadStates(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetServerIcon operation middleware
+func (siw *ServerInterfaceWrapper) GetServerIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "iconId" -------------
+	var iconId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "iconId", r.PathValue("iconId"), &iconId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "iconId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetServerIcon(w, r, iconId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListServers operation middleware
 func (siw *ServerInterfaceWrapper) ListServers(w http.ResponseWriter, r *http.Request) {
 
@@ -4472,6 +4510,58 @@ func (siw *ServerInterfaceWrapper) SetChannelOverride(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetChannelOverride(w, r, serverId, channelId, targetKind, targetId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveServerIcon operation middleware
+func (siw *ServerInterfaceWrapper) RemoveServerIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveServerIcon(w, r, serverId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetServerIcon operation middleware
+func (siw *ServerInterfaceWrapper) SetServerIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetServerIcon(w, r, serverId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5326,6 +5416,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.ListServerInvites)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.CreateServerInvite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites/{code}", wrapper.RevokeServerInvite)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.RemoveServerIcon)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.SetServerIcon)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/server-icons/{iconId}", wrapper.GetServerIcon)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invites/{code}", wrapper.PreviewInvite)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/invites/{code}/join", wrapper.JoinServer)
 
@@ -11384,6 +11477,98 @@ func (response ListReadStates401JSONResponse) VisitListReadStatesResponse(w http
 	return err
 }
 
+type GetServerIconRequestObject struct {
+	IconId openapi_types.UUID `json:"iconId"`
+}
+
+type GetServerIconResponseObject interface {
+	VisitGetServerIconResponse(w http.ResponseWriter) error
+}
+
+type GetServerIcon200ResponseHeaders struct {
+	CacheControl string
+}
+
+type GetServerIcon200ImagegifResponse struct {
+	Body          io.Reader
+	Headers       GetServerIcon200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetServerIcon200ImagegifResponse) VisitGetServerIconResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/gif")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetServerIcon200ImagejpegResponse struct {
+	Body          io.Reader
+	Headers       GetServerIcon200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetServerIcon200ImagejpegResponse) VisitGetServerIconResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetServerIcon200ImagepngResponse struct {
+	Body          io.Reader
+	Headers       GetServerIcon200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetServerIcon200ImagepngResponse) VisitGetServerIconResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetServerIcon404JSONResponse Error
+
+func (response GetServerIcon404JSONResponse) VisitGetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListServersRequestObject struct {
 }
 
@@ -12452,6 +12637,165 @@ func (response SetChannelOverride422JSONResponse) VisitSetChannelOverrideRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveServerIconRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+}
+
+type RemoveServerIconResponseObject interface {
+	VisitRemoveServerIconResponse(w http.ResponseWriter) error
+}
+
+type RemoveServerIcon204Response struct {
+}
+
+func (response RemoveServerIcon204Response) VisitRemoveServerIconResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveServerIcon401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveServerIcon401JSONResponse) VisitRemoveServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveServerIcon403JSONResponse Error
+
+func (response RemoveServerIcon403JSONResponse) VisitRemoveServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveServerIcon404JSONResponse Error
+
+func (response RemoveServerIcon404JSONResponse) VisitRemoveServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetServerIconRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	Body     io.Reader
+}
+
+type SetServerIconResponseObject interface {
+	VisitSetServerIconResponse(w http.ResponseWriter) error
+}
+
+type SetServerIcon204Response struct {
+}
+
+func (response SetServerIcon204Response) VisitSetServerIconResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetServerIcon401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetServerIcon401JSONResponse) VisitSetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetServerIcon403JSONResponse Error
+
+func (response SetServerIcon403JSONResponse) VisitSetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetServerIcon404JSONResponse Error
+
+func (response SetServerIcon404JSONResponse) VisitSetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetServerIcon413JSONResponse Error
+
+func (response SetServerIcon413JSONResponse) VisitSetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetServerIcon422JSONResponse Error
+
+func (response SetServerIcon422JSONResponse) VisitSetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetServerIcon429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SetServerIcon429JSONResponse) VisitSetServerIconResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14308,6 +14652,9 @@ type StrictServerInterface interface {
 	// ListReadStates Read position and unread count of each of the caller's conversations
 	// (GET /api/v1/read-state)
 	ListReadStates(ctx context.Context, request ListReadStatesRequestObject) (ListReadStatesResponseObject, error)
+	// GetServerIcon A server's icon
+	// (GET /api/v1/server-icons/{iconId})
+	GetServerIcon(ctx context.Context, request GetServerIconRequestObject) (GetServerIconResponseObject, error)
 	// ListServers The servers you are in
 	// (GET /api/v1/servers)
 	ListServers(ctx context.Context, request ListServersRequestObject) (ListServersResponseObject, error)
@@ -14347,6 +14694,12 @@ type StrictServerInterface interface {
 	// SetChannelOverride Allow or deny permissions in a channel for a role or member (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	SetChannelOverride(ctx context.Context, request SetChannelOverrideRequestObject) (SetChannelOverrideResponseObject, error)
+	// RemoveServerIcon Remove the server's icon (MANAGE_SERVER)
+	// (DELETE /api/v1/servers/{serverId}/icon)
+	RemoveServerIcon(ctx context.Context, request RemoveServerIconRequestObject) (RemoveServerIconResponseObject, error)
+	// SetServerIcon Set the server's icon (MANAGE_SERVER)
+	// (PUT /api/v1/servers/{serverId}/icon)
+	SetServerIcon(ctx context.Context, request SetServerIconRequestObject) (SetServerIconResponseObject, error)
 	// ListServerInvites A server's invites (MANAGE_SERVER)
 	// (GET /api/v1/servers/{serverId}/invites)
 	ListServerInvites(ctx context.Context, request ListServerInvitesRequestObject) (ListServerInvitesResponseObject, error)
@@ -17045,6 +17398,32 @@ func (sh *strictHandler) ListReadStates(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// GetServerIcon operation middleware
+func (sh *strictHandler) GetServerIcon(w http.ResponseWriter, r *http.Request, iconId openapi_types.UUID) {
+	var request GetServerIconRequestObject
+
+	request.IconId = iconId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetServerIcon(ctx, request.(GetServerIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetServerIcon")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetServerIconResponseObject); ok {
+		if err := validResponse.VisitGetServerIconResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListServers operation middleware
 func (sh *strictHandler) ListServers(w http.ResponseWriter, r *http.Request) {
 	var request ListServersRequestObject
@@ -17432,6 +17811,60 @@ func (sh *strictHandler) SetChannelOverride(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SetChannelOverrideResponseObject); ok {
 		if err := validResponse.VisitSetChannelOverrideResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveServerIcon operation middleware
+func (sh *strictHandler) RemoveServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
+	var request RemoveServerIconRequestObject
+
+	request.ServerId = serverId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveServerIcon(ctx, request.(RemoveServerIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveServerIcon")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveServerIconResponseObject); ok {
+		if err := validResponse.VisitRemoveServerIconResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetServerIcon operation middleware
+func (sh *strictHandler) SetServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
+	var request SetServerIconRequestObject
+
+	request.ServerId = serverId
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetServerIcon(ctx, request.(SetServerIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetServerIcon")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetServerIconResponseObject); ok {
+		if err := validResponse.VisitSetServerIconResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

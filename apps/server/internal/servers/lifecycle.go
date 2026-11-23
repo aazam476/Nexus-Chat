@@ -84,6 +84,7 @@ func serverOf(row store.Server) Server {
 	return Server{
 		ID: row.ID, Name: row.Name, Description: row.Description, OwnerID: row.OwnerID,
 		AttachmentMaxBytes: row.AttachmentMaxBytes, CompressMedia: row.CompressMedia, CreatedAt: row.CreatedAt,
+		IconID: row.IconID,
 	}
 }
 

@@ -28,6 +28,10 @@ export type Server = {
      */
     attachmentMaxBytes?: number;
     /**
+     * The path of the 512×512 icon, when the server has one.
+     */
+    iconUrl?: string;
+    /**
      * Whether members' clients compress photos by default (ADR 0014).
      */
     compressMedia: boolean;
@@ -5632,6 +5636,115 @@ export type RevokeServerInviteResponses = {
 };
 
 export type RevokeServerInviteResponse = RevokeServerInviteResponses[keyof RevokeServerInviteResponses];
+
+export type RemoveServerIconData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/icon';
+};
+
+export type RemoveServerIconErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_SERVER (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type RemoveServerIconError = RemoveServerIconErrors[keyof RemoveServerIconErrors];
+
+export type RemoveServerIconResponses = {
+    /**
+     * Removed.
+     */
+    204: void;
+};
+
+export type RemoveServerIconResponse = RemoveServerIconResponses[keyof RemoveServerIconResponses];
+
+export type SetServerIconData = {
+    body: Blob | File;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/icon';
+};
+
+export type SetServerIconErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_SERVER (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+    /**
+     * The file is over 8 MB or the image over 8192 pixels on a side (`image_too_large`).
+     */
+    413: Error;
+    /**
+     * Not a supported or readable image (`unsupported_image`).
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type SetServerIconError = SetServerIconErrors[keyof SetServerIconErrors];
+
+export type SetServerIconResponses = {
+    /**
+     * Set.
+     */
+    204: void;
+};
+
+export type SetServerIconResponse = SetServerIconResponses[keyof SetServerIconResponses];
+
+export type GetServerIconData = {
+    body?: never;
+    path: {
+        iconId: string;
+    };
+    query?: never;
+    url: '/api/v1/server-icons/{iconId}';
+};
+
+export type GetServerIconErrors = {
+    /**
+     * There is no such icon (`icon_not_found`).
+     */
+    404: Error;
+};
+
+export type GetServerIconError = GetServerIconErrors[keyof GetServerIconErrors];
+
+export type GetServerIconResponses = {
+    /**
+     * The 512×512 picture.
+     */
+    200: Blob | File;
+};
+
+export type GetServerIconResponse = GetServerIconResponses[keyof GetServerIconResponses];
 
 export type PreviewInviteData = {
     body?: never;

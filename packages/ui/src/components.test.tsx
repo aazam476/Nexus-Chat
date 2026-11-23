@@ -224,11 +224,16 @@ describe("layout and text", () => {
             <Text>Use HTTPS.</Text>
           </Banner>
           <Text selectable>https://chat.example/invite/abc</Text>
+          <Stack direction="row" gap="sm">
+            <Text>Left</Text>
+            <Text>Right</Text>
+          </Stack>
         </Screen>,
       ),
     );
     expect(screen.getByText("https://chat.example/invite/abc")).toHaveProp("selectable", true);
     expect(screen.getByText("Quiet")).toHaveProp("selectable", false);
+    expect(JSON.stringify(screen.toJSON())).toContain('"flexDirection":"row","flexWrap":"wrap"');
 
     expect(screen.getByRole("heading", { name: "Welcome" })).toBeOnTheScreen();
     expect(screen.getByLabelText("Warning: not secure")).toBeOnTheScreen();

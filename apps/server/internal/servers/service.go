@@ -53,6 +53,8 @@ type Server struct {
 	AttachmentMaxBytes *int64
 	CompressMedia      bool
 	CreatedAt          time.Time
+	// IconID names the current icon; nil for none.
+	IconID *uuid.UUID
 }
 
 // Role is one of a server's roles; Position 0 is @everyone.
@@ -110,6 +112,7 @@ type Dependencies struct {
 	Notifier Notifier
 	// Audiences hears when someone must leave an audience's MLS group.
 	Audiences AudienceListener
+	Icons     Icons
 	Clock     clock.Clock
 }
 
@@ -118,12 +121,13 @@ type Service struct {
 	store     *store.Writer
 	notifier  Notifier
 	audiences AudienceListener
+	icons     Icons
 	clock     clock.Clock
 }
 
 // NewService returns a Service.
 func NewService(dependencies Dependencies) *Service {
-	return &Service{store: dependencies.Store, notifier: dependencies.Notifier, audiences: dependencies.Audiences, clock: dependencies.Clock}
+	return &Service{store: dependencies.Store, notifier: dependencies.Notifier, audiences: dependencies.Audiences, icons: dependencies.Icons, clock: dependencies.Clock}
 }
 
 // notify brings the server's audiences up to date after a change, then

@@ -3,14 +3,14 @@ import { useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useTimeline } from "../../../../src/messaging/useConversations";
-import { AttachmentsContext, useAttachments } from "../../../../src/messaging/useAttachments";
-import { ConversationFooter } from "../../../../src/screens/conversation/ConversationFooter";
-import { MentionNamesContext } from "../../../../src/screens/conversation/MentionNames";
-import { MessageList } from "../../../../src/screens/conversation/MessageList";
-import { useComposer } from "../../../../src/screens/conversation/useComposer";
-import { ChannelHeader } from "../../../../src/screens/servers/ChannelHeader";
-import { useChannel } from "../../../../src/screens/servers/useChannel";
+import { useTimeline } from "../../../../../src/messaging/useConversations";
+import { AttachmentsContext, useAttachments } from "../../../../../src/messaging/useAttachments";
+import { ConversationFooter } from "../../../../../src/screens/conversation/ConversationFooter";
+import { MentionNamesContext } from "../../../../../src/screens/conversation/MentionNames";
+import { MessageList } from "../../../../../src/screens/conversation/MessageList";
+import { useComposer } from "../../../../../src/screens/conversation/useComposer";
+import { ChannelHeader } from "../../../../../src/screens/servers/ChannelHeader";
+import { useChannel } from "../../../../../src/screens/servers/useChannel";
 
 /**
  * A server text channel: its messages and the composer, end-to-end

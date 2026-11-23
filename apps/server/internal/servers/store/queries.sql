@@ -165,3 +165,12 @@ DELETE FROM conversation_members WHERE conversation_id = $1 AND user_id = $2;
 
 -- name: SetChannelAudience :exec
 UPDATE server_channels SET audience_id = $2 WHERE id = $1;
+
+-- Icons
+
+-- name: SetServerIcon :exec
+UPDATE servers SET icon_id = sqlc.narg(icon_id), icon_format = sqlc.narg(icon_format) WHERE id = sqlc.arg(id);
+
+-- name: GetServerIconFormat :one
+-- A server with an icon ID always has its format (a table CHECK).
+SELECT COALESCE(icon_format, '')::text FROM servers WHERE icon_id = sqlc.arg(icon_id)::uuid;

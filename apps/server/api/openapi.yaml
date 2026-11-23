@@ -4203,6 +4203,128 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/icon:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: setServerIcon
+      summary: Set the server's icon (MANAGE_SERVER)
+      description: |
+        A PNG, JPEG, WebP or GIF image of at most 8 MB; the server takes the
+        centered square, resizes it to 512×512 and removes all metadata.
+        Members' devices get server_update.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: Set.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_SERVER (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: The file is over 8 MB or the image over 8192 pixels on a side (`image_too_large`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Not a supported or readable image (`unsupported_image`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: removeServerIcon
+      summary: Remove the server's icon (MANAGE_SERVER)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_SERVER (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/server-icons/{iconId}:
+    get:
+      operationId: getServerIcon
+      summary: A server's icon
+      description: |
+        Public, so it works in an image tag and on invite previews; icon IDs
+        are random and change with each upload, so responses can be cached
+        forever.
+      tags: [servers]
+      parameters:
+        - name: iconId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The 512×512 picture.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: There is no such icon (`icon_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/invites/{code}:
     parameters:
       - name: code
@@ -4406,6 +4528,9 @@ components:
           type: integer
           format: int64
           description: The server's own attachment limit, below the instance's; absent means the instance's.
+        iconUrl:
+          type: string
+          description: The path of the 512×512 icon, when the server has one.
         compressMedia:
           type: boolean
           description: Whether members' clients compress photos by default (ADR 0014).

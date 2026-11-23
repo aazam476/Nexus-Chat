@@ -84,7 +84,14 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	// leaves a group, and the delivery service asks conversations who is in
 	// them; the forwarder lets each be built with the other.
 	leaves := &leaveForwarder{}
-	serverService := servers.NewService(servers.Dependencies{Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Audiences: leaves, Clock: system})
+	serverService := servers.NewService(servers.Dependencies{
+		Store: serversstore.NewWriter(app.pool), Notifier: app.hub, Audiences: leaves, Clock: system,
+		// Icon changes are limited per user, like profile pictures and group icons.
+		Icons: servers.Icons{
+			Files:   filestore.NewLocal(filepath.Join(configuration.DataDirectory, "files")),
+			Limiter: ratelimit.New(ratelimit.PerMinute(10, 5), system), Logger: app.logger,
+		},
+	})
 	features.Servers = servers.NewHandler(serverService)
 	socialService := social.NewService(social.Dependencies{
 		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: serverService,

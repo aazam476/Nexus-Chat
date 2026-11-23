@@ -11,6 +11,7 @@ func serverResponse(server Server) api.Server {
 	return api.Server{
 		Id: server.ID, Name: server.Name, Description: server.Description, OwnerId: server.OwnerID,
 		AttachmentMaxBytes: server.AttachmentMaxBytes, CompressMedia: server.CompressMedia, CreatedAt: server.CreatedAt,
+		IconUrl: iconPath(server.IconID),
 	}
 }
 

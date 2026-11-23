@@ -486,10 +486,21 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   changed. The release gate's browser test makes a server, posts in it,
   and has someone join by invite and read that earlier message from the
   history bundle. Voice channels are listed but open with calls (M9).
-  Server settings, channel and role management, permission overrides and
-  member roles in the app are next; until then they are only in the API.
+- Managing a server in the app: its icon (processed and served like group
+  icons), name, description and "compress photos by default"; deleting it;
+  adding, renaming, moving and deleting channels and categories; each
+  channel's permission overrides for roles and people, three ways (allow,
+  inherit, deny); roles with their colors, permissions and order; and
+  giving members roles. The screens only offer what the server will allow:
+  roles below the user's own, and permissions they hold themselves.
 
 ## Known issues
+
+- Channels and roles are reordered with "move up" and "move down" buttons
+  and a category picker, which also work with screen readers and
+  keyboards. Dragging them (spec §4.4) is not built yet.
+- Server channels do not show typing or unread counts yet; their messages
+  arrive and read like a DM's otherwise.
 
 - Video compression (ADR 0014) is not built yet: it needs the platforms'
   own encoders (AVFoundation, Media3 Transformer, WebCodecs). Until then,

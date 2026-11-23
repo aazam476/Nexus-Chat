@@ -198,6 +198,8 @@ type Server struct {
 	AttachmentMaxBytes *int64
 	CompressMedia      bool
 	CreatedAt          time.Time
+	IconID             *uuid.UUID
+	IconFormat         *string
 }
 
 type ServerChannel struct {

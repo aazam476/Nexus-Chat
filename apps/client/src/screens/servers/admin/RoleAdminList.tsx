@@ -1,0 +1,99 @@
+import type { ServerDetails, ServerMember, ServerRole } from "@nexus-chat/api-client";
+import { Button, Stack, Text } from "@nexus-chat/ui";
+import { router } from "expo-router";
+import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+
+import { useConnection } from "../../../connection/ConnectionContext";
+import { isolate } from "../../../i18n/bidi";
+import { mayManageRole, rolesHighestFirst } from "../../../servers/hierarchy";
+import { placeRoles } from "../../../servers/manageActions";
+import { movedRole } from "../../../servers/roleOrder";
+import type { ServerRunner } from "../useServerRunner";
+
+/** Props of {@link RoleAdminList}. */
+export interface RoleAdminListProps {
+  details: ServerDetails;
+  members: readonly ServerMember[];
+  runner: ServerRunner;
+}
+
+/** Moving a role past its neighbor, where the user may. */
+function RoleMoves({
+  role,
+  name,
+  props,
+}: {
+  role: ServerRole;
+  name: string;
+  props: RoleAdminListProps;
+}): ReactNode {
+  const { t } = useTranslation();
+  const { user } = useConnection();
+  const { details, runner } = props;
+  const moves = [
+    { by: -1 as const, label: "servers.roleAdmin.moveUp", id: "up" },
+    { by: 1 as const, label: "servers.roleAdmin.moveDown", id: "down" },
+  ];
+  return moves.map(({ by, label, id }) => {
+    const order = movedRole(details, user?.id ?? "", role.id, by);
+    return order === undefined ? null : (
+      <Button
+        key={id}
+        label={t(label, { name })}
+        variant="secondary"
+        disabled={runner.busy}
+        onPress={() => {
+          runner.run((client) => placeRoles(client, details.server.id, order));
+        }}
+        testID={`role-${id}-${role.id}`}
+      />
+    );
+  });
+}
+
+/** One role: its name, how many have it, and what the user may do with it. */
+function RoleRow({ role, props }: { role: ServerRole; props: RoleAdminListProps }): ReactNode {
+  const { t } = useTranslation();
+  const { user } = useConnection();
+  const { details, members } = props;
+  const name = role.everyone ? t("servers.roleAdmin.everyone") : isolate(role.name);
+  const count = role.everyone
+    ? members.length
+    : members.filter((member) => member.roleIds.includes(role.id)).length;
+  return (
+    <Stack gap="xs">
+      <Text>{name}</Text>
+      <Text variant="small" tone="muted">
+        {t("servers.roleAdmin.members", { count })}
+      </Text>
+      <Stack gap="xs" direction="row">
+        <RoleMoves role={role} name={name} props={props} />
+        {mayManageRole(details, user?.id ?? "", role) ? (
+          <Button
+            label={t("servers.channelAdmin.edit", { name })}
+            variant="secondary"
+            onPress={() => {
+              router.push({
+                pathname: "/server/[id]/role/[roleId]",
+                params: { id: details.server.id, roleId: role.id },
+              });
+            }}
+            testID={`role-edit-${role.id}`}
+          />
+        ) : null}
+      </Stack>
+    </Stack>
+  );
+}
+
+/** The server's roles, highest first. */
+export function RoleAdminList(props: RoleAdminListProps): ReactNode {
+  return (
+    <Stack gap="md">
+      {rolesHighestFirst(props.details).map((role) => (
+        <RoleRow key={role.id} role={role} props={props} />
+      ))}
+    </Stack>
+  );
+}

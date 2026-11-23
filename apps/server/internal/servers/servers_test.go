@@ -16,6 +16,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/permissions"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/database"
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/databasetest"
+	"github.com/aazam476/nexus-chat/apps/server/internal/platform/filestore"
 	"github.com/aazam476/nexus-chat/apps/server/internal/servers/store"
 )
 
@@ -69,6 +70,10 @@ func (fake *leaves) MemberLeft(_ context.Context, audienceID uuid.UUID, userID u
 	return fake.fail
 }
 
+type allowAll struct{}
+
+func (allowAll) Allow(string) bool { return true }
+
 type fixture struct {
 	service  *Service
 	events   *recorder
@@ -86,7 +91,8 @@ func newFixture(t *testing.T) fixture {
 	events, now := &recorder{}, &testClock{now: start}
 	writer := store.NewWriter(pool)
 	removals := &leaves{}
-	service := NewService(Dependencies{Store: writer, Notifier: events, Audiences: removals, Clock: now})
+	icons := Icons{Files: filestore.NewLocal(t.TempDir()), Limiter: allowAll{}, Logger: slog.New(slog.DiscardHandler)}
+	service := NewService(Dependencies{Store: writer, Notifier: events, Audiences: removals, Icons: icons, Clock: now})
 	return fixture{service: service, events: events, clock: now, accounts: accountsstore.New(pool), store: writer, pool: pool, leaves: removals}
 }
 

@@ -1,10 +1,11 @@
 import type { Server } from "@nexus-chat/api-client";
-import { Avatar, ListRow, Stack, Text } from "@nexus-chat/ui";
+import { ListRow, Stack, Text } from "@nexus-chat/ui";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { isolate } from "../../i18n/bidi";
+import { ServerIcon } from "./ServerIcon";
 
 /** The user's servers, or why there are none to show. */
 export function ServerList({ servers }: { servers: Server[] | undefined }): ReactNode {
@@ -22,7 +23,7 @@ export function ServerList({ servers }: { servers: Server[] | undefined }): Reac
           key={server.id}
           title={isolate(server.name)}
           {...(server.description === "" ? {} : { subtitle: isolate(server.description) })}
-          leading={<Avatar name={server.name} />}
+          leading={<ServerIcon server={server} />}
           onPress={() => {
             router.push({ pathname: "/server/[id]", params: { id: server.id } });
           }}

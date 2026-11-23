@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useConnection } from "../../connection/ConnectionContext";
 import { isolate } from "../../i18n/bidi";
 import { acceptInvite, inviteCodeOf, lookUpInvite, serverErrorText } from "../../servers/serverActions";
+import { ServerIcon } from "./ServerIcon";
 
 /** What the invite leads to, and the button that joins. */
 function Invitation({ preview, code }: { preview: InvitePreview; code: string }): ReactNode {
@@ -31,6 +32,7 @@ function Invitation({ preview, code }: { preview: InvitePreview; code: string })
   };
   return (
     <Stack gap="sm">
+      <ServerIcon server={preview.server} size={64} />
       <Text>{t("servers.invitedTo", { name })}</Text>
       {preview.server.description === "" ? null : (
         <Text tone="muted">{isolate(preview.server.description)}</Text>

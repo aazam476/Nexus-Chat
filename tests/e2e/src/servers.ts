@@ -47,3 +47,15 @@ export async function openChannel(page: Page, name: string): Promise<void> {
     page.getByRole("heading", { name: channelTitle(name) }).filter({ visible: true }),
   ).toBeVisible();
 }
+
+/** Adds a text channel from the open server's settings, then goes back to the server. */
+export async function addChannel(page: Page, name: string): Promise<void> {
+  await shown(page, "server-settings").click();
+  await shown(page, "manage-channels").click();
+  await shown(page, "new-channel-name").fill(name);
+  await shown(page, "new-channel-create").click();
+  await expect(page.getByText(channelTitle(name)).filter({ visible: true })).toBeVisible();
+  await expectAccessible(page);
+  await shown(page, "channel-admin-back").click();
+  await shown(page, "settings-back").click();
+}

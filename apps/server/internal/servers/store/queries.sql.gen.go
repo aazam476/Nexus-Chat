@@ -192,7 +192,7 @@ func (q *Queries) GetRole(ctx context.Context, id uuid.UUID) (ServerRole, error)
 }
 
 const getServer = `-- name: GetServer :one
-SELECT id, name, description, owner_id, attachment_max_bytes, compress_media, created_at FROM servers WHERE id = $1
+SELECT id, name, description, owner_id, attachment_max_bytes, compress_media, created_at, icon_id, icon_format FROM servers WHERE id = $1
 `
 
 func (q *Queries) GetServer(ctx context.Context, id uuid.UUID) (Server, error) {
@@ -206,8 +206,22 @@ func (q *Queries) GetServer(ctx context.Context, id uuid.UUID) (Server, error) {
 		&i.AttachmentMaxBytes,
 		&i.CompressMedia,
 		&i.CreatedAt,
+		&i.IconID,
+		&i.IconFormat,
 	)
 	return i, err
+}
+
+const getServerIconFormat = `-- name: GetServerIconFormat :one
+SELECT COALESCE(icon_format, '')::text FROM servers WHERE icon_id = $1::uuid
+`
+
+// A server with an icon ID always has its format (a table CHECK).
+func (q *Queries) GetServerIconFormat(ctx context.Context, iconID uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getServerIconFormat, iconID)
+	var column_1 string
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getServerMember = `-- name: GetServerMember :one
@@ -628,7 +642,7 @@ func (q *Queries) ListServerMembers(ctx context.Context, serverID uuid.UUID) ([]
 }
 
 const listServersOf = `-- name: ListServersOf :many
-SELECT s.id, s.name, s.description, s.owner_id, s.attachment_max_bytes, s.compress_media, s.created_at FROM servers s JOIN server_members m ON m.server_id = s.id
+SELECT s.id, s.name, s.description, s.owner_id, s.attachment_max_bytes, s.compress_media, s.created_at, s.icon_id, s.icon_format FROM servers s JOIN server_members m ON m.server_id = s.id
 WHERE m.user_id = $1 ORDER BY m.joined_at, s.id
 `
 
@@ -649,6 +663,8 @@ func (q *Queries) ListServersOf(ctx context.Context, userID uuid.UUID) ([]Server
 			&i.AttachmentMaxBytes,
 			&i.CompressMedia,
 			&i.CreatedAt,
+			&i.IconID,
+			&i.IconFormat,
 		); err != nil {
 			return nil, err
 		}
@@ -831,6 +847,23 @@ type SetRolePositionParams struct {
 
 func (q *Queries) SetRolePosition(ctx context.Context, arg SetRolePositionParams) error {
 	_, err := q.db.Exec(ctx, setRolePosition, arg.ID, arg.Position)
+	return err
+}
+
+const setServerIcon = `-- name: SetServerIcon :exec
+
+UPDATE servers SET icon_id = $1, icon_format = $2 WHERE id = $3
+`
+
+type SetServerIconParams struct {
+	IconID     *uuid.UUID
+	IconFormat *string
+	ID         uuid.UUID
+}
+
+// Icons
+func (q *Queries) SetServerIcon(ctx context.Context, arg SetServerIconParams) error {
+	_, err := q.db.Exec(ctx, setServerIcon, arg.IconID, arg.IconFormat, arg.ID)
 	return err
 }
 
