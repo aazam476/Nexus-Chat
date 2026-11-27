@@ -186,6 +186,45 @@ jobs:
             maestro-debug
           retention-days: 14
 
+  load:
+    name: Load smoke test (k6)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+        env:
+          POSTGRES_PASSWORD: load
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Start a fresh instance on port 8080
+        run: |
+          (cd apps/server && go build -o "$RUNNER_TEMP/nexus-chat-server" ./cmd/nexus-chat-server)
+          mkdir -p "$RUNNER_TEMP/data"
+          DATABASE_URL="postgres://postgres:load@localhost:5432/postgres?sslmode=disable" \
+            DATA_DIR="$RUNNER_TEMP/data" ADMIN_EMAIL=admin@example.com HTTP_PORT=8080 \
+            nohup "$RUNNER_TEMP/nexus-chat-server" > "$RUNNER_TEMP/server.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8080/api/v1/instance > /dev/null && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/server.log"
+          exit 1
+      - name: 500 WebSocket users in one server, p95 delivery under 300 ms
+        run: scripts/load-smoke.sh http://localhost:8080 "postgres://postgres:load@localhost:5432/postgres?sslmode=disable"
+      - name: Keep the server log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: load-server-log
+          path: ${{ runner.temp }}/server.log
+          retention-days: 14
+
   mutation:
     name: Mutation testing (auth)
     runs-on: ubuntu-24.04

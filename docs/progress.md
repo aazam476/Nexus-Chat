@@ -529,6 +529,14 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   composer and a follow button. Channel unread counts leave replies out.
   The release gate's browser test replies in a thread and has the other
   member open it.
+- Load smoke test (spec §7.2, `tests/load/smoke.js`, `scripts/load-smoke.sh`):
+  a seed tool puts 500 users with sessions into one server, and k6 holds a
+  gateway connection for each while the owner posts in #general on a fixed
+  schedule; each listener times every message from when it was due. The
+  run fails unless the 95th percentile is under 300 ms and at least 99% of
+  deliveries arrive. In CI it runs on the standard 4-vCPU runner, with
+  PostgreSQL and k6 on the same machine; locally that measured a p95 of
+  about 28 ms with every delivery arriving.
 - Visual checks of the server screens (the list, a server, its settings,
   and the channel, role and member settings) with demo, worst-case and
   right-to-left servers, in both themes and at every checked width.
