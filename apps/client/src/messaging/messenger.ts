@@ -14,7 +14,7 @@ import type { LocalDatabase } from "../storage/localDatabase";
 import type { MessagingApi } from "./engine/api";
 import { utf8 } from "./engine/bytes";
 import { syncAudience, type Audience } from "./engine/channels";
-import { joinAudience, readChannelHistory, sendToChannel } from "./engine/channelSend";
+import { joinAudience, readChannelHistory, readThreadHistory, sendToChannel } from "./engine/channelSend";
 import type { EngineContext } from "./engine/context";
 import { refillKeyPackages, setUpDevice } from "./engine/device";
 import { readMissedHistory } from "./engine/archive";
@@ -139,11 +139,29 @@ export class Messenger {
     );
   }
 
-  /** Sends a payload in a server channel and returns its message ID. */
-  sendInChannel(audience: Audience, channelId: string, payload: Payload): Promise<string> {
-    return this.run(audience.audienceId, () => sendToChannel(this.context, audience, channelId, payload), [
+  /**
+   * Sends a payload in a server channel, or in the thread on `thread`
+   * there, and returns its message ID.
+   */
+  sendInChannel(audience: Audience, channelId: string, payload: Payload, thread?: string): Promise<string> {
+    const where = thread === undefined ? { channelId } : { channelId, thread };
+    return this.run(audience.audienceId, () => sendToChannel(this.context, audience, where, payload), [
       channelId,
     ]);
+  }
+
+  /**
+   * Reads the archive of the thread on rootId, for replies this device
+   * has not got (sent before it joined, or while its live copies expired).
+   */
+  readThread(audience: Audience, channelId: string, rootId: string): Promise<void> {
+    return this.run(
+      audience.audienceId,
+      async () => {
+        await readThreadHistory(this.context, audience, channelId, rootId);
+      },
+      [channelId],
+    );
   }
 
   private syncChannels(audience: Audience): Promise<void> {

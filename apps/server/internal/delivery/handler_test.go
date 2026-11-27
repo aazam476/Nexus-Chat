@@ -123,7 +123,7 @@ func TestEndpointsNeedASession(t *testing.T) {
 			return second(handler.ListArchivedMessages(ctx, api.ListArchivedMessagesRequestObject{ConversationId: id}))
 		},
 		func() error {
-			return second(handler.SendChannelMessage(ctx, api.SendChannelMessageRequestObject{ChannelId: id, Body: &api.MlsSend{}}))
+			return second(handler.SendChannelMessage(ctx, api.SendChannelMessageRequestObject{ChannelId: id, Body: &api.ChannelSend{}}))
 		},
 		func() error {
 			return second(handler.ListChannelArchive(ctx, api.ListChannelArchiveRequestObject{ChannelId: id}))
@@ -139,16 +139,16 @@ func TestChannelEndpoints(t *testing.T) {
 	ada := f.user(t, "ada")
 	audienceID, channelID, group := f.audience(t, ada, ada)
 	f.grants.grant = ChannelGrant{AudienceID: audienceID, MaySend: true}
-	send := func(body api.MlsSend) api.SendChannelMessageResponseObject {
+	send := func(body api.ChannelSend) api.SendChannelMessageResponseObject {
 		return must(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &body}))
 	}
 	messageID := uuid.New()
 	archive := &api.ArchiveCopy{MessageId: messageID, Sealed: []byte("sealed")}
 
-	assert.IsType(t, api.SendChannelMessage201JSONResponse{}, send(api.MlsSend{Message: privateMessage(group, 0, 1), Archive: archive}))
-	assert.IsType(t, api.SendChannelMessage409JSONResponse{}, send(api.MlsSend{Message: privateMessage(group, 0, 1), Archive: archive}))
-	assert.IsType(t, api.SendChannelMessage409JSONResponse{}, send(api.MlsSend{Message: privateMessage(group, 4, 1)}))
-	assert.IsType(t, api.SendChannelMessage422JSONResponse{}, send(api.MlsSend{Message: []byte{1}}))
+	assert.IsType(t, api.SendChannelMessage201JSONResponse{}, send(api.ChannelSend{Message: privateMessage(group, 0, 1), Archive: archive}))
+	assert.IsType(t, api.SendChannelMessage409JSONResponse{}, send(api.ChannelSend{Message: privateMessage(group, 0, 1), Archive: archive}))
+	assert.IsType(t, api.SendChannelMessage409JSONResponse{}, send(api.ChannelSend{Message: privateMessage(group, 4, 1)}))
+	assert.IsType(t, api.SendChannelMessage422JSONResponse{}, send(api.ChannelSend{Message: []byte{1}}))
 	listed := must(handler.ListMlsMessages(as(t, ada), api.ListMlsMessagesRequestObject{ConversationId: audienceID}))
 	assert.Equal(t, &channelID, listed.(api.ListMlsMessages200JSONResponse)[0].ChannelId) //nolint:forcetypeassert // the success type
 	archived := must(handler.ListChannelArchive(as(t, ada), api.ListChannelArchiveRequestObject{ChannelId: channelID}))
@@ -157,12 +157,12 @@ func TestChannelEndpoints(t *testing.T) {
 	assert.Equal(t, group, list[0].MlsGroupId)
 
 	f.grants.grant.MaySend = false
-	assert.IsType(t, api.SendChannelMessage403JSONResponse{}, send(api.MlsSend{Message: privateMessage(group, 0, 1)}))
+	assert.IsType(t, api.SendChannelMessage403JSONResponse{}, send(api.ChannelSend{Message: privateMessage(group, 0, 1)}))
 	f.grants.err = ErrNotFound
-	assert.IsType(t, api.SendChannelMessage404JSONResponse{}, send(api.MlsSend{Message: privateMessage(group, 0, 1)}))
+	assert.IsType(t, api.SendChannelMessage404JSONResponse{}, send(api.ChannelSend{Message: privateMessage(group, 0, 1)}))
 	assert.IsType(t, api.ListChannelArchive404JSONResponse{}, must(handler.ListChannelArchive(as(t, ada), api.ListChannelArchiveRequestObject{ChannelId: channelID})))
 	f.grants.err = errors.New("database is down")
-	require.Error(t, second(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &api.MlsSend{}})))
+	require.Error(t, second(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &api.ChannelSend{}})))
 	require.Error(t, second(handler.ListChannelArchive(as(t, ada), api.ListChannelArchiveRequestObject{ChannelId: channelID})))
 }
 
@@ -173,7 +173,7 @@ func TestChannelReadEndpoints(t *testing.T) {
 	audienceID, channelID, group := f.audience(t, ada, ada)
 	f.grants.grant = ChannelGrant{AudienceID: audienceID, MaySend: true}
 	f.grants.channels = []uuid.UUID{channelID}
-	sent := must(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &api.MlsSend{Message: privateMessage(group, 0, 1)}}))
+	sent := must(handler.SendChannelMessage(as(t, ada), api.SendChannelMessageRequestObject{ChannelId: channelID, Body: &api.ChannelSend{Message: privateMessage(group, 0, 1)}}))
 	id := sent.(api.SendChannelMessage201JSONResponse).Id //nolint:forcetypeassert // the success type
 
 	marked := must(handler.MarkChannelRead(as(t, ada), api.MarkChannelReadRequestObject{ChannelId: channelID, Body: &api.ReadMark{LastReadId: id}}))

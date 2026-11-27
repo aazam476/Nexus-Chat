@@ -94,6 +94,15 @@ type SendParams struct {
 	Now            time.Time
 	// ChannelID is set for a server channel's message in its audience's group.
 	ChannelID *uuid.UUID
+	// Thread is set for a reply in a thread on one of the channel's messages.
+	Thread *ThreadReply
+}
+
+// ThreadReply is the thread a channel message replies in.
+type ThreadReply struct {
+	RootID uuid.UUID
+	// RootSender follows the thread with the replier, when known.
+	RootSender *uuid.UUID
 }
 
 // Send stores both copies of an application message together.
@@ -102,21 +111,48 @@ func (writer *Writer) Send(ctx context.Context, params SendParams) (int64, error
 	err := database.InTransaction(ctx, writer.pool, func(transaction pgx.Tx) error {
 		queries := writer.WithTx(transaction)
 		var err error
+		var root *uuid.UUID
+		if params.Thread != nil {
+			root = &params.Thread.RootID
+		}
 		id, err = queries.InsertMessage(ctx, InsertMessageParams{
 			ConversationID: params.ConversationID, Kind: "application", Epoch: params.Epoch, SenderID: &params.SenderID, Data: params.Message, CreatedAt: params.Now,
-			ChannelID: params.ChannelID,
+			ChannelID: params.ChannelID, ThreadRootID: root,
 		})
 		if err != nil || params.ArchiveID == nil {
 			return err
 		}
 		err = queries.InsertArchive(ctx, InsertArchiveParams{
 			ConversationID: params.ConversationID, MessageID: *params.ArchiveID, Epoch: params.Epoch, SenderID: &params.SenderID, Sealed: params.Archive, CreatedAt: params.Now,
-			ChannelID: params.ChannelID,
+			ChannelID: params.ChannelID, ThreadRootID: root,
 		})
 		if isDuplicateArchive(err) {
 			return ErrDuplicateMessage
 		}
-		return err
+		if err != nil || params.Thread == nil || params.ChannelID == nil {
+			return err
+		}
+		return recordReply(ctx, queries, params)
 	})
 	return id, err
+}
+
+// recordReply counts a thread reply, starting the thread on the first
+// one, and has the replier (and the root's sender) follow it.
+func recordReply(ctx context.Context, queries *Queries, params SendParams) error {
+	channelID, thread := *params.ChannelID, params.Thread
+	err := queries.RecordThreadReply(ctx, RecordThreadReplyParams{ChannelID: channelID, RootMessageID: thread.RootID, SenderID: &params.SenderID, Now: params.Now})
+	if err != nil {
+		return err
+	}
+	followers := []uuid.UUID{params.SenderID}
+	if thread.RootSender != nil {
+		followers = append(followers, *thread.RootSender)
+	}
+	for _, follower := range followers {
+		if _, err := queries.FollowThread(ctx, FollowThreadParams{UserID: follower, ChannelID: channelID, RootMessageID: thread.RootID}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

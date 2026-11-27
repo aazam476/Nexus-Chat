@@ -582,5 +582,20 @@
     "MUTE_MEMBERS": "Mute others in voice channels",
     "DEAFEN_MEMBERS": "Deafen others in voice channels",
     "MOVE_MEMBERS": "Move others between voice channels"
+  },
+  "threads": {
+    "title": "Thread",
+    "back": "Back to the channel",
+    "replyInThread": "Reply in thread",
+    "replies_one": "{{count}} reply, last at {{time}}",
+    "replies_other": "{{count}} replies, last at {{time}}",
+    "follow": "Follow",
+    "unfollow": "Stop following",
+    "following": "You follow this thread and will be notified of new replies.",
+    "notFollowing": "Follow this thread to be notified of new replies.",
+    "rootMissing": "The message this thread is on is not on this device.",
+    "noReplies": "No replies yet. Start the thread below.",
+    "readOnly": "You can read this thread but not reply in it.",
+    "loading": "Loading the thread…"
   }
 }

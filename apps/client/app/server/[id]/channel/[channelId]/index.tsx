@@ -3,43 +3,16 @@ import { useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useTimeline } from "../../../../../src/messaging/useConversations";
 import { useReadTracking } from "../../../../../src/messaging/useReadTracking";
-import { ServerEmojiContext, useChannelEmoji } from "../../../../../src/servers/ServerEmoji";
 import { useChannelReads } from "../../../../../src/servers/useChannelReads";
-import { AttachmentsContext, useAttachments } from "../../../../../src/messaging/useAttachments";
+import { useAttachments } from "../../../../../src/messaging/useAttachments";
 import { ConversationFooter } from "../../../../../src/screens/conversation/ConversationFooter";
-import { MentionNamesContext } from "../../../../../src/screens/conversation/MentionNames";
 import { MessageList } from "../../../../../src/screens/conversation/MessageList";
 import { useComposer } from "../../../../../src/screens/conversation/useComposer";
+import { ChannelContexts } from "../../../../../src/screens/servers/ChannelContexts";
 import { ChannelHeader } from "../../../../../src/screens/servers/ChannelHeader";
 import { useChannel } from "../../../../../src/screens/servers/useChannel";
-
-/** What the channel's messages and composer read: attachments, offered emoji and mentioned names. */
-function ChannelContexts({
-  open,
-  attachments,
-  serverId,
-  children,
-}: {
-  open: ReturnType<typeof useChannel>;
-  attachments: ReturnType<typeof useAttachments>;
-  serverId: string;
-  children: ReactNode;
-}): ReactNode {
-  const { people } = open;
-  return (
-    <AttachmentsContext value={attachments}>
-      <ServerEmojiContext value={useChannelEmoji(serverId, open.channel)}>
-        <MentionNamesContext
-          value={{ nameOfId: people.nameOfId, selfId: people.userIdOf(people.self) ?? "" }}
-        >
-          {children}
-        </MentionNamesContext>
-      </ServerEmojiContext>
-    </AttachmentsContext>
-  );
-}
+import { useChannelView } from "../../../../../src/screens/servers/useChannelView";
 
 /**
  * A server text channel: its messages and the composer, end-to-end
@@ -50,7 +23,7 @@ export default function ChannelScreen(): ReactNode {
   const { t } = useTranslation();
   const { id, channelId } = useLocalSearchParams<{ id: string; channelId: string }>();
   const open = useChannel(id, channelId);
-  const view = useTimeline(channelId);
+  const { view, thread } = useChannelView(id, channelId, open);
   const timeline = view?.items;
   const composer = useComposer();
   // Attachments travel with the audience's group, like a group DM's.
@@ -79,6 +52,7 @@ export default function ChannelScreen(): ReactNode {
           composer={composer}
           send={send}
           firstUnreadId={firstUnreadId}
+          thread={thread}
         />
       </ConversationLayout>
     </ChannelContexts>

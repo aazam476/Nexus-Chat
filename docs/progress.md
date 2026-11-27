@@ -516,6 +516,19 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   `USE_CUSTOM_EMOJI` in the channel are offered them. The release gate's
   browser test uploads one and has the other member see it, and the visual
   checks cover the Emoji settings.
+- Threads: any channel message can carry a thread. Replies travel in the
+  channel's audience group like its other messages, and name the message
+  they reply on both inside the encryption and on the server's copies,
+  which devices check against each other. The server checks the root is a
+  message of the channel, needs `SEND_IN_THREADS` to reply and
+  `CREATE_THREADS` to start one, counts replies, serves each thread's own
+  archive, and keeps who follows it: repliers follow automatically, and the
+  root's sender when the thread starts. In the app, a channel leaves replies
+  out and shows "N replies" under their message; "Reply in thread" and that
+  link open the thread full screen, with the root, its replies, its own
+  composer and a follow button. Channel unread counts leave replies out.
+  The release gate's browser test replies in a thread and has the other
+  member open it.
 - Visual checks of the server screens (the list, a server, its settings,
   and the channel, role and member settings) with demo, worst-case and
   right-to-left servers, in both themes and at every checked width.
@@ -526,6 +539,10 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   message, and `read_update` tells the user's other devices.
 
 ## Known issues
+
+- Threads open full screen on every device. On wide screens the spec puts
+  them in a side panel next to the channel; that comes with the desktop
+  layout work. Followed threads notify once push notifications exist (M8).
 
 - The mobile end-to-end flows (Maestro) cover setup, login and sign-up,
   but not messaging or servers yet: setting up encryption asks for

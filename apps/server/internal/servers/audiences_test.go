@@ -136,19 +136,22 @@ func TestChannelGrants(t *testing.T) {
 
 	grant, err := f.service.ChannelGrant(t.Context(), ref(sam, general.ID))
 	require.NoError(t, err)
-	assert.Equal(t, delivery.ChannelGrant{AudienceID: *general.AudienceID, MaySend: true}, grant)
+	assert.Equal(t, delivery.ChannelGrant{AudienceID: *general.AudienceID, MaySend: true, MayReplyInThreads: true, MayStartThreads: true}, grant)
 	for _, refused := range []delivery.ChannelRef{ref(eve, general.ID), ref(sam, voice.ID), ref(sam, uuid.New())} {
 		_, err := f.service.ChannelGrant(t.Context(), refused)
 		require.ErrorIs(t, err, delivery.ErrNotFound)
 	}
 
 	// Without READ_HISTORY_BEFORE_JOIN, history starts when Sam joined;
-	// without SEND_MESSAGES he only reads; hidden, he gets nothing.
+	// without SEND_MESSAGES and the thread permissions he only reads;
+	// hidden, he gets nothing.
 	limited := permissions.ViewChannel
 	require.NoError(t, f.service.UpdateRole(t.Context(), owner, details.Roles[0].ID, RoleSpec{Name: "@everyone", Permissions: limited}))
 	grant, err = f.service.ChannelGrant(t.Context(), ref(sam, general.ID))
 	require.NoError(t, err)
 	assert.False(t, grant.MaySend)
+	assert.False(t, grant.MayReplyInThreads)
+	assert.False(t, grant.MayStartThreads)
 	assert.True(t, start.Equal(grant.HistorySince), "history starts when Sam joined")
 	require.NoError(t, f.service.SetOverride(t.Context(), owner, general.ID, Override{TargetKind: TargetMember, TargetID: sam, Deny: permissions.ViewChannel}))
 	_, err = f.service.ChannelGrant(t.Context(), ref(sam, general.ID))

@@ -11,7 +11,7 @@
 import { encrypt, epoch, groupId, historyKey, sealArchive, type Group } from "@nexus-chat/crypto";
 
 import { encodePayload, type Payload } from "../payload";
-import type { Outcome } from "./api";
+import type { Outcome, StoredChannelArchive } from "./api";
 import { keptHistoryKeys, openCopy, saveHistoryKeys } from "./archive";
 import { toBase64, utf8 } from "./bytes";
 import { audienceHooks, channelKeysId, keyName, syncAudience, type Audience } from "./channels";
@@ -33,6 +33,8 @@ interface ChannelMessage {
   id: string;
   channelId: string;
   payload: Payload;
+  /** For a reply in a thread, the message the thread is on. */
+  thread?: string;
 }
 
 /** Keeps a sent message and the history key it was sealed under, from the group it was sent in. */
@@ -42,7 +44,7 @@ async function keepSent(
   sentIn: Group,
   deliveryId?: number,
 ): Promise<void> {
-  const { id, channelId, payload } = outgoing;
+  const { id, channelId, payload, thread } = outgoing;
   await saveHistoryKeys(context, channelKeysId(channelId), {
     [keyName(groupId(sentIn), epoch(sentIn))]: toBase64(await historyKey(sentIn, utf8(channelId))),
   });
@@ -52,6 +54,7 @@ async function keepSent(
     payload,
     sentAt: new Date().toISOString(),
     channelId,
+    ...(thread === undefined ? {} : { thread }),
   };
   await storeMessages(context, channelId, [deliveryId === undefined ? own : { ...own, deliveryId }]);
 }
@@ -62,12 +65,17 @@ async function trySend(
   audience: Audience,
   outgoing: ChannelMessage,
 ): Promise<Outcome> {
-  const { id, channelId, payload } = outgoing;
+  const { id, channelId, payload, thread } = outgoing;
   const state = await loadState(context, audience.audienceId);
   if (state.group === undefined) {
     throw new ConversationError("this device is not in the channel's group yet");
   }
-  const plaintext = encodePayload({ id, payload, channel: channelId });
+  const plaintext = encodePayload({
+    id,
+    payload,
+    channel: channelId,
+    ...(thread === undefined ? {} : { thread }),
+  });
   const archive = await sealArchive(
     state.group,
     { channelId: utf8(channelId), messageId: utf8(id) },
@@ -81,6 +89,7 @@ async function trySend(
       messageId: id,
       sealed: archive.sealed,
     },
+    thread,
   );
   if (!outcome.accepted) {
     return outcome;
@@ -91,17 +100,17 @@ async function trySend(
 }
 
 /**
- * Sends a payload in one of the audience's channels and returns its
- * message ID. If the group moved on meanwhile, it catches up and tries
- * once more.
+ * Sends a payload in one of the audience's channels, or in a thread there,
+ * and returns its message ID. If the group moved on meanwhile, it catches
+ * up and tries once more.
  */
 export async function sendToChannel(
   context: EngineContext,
   audience: Audience,
-  channelId: string,
+  where: { channelId: string; thread?: string },
   payload: Payload,
 ): Promise<string> {
-  const outgoing = { id: crypto.randomUUID(), channelId, payload };
+  const outgoing: ChannelMessage = { id: crypto.randomUUID(), ...where, payload };
   for (let attempt = 0; attempt < 2; attempt++) {
     const outcome = await trySend(context, audience, outgoing);
     if (outcome.accepted) {
@@ -115,27 +124,32 @@ export async function sendToChannel(
   throw new ConversationError("the message could not be sent; try again");
 }
 
+/** Fetches a page of archive copies before `before`. */
+type ArchivePage = (before: string | undefined) => Promise<StoredChannelArchive[]>;
+
 /**
- * Reads the channel's archive with the history keys this device holds,
- * its own and those that came in bundles, and keeps what it had not.
+ * Reads archive copies, page by page, with the history keys this device
+ * holds, its own and those that came in bundles, and keeps those it had
+ * not. Each copy must be in the thread it was asked for (or in none).
  * It returns how many messages it added.
  */
-export async function readChannelHistory(
+async function readCopies(
   context: EngineContext,
-  audience: Audience,
   channelId: string,
+  thread: string | undefined,
+  page: ArchivePage,
 ): Promise<number> {
   const keys = await keptHistoryKeys(context, channelKeysId(channelId));
   const held = new Set((await loadMessages(context, channelId)).map((message) => message.id));
   const found: DecryptedMessage[] = [];
   let before: string | undefined;
-  for (let page = 0; page < maximumPages; page++) {
-    const copies = await context.api.channelArchive({ serverId: audience.serverId, channelId }, before);
+  for (let count = 0; count < maximumPages; count++) {
+    const copies = await page(before);
     for (const copy of copies) {
       const message = held.has(copy.messageId)
         ? undefined
         : await openCopy(context, channelId, copy, keys[keyName(copy.groupId, copy.epoch)]);
-      if (message !== undefined) {
+      if (message !== undefined && message.thread === thread && copy.threadRootId === thread) {
         found.push({ ...message, channelId });
         held.add(message.id);
       }
@@ -147,4 +161,27 @@ export async function readChannelHistory(
   }
   await storeMessages(context, channelId, found);
   return found.length;
+}
+
+/** Reads the channel's archive, without its threads, and keeps what this device had not. */
+export function readChannelHistory(
+  context: EngineContext,
+  audience: Audience,
+  channelId: string,
+): Promise<number> {
+  const channel = { serverId: audience.serverId, channelId };
+  return readCopies(context, channelId, undefined, (before) => context.api.channelArchive(channel, before));
+}
+
+/** Reads the archive of the thread on rootId, and keeps what this device had not. */
+export function readThreadHistory(
+  context: EngineContext,
+  audience: Audience,
+  channelId: string,
+  rootId: string,
+): Promise<number> {
+  const channel = { serverId: audience.serverId, channelId };
+  return readCopies(context, channelId, rootId, (before) =>
+    context.api.threadArchive(channel, rootId, before),
+  );
 }

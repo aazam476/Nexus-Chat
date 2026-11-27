@@ -71,13 +71,15 @@ type Outgoing struct {
 	Archive *Archive
 	// channelID is set by SendToChannel, after checking the channel.
 	channelID *uuid.UUID
+	// thread is set by SendInThread, after checking the thread.
+	thread *store.ThreadReply
 }
 
 // SendMessage accepts an application message for the current epoch, with
 // its archive copy when given. It returns the live copy's ID. A server
 // audience's messages go through SendToChannel instead.
 func (service *Service) SendMessage(ctx context.Context, me uuid.UUID, conversationID uuid.UUID, outgoing Outgoing) (int64, error) {
-	outgoing.channelID = nil
+	outgoing.channelID, outgoing.thread = nil, nil
 	return service.send(ctx, me, conversationID, outgoing)
 }
 
@@ -102,7 +104,7 @@ func (service *Service) send(ctx context.Context, me uuid.UUID, conversationID u
 	if _, err := header(message, group, mlsheader.ContentTypeApplication); err != nil {
 		return 0, err
 	}
-	params := store.SendParams{ConversationID: conversationID, Epoch: group.Epoch, Message: message, SenderID: me, Now: service.dependencies.Clock.Now(), ChannelID: channelID}
+	params := store.SendParams{ConversationID: conversationID, Epoch: group.Epoch, Message: message, SenderID: me, Now: service.dependencies.Clock.Now(), ChannelID: channelID, Thread: outgoing.thread}
 	if archive != nil {
 		if len(archive.Sealed) == 0 || len(archive.Sealed) > MaximumMessageSize {
 			return 0, ErrInvalidMessage

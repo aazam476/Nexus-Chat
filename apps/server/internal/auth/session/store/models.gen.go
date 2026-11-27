@@ -27,6 +27,7 @@ type ArchivedMessage struct {
 	Sealed         []byte
 	CreatedAt      time.Time
 	ChannelID      *uuid.UUID
+	ThreadRootID   *uuid.UUID
 }
 
 type Attachment struct {
@@ -53,6 +54,15 @@ type ChannelRead struct {
 	UserID     uuid.UUID
 	LastReadID int64
 	UpdatedAt  time.Time
+}
+
+type ChannelThread struct {
+	ChannelID     uuid.UUID
+	RootMessageID uuid.UUID
+	CreatedBy     *uuid.UUID
+	CreatedAt     time.Time
+	ReplyCount    int32
+	LastReplyAt   time.Time
 }
 
 type Conversation struct {
@@ -155,6 +165,7 @@ type MlsMessage struct {
 	Data           []byte
 	CreatedAt      time.Time
 	ChannelID      *uuid.UUID
+	ThreadRootID   *uuid.UUID
 }
 
 type OidcFlow struct {
@@ -281,6 +292,12 @@ type Session struct {
 	LastSeenAt      time.Time
 	ExpiresAt       time.Time
 	AuthenticatedAt time.Time
+}
+
+type ThreadFollow struct {
+	ChannelID     uuid.UUID
+	RootMessageID uuid.UUID
+	UserID        uuid.UUID
 }
 
 type TotpCredential struct {

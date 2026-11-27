@@ -17,6 +17,8 @@ export interface MessageListProps {
   send: (payload: Payload) => Promise<unknown>;
   /** Where new messages begin, if any are unread. */
   firstUnreadId?: string | undefined;
+  /** In a channel: opens the thread on a message, given whether it can be replied in there. */
+  thread?: { open: (item: TimelineItem) => void; mayReply: (item: TimelineItem) => boolean };
 }
 
 /** What pressing a message and its actions does. */
@@ -27,9 +29,10 @@ function handlersFor(
     select: (id: string | undefined) => void;
     composer: Composer;
     send: (payload: Payload) => Promise<unknown>;
+    thread: MessageListProps["thread"];
   },
 ): MessageItemProps["on"] {
-  const { select, composer, send } = state;
+  const { select, composer, send, thread } = state;
   const then = (action: () => void) => () => {
     select(undefined);
     action();
@@ -55,6 +58,24 @@ function handlersFor(
       select(undefined);
       sendQuietly({ kind: "reaction", target: item.id, emoji, added });
     },
+    ...threadHandlers(item, thread, then),
+  };
+}
+
+/** In a channel, opening the message's thread, and whether replying there is offered. */
+function threadHandlers(
+  item: TimelineItem,
+  thread: MessageListProps["thread"],
+  then: (action: () => void) => () => void,
+): Pick<MessageItemProps["on"], "openThread" | "mayStartThread"> {
+  if (thread === undefined) {
+    return {};
+  }
+  return {
+    openThread: then(() => {
+      thread.open(item);
+    }),
+    mayStartThread: thread.mayReply(item),
   };
 }
 
@@ -80,6 +101,7 @@ function renderer(state: {
         select,
         composer: props.composer,
         send: props.send,
+        thread: props.thread,
       })}
     />
   );

@@ -40,6 +40,8 @@ export interface DecryptedMessage {
   deliveryId?: number;
   /** In a server audience's group, the channel the message is in. */
   channelId?: string;
+  /** For a reply in a thread, the message the thread is on. */
+  thread?: string;
 }
 
 /**

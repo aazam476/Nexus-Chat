@@ -61,13 +61,16 @@ export interface Envelope {
    * server's tag on the message can be checked against it.
    */
   channel?: string;
+  /** In a server channel, for a reply in a thread: the message the thread is on, checked the same way. */
+  thread?: string;
 }
 
 /** The bytes to encrypt. */
 export function encodePayload(envelope: Envelope): Uint8Array {
   const channel = envelope.channel === undefined ? {} : { channel: envelope.channel };
+  const thread = envelope.thread === undefined ? {} : { thread: envelope.thread };
   return new TextEncoder().encode(
-    JSON.stringify({ v: version, id: envelope.id, ...channel, ...envelope.payload }),
+    JSON.stringify({ v: version, id: envelope.id, ...channel, ...thread, ...envelope.payload }),
   );
 }
 
@@ -146,9 +149,12 @@ export function decodePayload(bytes: Uint8Array): Envelope | undefined {
   if (payload === undefined) {
     return undefined;
   }
-  return isId(parsed.channel)
-    ? { id: parsed.id, payload, channel: parsed.channel }
-    : { id: parsed.id, payload };
+  return {
+    id: parsed.id,
+    payload,
+    ...(isId(parsed.channel) ? { channel: parsed.channel } : {}),
+    ...(isId(parsed.thread) ? { thread: parsed.thread } : {}),
+  };
 }
 
 function parse(bytes: Uint8Array): Fields | undefined {

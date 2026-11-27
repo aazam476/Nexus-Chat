@@ -13,18 +13,18 @@ WHERE conversation_id = sqlc.arg(conversation_id) AND epoch = sqlc.arg(expected_
 RETURNING epoch;
 
 -- name: InsertMessage :one
-INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id)
-VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id))
+INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id, thread_root_id)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id), sqlc.narg(thread_root_id))
 RETURNING id;
 
 -- name: MessagesAfter :many
-SELECT id, kind, epoch, sender_id, data, created_at, channel_id FROM mls_messages
+SELECT id, kind, epoch, sender_id, data, created_at, channel_id, thread_root_id FROM mls_messages
 WHERE conversation_id = $1 AND id > sqlc.arg(after_id)
 ORDER BY id LIMIT sqlc.arg(row_limit);
 
 -- name: InsertArchive :exec
-INSERT INTO archived_messages (conversation_id, message_id, epoch, sender_id, sealed, created_at, channel_id)
-VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id));
+INSERT INTO archived_messages (conversation_id, message_id, epoch, sender_id, sealed, created_at, channel_id, thread_root_id)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id), sqlc.narg(thread_root_id));
 
 -- name: ArchiveBefore :many
 -- Archive copies older than `before`, newest first, for scrolling back.
@@ -35,11 +35,63 @@ ORDER BY created_at DESC, message_id LIMIT sqlc.arg(row_limit);
 -- name: ChannelArchiveBefore :many
 -- A server channel's archive copies from `since` up to `before`, newest
 -- first, with the MLS group each was sent in: a channel moves between
--- audience groups as its audience changes.
+-- audience groups as its audience changes. Replies in threads are left
+-- out; a thread's archive has them.
 SELECT a.message_id, c.mls_group_id, a.epoch, a.sender_id, a.sealed, a.created_at
 FROM archived_messages a JOIN conversations c ON c.id = a.conversation_id
-WHERE a.channel_id = sqlc.arg(channel_id) AND a.created_at < sqlc.arg(before) AND a.created_at >= sqlc.arg(since)
+WHERE a.channel_id = sqlc.arg(channel_id) AND a.thread_root_id IS NULL
+  AND a.created_at < sqlc.arg(before) AND a.created_at >= sqlc.arg(since)
 ORDER BY a.created_at DESC, a.message_id LIMIT sqlc.arg(row_limit);
+
+-- name: ThreadArchiveBefore :many
+-- Like ChannelArchiveBefore, for the replies in one thread.
+SELECT a.message_id, c.mls_group_id, a.epoch, a.sender_id, a.sealed, a.created_at
+FROM archived_messages a JOIN conversations c ON c.id = a.conversation_id
+WHERE a.channel_id = sqlc.arg(channel_id) AND a.thread_root_id = sqlc.arg(root_message_id)
+  AND a.created_at < sqlc.arg(before) AND a.created_at >= sqlc.arg(since)
+ORDER BY a.created_at DESC, a.message_id LIMIT sqlc.arg(row_limit);
+
+-- name: ThreadRoot :one
+-- The sender of a channel message that can carry a thread: one in the
+-- channel that is not itself a reply in a thread.
+SELECT sender_id FROM archived_messages
+WHERE channel_id = sqlc.arg(channel_id) AND message_id = sqlc.arg(message_id) AND thread_root_id IS NULL
+LIMIT 1;
+
+-- name: ThreadExists :one
+SELECT EXISTS (
+    SELECT 1 FROM channel_threads WHERE channel_id = sqlc.arg(channel_id) AND root_message_id = sqlc.arg(root_message_id)
+);
+
+-- name: RecordThreadReply :exec
+-- Starts the thread on its first reply, or counts another one.
+INSERT INTO channel_threads AS threads (channel_id, root_message_id, created_by, created_at, reply_count, last_reply_at)
+VALUES (sqlc.arg(channel_id), sqlc.arg(root_message_id), sqlc.arg(sender_id), sqlc.arg(now), 1, sqlc.arg(now))
+ON CONFLICT (channel_id, root_message_id) DO UPDATE
+SET reply_count = threads.reply_count + 1, last_reply_at = EXCLUDED.last_reply_at;
+
+-- name: FollowThread :execrows
+INSERT INTO thread_follows (channel_id, root_message_id, user_id)
+SELECT threads.channel_id, threads.root_message_id, sqlc.arg(user_id)::uuid FROM channel_threads AS threads
+WHERE threads.channel_id = sqlc.arg(channel_id) AND threads.root_message_id = sqlc.arg(root_message_id)
+ON CONFLICT DO NOTHING;
+
+-- name: UnfollowThread :exec
+DELETE FROM thread_follows
+WHERE channel_id = sqlc.arg(channel_id) AND root_message_id = sqlc.arg(root_message_id) AND user_id = sqlc.arg(user_id);
+
+-- name: ChannelThreads :many
+-- A channel's threads, most recently active first, and whether the user follows each.
+SELECT threads.root_message_id, threads.reply_count, threads.created_at, threads.last_reply_at,
+    EXISTS (
+        SELECT 1 FROM thread_follows AS follows
+        WHERE follows.channel_id = threads.channel_id AND follows.root_message_id = threads.root_message_id
+          AND follows.user_id = sqlc.arg(user_id)
+    ) AS following
+FROM channel_threads AS threads
+WHERE threads.channel_id = sqlc.arg(channel_id)
+ORDER BY threads.last_reply_at DESC, threads.root_message_id
+LIMIT 100;
 
 -- name: DeleteExpiredMessages :execrows
 -- Live copies older than the cut-off; archive copies stay.
@@ -104,6 +156,7 @@ SELECT
             SELECT 1 FROM mls_messages AS messages
             WHERE messages.channel_id = channel.id
               AND messages.kind = 'application'
+              AND messages.thread_root_id IS NULL
               AND messages.id > COALESCE(reads.last_read_id, 0)
               AND messages.sender_id IS DISTINCT FROM sqlc.arg(user_id)::uuid
             LIMIT 1000

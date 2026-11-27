@@ -24,22 +24,34 @@ func (handler *Handler) SendChannelMessage(ctx context.Context, request api.Send
 		outgoing.Archive = &Archive{MessageID: request.Body.Archive.MessageId, Sealed: request.Body.Archive.Sealed}
 	}
 	ref := ChannelRef{ServerID: request.ServerId, ChannelID: request.ChannelId, UserID: me}
-	id, err := handler.service.SendToChannel(ctx, ref, outgoing)
+	var id int64
+	if request.Body.ThreadRootId == nil {
+		id, err = handler.service.SendToChannel(ctx, ref, outgoing)
+	} else {
+		id, err = handler.service.SendInThread(ctx, ref, *request.Body.ThreadRootId, outgoing)
+	}
+	if err != nil {
+		return sendChannelError(err)
+	}
+	return api.SendChannelMessage201JSONResponse{Id: id}, nil
+}
+
+func sendChannelError(err error) (api.SendChannelMessageResponseObject, error) {
 	switch {
 	case errors.Is(err, ErrNotAllowed):
 		return api.SendChannelMessage403JSONResponse(apiresponse.Error("cannot_send", err)), nil
 	case errors.Is(err, ErrNotFound):
 		return api.SendChannelMessage404JSONResponse(channelNotFound(err)), nil
+	case errors.Is(err, ErrNoThread):
+		return api.SendChannelMessage404JSONResponse(apiresponse.Error("thread_not_found", err)), nil
 	case errors.Is(err, ErrWrongEpoch):
 		return api.SendChannelMessage409JSONResponse(apiresponse.Error("wrong_epoch", err)), nil
 	case errors.Is(err, ErrDuplicate):
 		return api.SendChannelMessage409JSONResponse(apiresponse.Error("duplicate_message", err)), nil
 	case errors.Is(err, ErrInvalidMessage):
 		return api.SendChannelMessage422JSONResponse(apiresponse.Error("invalid_mls_message", err)), nil
-	case err != nil:
-		return nil, err
 	}
-	return api.SendChannelMessage201JSONResponse{Id: id}, nil
+	return nil, err
 }
 
 // ListChannelArchive answers GET /api/v1/servers/{serverId}/channels/{channelId}/archive.

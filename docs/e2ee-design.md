@@ -211,6 +211,13 @@ Edits, deletions-by-author, reactions, and thread replies are ordinary
 messages whose plaintext references the target message ID, so they get the
 same treatment.
 
+A thread reply also names the message its thread is on outside the
+encryption, on both its live and archive copies, as a channel message names
+its channel. The server uses this to check that the root is a message of the
+channel, to count replies and to serve a thread's archive; devices drop a
+reply whose outer and inner roots disagree. Edits, reactions and deletions
+of thread replies carry no root: they name their target, wherever it is.
+
 ### 4.1 Where history keys live
 
 - Devices store history keys in their encrypted local database.

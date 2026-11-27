@@ -27,6 +27,10 @@ export interface MessageItemProps {
     edit: () => void;
     delete: () => void;
     react: (emoji: string, added: boolean) => void;
+    /** In a channel: opens the thread on this message. */
+    openThread?: () => void;
+    /** Whether "Reply in thread" is offered: the user may reply there. */
+    mayStartThread?: boolean;
   };
 }
 
@@ -71,6 +75,9 @@ function Actions({
   return (
     <View style={styles.actions}>
       <ActionButton label={t("conversation.reply")} onPress={on.reply} />
+      {on.openThread !== undefined && on.mayStartThread === true ? (
+        <ActionButton label={t("threads.replyInThread")} onPress={on.openThread} testID="message-thread" />
+      ) : null}
       {quickReactions.map((emoji) => (
         <ActionButton
           key={emoji}
@@ -86,6 +93,24 @@ function Actions({
       {own ? (
         <ActionButton label={t("conversation.delete")} onPress={on.delete} testID="message-delete" />
       ) : null}
+    </View>
+  );
+}
+
+/** Under a message with a thread: how many replies, and when the last came; it opens the thread. */
+function ThreadLink({ item, open }: { item: TimelineItem; open: (() => void) | undefined }): ReactNode {
+  const { t } = useTranslation();
+  if (item.replies === undefined || open === undefined) {
+    return null;
+  }
+  const time = new Date(item.replies.lastAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return (
+    <View style={styles.actions}>
+      <ActionButton
+        label={t("threads.replies", { count: item.replies.count, time })}
+        onPress={open}
+        testID={`thread-${item.id}`}
+      />
     </View>
   );
 }
@@ -152,6 +177,7 @@ export function MessageItem({ item, replied, context, on }: MessageItemProps): R
         ) : null}
       </Pressable>
       <Reactions reactions={item.reactions} self={context.self} nameOf={context.nameOf} onToggle={on.react} />
+      <ThreadLink item={item} open={on.openThread} />
       {context.selected && !item.deleted ? <Actions item={item} self={context.self} on={on} /> : null}
     </View>
   );

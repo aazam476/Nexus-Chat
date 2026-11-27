@@ -106,9 +106,11 @@ export async function openCopy(
     );
     const envelope = decodePayload(opened.plaintext);
     const sender = decodeDeviceCredential(opened.sender)?.identity;
-    return envelope?.id === copy.messageId && sender !== undefined
-      ? { id: envelope.id, sender, payload: envelope.payload, sentAt: copy.createdAt }
-      : undefined;
+    if (envelope?.id !== copy.messageId || sender === undefined) {
+      return undefined;
+    }
+    const thread = envelope.thread === undefined ? {} : { thread: envelope.thread };
+    return { id: envelope.id, sender, payload: envelope.payload, sentAt: copy.createdAt, ...thread };
   } catch {
     return undefined;
   }

@@ -119,3 +119,16 @@ export async function addEmoji(page: Page, name: string): Promise<void> {
   await shown(page, "emoji-admin-back").click();
   await shown(page, "settings-back").click();
 }
+
+/** Opens the thread on the message saying `root` in the open channel, and replies there. */
+export async function replyInThread(page: Page, root: string, reply: string): Promise<void> {
+  await page.getByText(root, { exact: true }).filter({ visible: true }).first().click();
+  await shown(page, "message-thread").click();
+  await expect(page.getByRole("heading", { name: "Thread" }).filter({ visible: true })).toBeVisible();
+  await shown(page, "composer").fill(reply);
+  await shown(page, "composer-send").click();
+  await expect(page.getByText(reply, { exact: true }).filter({ visible: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expectAccessible(page);
+}

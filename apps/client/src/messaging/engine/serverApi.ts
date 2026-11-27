@@ -13,6 +13,7 @@ import {
   getMlsGroupState,
   listArchivedMessages,
   listChannelArchive,
+  listThreadArchive,
   sendChannelMessage,
   listMlsMessages,
   publishIdentity,
@@ -24,7 +25,7 @@ import {
   type Client,
 } from "@nexus-chat/api-client";
 
-import type { MessagingApi, Outcome } from "./api";
+import type { MessagingApi, Outcome, StoredChannelArchive } from "./api";
 import { fromBase64, toBase64 } from "./bytes";
 
 /** Thrown when the server answers something the engine cannot go on from. */
@@ -187,9 +188,20 @@ function fetchCalls(client: Client): Calls<"messages" | "archive"> {
   };
 }
 
-function channelCalls(client: Client): Calls<"sendChannelMessage" | "channelArchive"> {
+/** Archive copies as the engine reads them: group IDs and sealed bytes decoded. */
+function decodedCopies(
+  copies: { mlsGroupId: string; sealed: string; messageId: string; epoch: number; createdAt: string }[],
+): StoredChannelArchive[] {
+  return copies.map(({ mlsGroupId, ...copy }) => ({
+    ...copy,
+    groupId: fromBase64(mlsGroupId),
+    sealed: fromBase64(copy.sealed),
+  }));
+}
+
+function channelCalls(client: Client): Calls<"sendChannelMessage" | "channelArchive" | "threadArchive"> {
   return {
-    sendChannelMessage: async (channel, message, archive) => {
+    sendChannelMessage: async (channel, message, archive, threadRootId) => {
       const copy =
         archive === undefined
           ? {}
@@ -197,7 +209,11 @@ function channelCalls(client: Client): Calls<"sendChannelMessage" | "channelArch
       const result = await sendChannelMessage({
         client,
         path: channel,
-        body: { message: toBase64(message), ...copy },
+        body: {
+          message: toBase64(message),
+          ...copy,
+          ...(threadRootId === undefined ? {} : { threadRootId }),
+        },
       });
       return outcome(result.response?.status ?? 0, result.data?.id);
     },
@@ -207,11 +223,15 @@ function channelCalls(client: Client): Calls<"sendChannelMessage" | "channelArch
         path: channel,
         query: before === undefined ? {} : { before },
       });
-      return required(result.data, "hand out the channel's archive").map(({ mlsGroupId, ...copy }) => ({
-        ...copy,
-        groupId: fromBase64(mlsGroupId),
-        sealed: fromBase64(copy.sealed),
-      }));
+      return decodedCopies(required(result.data, "hand out the channel's archive"));
+    },
+    threadArchive: async (channel, rootId, before) => {
+      const result = await listThreadArchive({
+        client,
+        path: { ...channel, rootId },
+        query: before === undefined ? {} : { before },
+      });
+      return decodedCopies(required(result.data, "hand out the thread's archive"));
     },
   };
 }

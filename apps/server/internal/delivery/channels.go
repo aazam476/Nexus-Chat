@@ -26,6 +26,9 @@ type ChannelGrant struct {
 	// AudienceID is the conversation of the channel's audience.
 	AudienceID uuid.UUID
 	MaySend    bool
+	// MayReplyInThreads and MayStartThreads are SEND_IN_THREADS and CREATE_THREADS.
+	MayReplyInThreads bool
+	MayStartThreads   bool
 	// HistorySince is the oldest archive copy the user may fetch; zero
 	// when the channel lets them read history from before they joined.
 	HistorySince time.Time
@@ -50,7 +53,7 @@ func (service *Service) SendToChannel(ctx context.Context, ref ChannelRef, outgo
 	if !grant.MaySend {
 		return 0, ErrNotAllowed
 	}
-	outgoing.channelID = &ref.ChannelID
+	outgoing.channelID, outgoing.thread = &ref.ChannelID, nil
 	return service.send(ctx, ref.UserID, grant.AudienceID, outgoing)
 }
 

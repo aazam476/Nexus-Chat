@@ -3033,6 +3033,14 @@ paths:
         The live copy goes to the channel's audience group, for its current
         epoch, and names the channel (docs/e2ee-design.md §3.1). Members'
         devices fetch it from that group's conversation, `audienceId`.
+
+        With `threadRootId` it is a reply in the thread on that message
+        (spec §4.5), which must be a message in this channel and not itself
+        in a thread. A reply needs an archive copy and SEND_IN_THREADS;
+        the first reply, which starts the thread, also needs CREATE_THREADS.
+        The sender then follows the thread, and so does the root's sender
+        when the thread starts. Edits, reactions and deletions in a thread
+        are sent without `threadRootId`: they name their target anyway.
       tags: [encryption]
       security:
         - bearerAuth: []
@@ -3041,7 +3049,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MlsSend"
+              $ref: "#/components/schemas/ChannelSend"
       responses:
         "201":
           description: Stored and delivered.
@@ -4199,6 +4207,153 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/threads:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listChannelThreads
+      summary: A channel's threads, most recently active first
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Up to 100 threads.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChannelThread"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/archive:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: rootId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listThreadArchive
+      summary: Archive copies of a thread's replies
+      description: Newest first, before `before`, as far back as you may read the channel.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: The copies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChannelArchivedMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: rootId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: followThread
+      summary: Follow a thread, to be notified of its replies
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Followed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: unfollowThread
+      summary: Stop following a thread
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: No longer followed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
           content:
             application/json:
               schema:
@@ -5667,6 +5822,20 @@ components:
           description: An MLSMessage holding a PrivateMessage with application content.
         archive:
           $ref: "#/components/schemas/ArchiveCopy"
+    ChannelSend:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          format: byte
+          description: An MLSMessage holding a PrivateMessage with application content.
+        archive:
+          $ref: "#/components/schemas/ArchiveCopy"
+        threadRootId:
+          type: string
+          format: uuid
+          description: The message whose thread this replies in; the encrypted content names it too.
     ArchiveCopy:
       type: object
       required: [messageId, sealed]
@@ -5716,6 +5885,26 @@ components:
         createdAt:
           type: string
           format: date-time
+    ChannelThread:
+      type: object
+      required: [rootId, replyCount, createdAt, lastReplyAt, following]
+      properties:
+        rootId:
+          type: string
+          format: uuid
+          description: The message the thread is on.
+        replyCount:
+          type: integer
+          description: Replies in the thread.
+        createdAt:
+          type: string
+          format: date-time
+        lastReplyAt:
+          type: string
+          format: date-time
+        following:
+          type: boolean
+          description: Whether you follow it; followed threads notify you (M8).
     ChannelReadState:
       type: object
       required: [channelId, lastReadId, unreadCount]
@@ -5782,6 +5971,10 @@ components:
           type: string
           format: uuid
           description: In a server audience's group, the channel an application message is for.
+        threadRootId:
+          type: string
+          format: uuid
+          description: For a reply in a thread, the message the thread is on.
     ChannelArchivedMessage:
       type: object
       required: [messageId, mlsGroupId, epoch, sealed, createdAt]
@@ -5805,6 +5998,10 @@ components:
         createdAt:
           type: string
           format: date-time
+        threadRootId:
+          type: string
+          format: uuid
+          description: For a reply in a thread, the message the thread is on.
     ArchivedMessage:
       type: object
       required: [messageId, epoch, sealed, createdAt]

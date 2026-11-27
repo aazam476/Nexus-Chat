@@ -505,6 +505,9 @@ type ChannelArchivedMessage struct {
 	MlsGroupId []byte              `json:"mlsGroupId"`
 	Sealed     []byte              `json:"sealed"`
 	SenderId   *openapi_types.UUID `json:"senderId,omitempty"`
+
+	// ThreadRootId For a reply in a thread, the message the thread is on.
+	ThreadRootId *openapi_types.UUID `json:"threadRootId,omitempty"`
 }
 
 // ChannelOverride defines model for ChannelOverride.
@@ -530,10 +533,36 @@ type ChannelReadState struct {
 	UnreadCount int64 `json:"unreadCount"`
 }
 
+// ChannelSend defines model for ChannelSend.
+type ChannelSend struct {
+	Archive *ArchiveCopy `json:"archive,omitempty"`
+
+	// Message An MLSMessage holding a PrivateMessage with application content.
+	Message []byte `json:"message"`
+
+	// ThreadRootId The message whose thread this replies in; the encrypted content names it too.
+	ThreadRootId *openapi_types.UUID `json:"threadRootId,omitempty"`
+}
+
 // ChannelText defines model for ChannelText.
 type ChannelText struct {
 	Name  string  `json:"name"`
 	Topic *string `json:"topic,omitempty"`
+}
+
+// ChannelThread defines model for ChannelThread.
+type ChannelThread struct {
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Following Whether you follow it; followed threads notify you (M8).
+	Following   bool      `json:"following"`
+	LastReplyAt time.Time `json:"lastReplyAt"`
+
+	// ReplyCount Replies in the thread.
+	ReplyCount int `json:"replyCount"`
+
+	// RootId The message the thread is on.
+	RootId openapi_types.UUID `json:"rootId"`
 }
 
 // ClaimedKeyPackage defines model for ClaimedKeyPackage.
@@ -925,6 +954,9 @@ type MlsMessage struct {
 
 	// SenderId Missing for directives, which the instance issues.
 	SenderId *openapi_types.UUID `json:"senderId,omitempty"`
+
+	// ThreadRootId For a reply in a thread, the message the thread is on.
+	ThreadRootId *openapi_types.UUID `json:"threadRootId,omitempty"`
 }
 
 // MlsMessageKind defines model for MlsMessage.Kind.
@@ -1588,6 +1620,12 @@ type ListChannelArchiveParams struct {
 	Limit  *int       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListThreadArchiveParams defines parameters for ListThreadArchive.
+type ListThreadArchiveParams struct {
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+	Limit  *int       `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // AddServerEmojiParams defines parameters for AddServerEmoji.
 type AddServerEmojiParams struct {
 	// Name 2 to 32 lowercase letters, digits and underscores, unique in the server.
@@ -1731,7 +1769,7 @@ type CreateServerChannelJSONRequestBody = NewServerChannel
 type UpdateServerChannelJSONRequestBody = ChannelText
 
 // SendChannelMessageJSONRequestBody defines body for SendChannelMessage for application/json ContentType.
-type SendChannelMessageJSONRequestBody = MlsSend
+type SendChannelMessageJSONRequestBody = ChannelSend
 
 // SetChannelOverrideJSONRequestBody defines body for SetChannelOverride for application/json ContentType.
 type SetChannelOverrideJSONRequestBody = OverrideSpec
@@ -2089,6 +2127,18 @@ type ServerInterface interface {
 	// MarkChannelRead Mark a text channel read up to a live message
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/read)
 	MarkChannelRead(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
+	// ListChannelThreads A channel's threads, most recently active first
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/threads)
+	ListChannelThreads(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
+	// ListThreadArchive Archive copies of a thread's replies
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/archive)
+	ListThreadArchive(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, rootId openapi_types.UUID, params ListThreadArchiveParams)
+	// UnfollowThread Stop following a thread
+	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow)
+	UnfollowThread(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, rootId openapi_types.UUID)
+	// FollowThread Follow a thread, to be notified of its replies
+	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow)
+	FollowThread(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, rootId openapi_types.UUID)
 	// ListServerEmoji The server's custom emoji, by name
 	// (GET /api/v1/servers/{serverId}/emoji)
 	ListServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -4631,6 +4681,202 @@ func (siw *ServerInterfaceWrapper) MarkChannelRead(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListChannelThreads operation middleware
+func (siw *ServerInterfaceWrapper) ListChannelThreads(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListChannelThreads(w, r, serverId, channelId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListThreadArchive operation middleware
+func (siw *ServerInterfaceWrapper) ListThreadArchive(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "rootId" -------------
+	var rootId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rootId", r.PathValue("rootId"), &rootId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rootId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListThreadArchiveParams
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListThreadArchive(w, r, serverId, channelId, rootId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnfollowThread operation middleware
+func (siw *ServerInterfaceWrapper) UnfollowThread(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "rootId" -------------
+	var rootId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rootId", r.PathValue("rootId"), &rootId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rootId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfollowThread(w, r, serverId, channelId, rootId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FollowThread operation middleware
+func (siw *ServerInterfaceWrapper) FollowThread(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "rootId" -------------
+	var rootId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "rootId", r.PathValue("rootId"), &rootId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rootId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FollowThread(w, r, serverId, channelId, rootId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListServerEmoji operation middleware
 func (siw *ServerInterfaceWrapper) ListServerEmoji(w http.ResponseWriter, r *http.Request) {
 
@@ -5657,6 +5903,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.ListServerInvites)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.CreateServerInvite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites/{code}", wrapper.RevokeServerInvite)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/threads", wrapper.ListChannelThreads)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/archive", wrapper.ListThreadArchive)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow", wrapper.UnfollowThread)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow", wrapper.FollowThread)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/read", wrapper.MarkChannelRead)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/read-state", wrapper.ListChannelReadStates)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.RemoveServerIcon)
@@ -13038,6 +13288,202 @@ func (response MarkChannelRead422JSONResponse) VisitMarkChannelReadResponse(w ht
 	return err
 }
 
+type ListChannelThreadsRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+}
+
+type ListChannelThreadsResponseObject interface {
+	VisitListChannelThreadsResponse(w http.ResponseWriter) error
+}
+
+type ListChannelThreads200JSONResponse []ChannelThread
+
+func (response ListChannelThreads200JSONResponse) VisitListChannelThreadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelThreads401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListChannelThreads401JSONResponse) VisitListChannelThreadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListChannelThreads404JSONResponse Error
+
+func (response ListChannelThreads404JSONResponse) VisitListChannelThreadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListThreadArchiveRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	RootId    openapi_types.UUID `json:"rootId"`
+	Params    ListThreadArchiveParams
+}
+
+type ListThreadArchiveResponseObject interface {
+	VisitListThreadArchiveResponse(w http.ResponseWriter) error
+}
+
+type ListThreadArchive200JSONResponse []ChannelArchivedMessage
+
+func (response ListThreadArchive200JSONResponse) VisitListThreadArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListThreadArchive401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListThreadArchive401JSONResponse) VisitListThreadArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListThreadArchive404JSONResponse Error
+
+func (response ListThreadArchive404JSONResponse) VisitListThreadArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnfollowThreadRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	RootId    openapi_types.UUID `json:"rootId"`
+}
+
+type UnfollowThreadResponseObject interface {
+	VisitUnfollowThreadResponse(w http.ResponseWriter) error
+}
+
+type UnfollowThread204Response struct {
+}
+
+func (response UnfollowThread204Response) VisitUnfollowThreadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnfollowThread401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnfollowThread401JSONResponse) VisitUnfollowThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnfollowThread404JSONResponse Error
+
+func (response UnfollowThread404JSONResponse) VisitUnfollowThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowThreadRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	RootId    openapi_types.UUID `json:"rootId"`
+}
+
+type FollowThreadResponseObject interface {
+	VisitFollowThreadResponse(w http.ResponseWriter) error
+}
+
+type FollowThread204Response struct {
+}
+
+func (response FollowThread204Response) VisitFollowThreadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type FollowThread401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response FollowThread401JSONResponse) VisitFollowThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowThread404JSONResponse Error
+
+func (response FollowThread404JSONResponse) VisitFollowThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListServerEmojiRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 }
@@ -15392,6 +15838,18 @@ type StrictServerInterface interface {
 	// MarkChannelRead Mark a text channel read up to a live message
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/read)
 	MarkChannelRead(ctx context.Context, request MarkChannelReadRequestObject) (MarkChannelReadResponseObject, error)
+	// ListChannelThreads A channel's threads, most recently active first
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/threads)
+	ListChannelThreads(ctx context.Context, request ListChannelThreadsRequestObject) (ListChannelThreadsResponseObject, error)
+	// ListThreadArchive Archive copies of a thread's replies
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/archive)
+	ListThreadArchive(ctx context.Context, request ListThreadArchiveRequestObject) (ListThreadArchiveResponseObject, error)
+	// UnfollowThread Stop following a thread
+	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow)
+	UnfollowThread(ctx context.Context, request UnfollowThreadRequestObject) (UnfollowThreadResponseObject, error)
+	// FollowThread Follow a thread, to be notified of its replies
+	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow)
+	FollowThread(ctx context.Context, request FollowThreadRequestObject) (FollowThreadResponseObject, error)
 	// ListServerEmoji The server's custom emoji, by name
 	// (GET /api/v1/servers/{serverId}/emoji)
 	ListServerEmoji(ctx context.Context, request ListServerEmojiRequestObject) (ListServerEmojiResponseObject, error)
@@ -18581,6 +19039,118 @@ func (sh *strictHandler) MarkChannelRead(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(MarkChannelReadResponseObject); ok {
 		if err := validResponse.VisitMarkChannelReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListChannelThreads operation middleware
+func (sh *strictHandler) ListChannelThreads(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID) {
+	var request ListChannelThreadsRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListChannelThreads(ctx, request.(ListChannelThreadsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListChannelThreads")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListChannelThreadsResponseObject); ok {
+		if err := validResponse.VisitListChannelThreadsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListThreadArchive operation middleware
+func (sh *strictHandler) ListThreadArchive(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, rootId openapi_types.UUID, params ListThreadArchiveParams) {
+	var request ListThreadArchiveRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+	request.RootId = rootId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListThreadArchive(ctx, request.(ListThreadArchiveRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListThreadArchive")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListThreadArchiveResponseObject); ok {
+		if err := validResponse.VisitListThreadArchiveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnfollowThread operation middleware
+func (sh *strictHandler) UnfollowThread(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, rootId openapi_types.UUID) {
+	var request UnfollowThreadRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+	request.RootId = rootId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnfollowThread(ctx, request.(UnfollowThreadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnfollowThread")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnfollowThreadResponseObject); ok {
+		if err := validResponse.VisitUnfollowThreadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FollowThread operation middleware
+func (sh *strictHandler) FollowThread(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, rootId openapi_types.UUID) {
+	var request FollowThreadRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+	request.RootId = rootId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FollowThread(ctx, request.(FollowThreadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FollowThread")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FollowThreadResponseObject); ok {
+		if err := validResponse.VisitFollowThreadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

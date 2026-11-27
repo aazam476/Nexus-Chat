@@ -138,7 +138,7 @@ export class FakeInstance {
   private sendToChannel(
     channel: ChannelAddress,
     userId: string,
-    sent: { message: Uint8Array; archive?: { messageId: string; sealed: Uint8Array } },
+    sent: { message: Uint8Array; archive?: { messageId: string; sealed: Uint8Array }; threadRootId?: string },
   ): Outcome {
     const audienceId = this.channels.get(channel.channelId);
     const group = audienceId === undefined ? undefined : this.groups.get(audienceId);
@@ -154,6 +154,7 @@ export class FakeInstance {
       senderId: userId,
       data: sent.message,
       channelId: channel.channelId,
+      ...(sent.threadRootId === undefined ? {} : { threadRootId: sent.threadRootId }),
     });
     if (sent.archive === undefined) {
       this.bundles += 1;
@@ -165,10 +166,26 @@ export class FakeInstance {
         epoch: group.epoch,
         senderId: userId,
         createdAt: new Date(id * 1000).toISOString(),
+        ...(sent.threadRootId === undefined ? {} : { threadRootId: sent.threadRootId }),
       });
       this.channelArchives.set(channel.channelId, copies);
     }
     return { accepted: true, id };
+  }
+
+  /**
+   * A channel's archive copies before `before` (its own, or one thread's),
+   * newest first, two at a time to exercise paging.
+   */
+  private channelArchiveBefore(
+    channelId: string,
+    thread: string | undefined,
+    before?: string,
+  ): StoredChannelArchive[] {
+    return (this.channelArchives.get(channelId) ?? [])
+      .filter((copy) => copy.threadRootId === thread && (before === undefined || copy.createdAt < before))
+      .reverse()
+      .slice(0, 2);
   }
 
   /** Archive copies before `before`, newest first, two at a time to exercise paging. */
@@ -272,17 +289,18 @@ export class FakeInstance {
       messages: (conversationId, afterId) =>
         Promise.resolve((this.messages.get(conversationId) ?? []).filter((message) => message.id > afterId)),
       archive: (conversationId, before) => Promise.resolve(this.archiveBefore(conversationId, before)),
-      sendChannelMessage: (channel, message, archive) =>
+      sendChannelMessage: (channel, message, archive, threadRootId) =>
         Promise.resolve(
-          this.sendToChannel(channel, userId, { message, ...(archive === undefined ? {} : { archive }) }),
+          this.sendToChannel(channel, userId, {
+            message,
+            ...(archive === undefined ? {} : { archive }),
+            ...(threadRootId === undefined ? {} : { threadRootId }),
+          }),
         ),
       channelArchive: (channel, before) =>
-        Promise.resolve(
-          (this.channelArchives.get(channel.channelId) ?? [])
-            .filter((copy) => before === undefined || copy.createdAt < before)
-            .reverse()
-            .slice(0, 2),
-        ),
+        Promise.resolve(this.channelArchiveBefore(channel.channelId, undefined, before)),
+      threadArchive: (channel, rootId, before) =>
+        Promise.resolve(this.channelArchiveBefore(channel.channelId, rootId, before)),
     };
   }
 }

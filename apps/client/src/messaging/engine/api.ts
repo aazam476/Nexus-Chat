@@ -16,6 +16,8 @@ export interface DeliveredMessage {
   createdAt: string;
   /** In a server audience's group, the channel an application message is for. */
   channelId?: string;
+  /** For a reply in a thread, the message the thread is on. */
+  threadRootId?: string;
 }
 
 /** A server text channel, as channel calls address it. */
@@ -32,6 +34,8 @@ export interface StoredChannelArchive {
   senderId?: string;
   sealed: Uint8Array;
   createdAt: string;
+  /** For a reply in a thread, the message the thread is on. */
+  threadRootId?: string;
 }
 
 /** An archive copy as stored. */
@@ -82,6 +86,10 @@ export interface MessagingApi {
     channel: ChannelAddress,
     message: Uint8Array,
     archive?: { messageId: string; sealed: Uint8Array },
+    threadRootId?: string,
   ): Promise<Outcome>;
+  /** The channel's archive, without replies in threads. */
   channelArchive(channel: ChannelAddress, before?: string): Promise<StoredChannelArchive[]>;
+  /** The archive of the replies in the thread on rootId. */
+  threadArchive(channel: ChannelAddress, rootId: string, before?: string): Promise<StoredChannelArchive[]>;
 }

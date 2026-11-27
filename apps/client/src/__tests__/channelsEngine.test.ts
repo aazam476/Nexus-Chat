@@ -51,8 +51,8 @@ describe("server channels in the messaging engine", () => {
   it("send each channel's messages to their channel, and share history where it is allowed", async () => {
     const { instance, ada, grace } = await setUp();
     await joinAudience(ada.context, audience);
-    await sendToChannel(ada.context, audience, general, text("welcome"));
-    await sendToChannel(ada.context, audience, staff, text("staff only"));
+    await sendToChannel(ada.context, audience, { channelId: general }, text("welcome"));
+    await sendToChannel(ada.context, audience, { channelId: staff }, text("staff only"));
     expect(await texts(ada.context, general)).toEqual(["welcome"]);
 
     // Grace joins; Ada's device sees her arrive and sends #general's keys.
@@ -66,7 +66,7 @@ describe("server channels in the messaging engine", () => {
     expect(await readChannelHistory(grace.context, audience, general)).toBe(0);
 
     // From now on, messages reach both, each in its channel.
-    await sendToChannel(grace.context, audience, staff, text("hello staff"));
+    await sendToChannel(grace.context, audience, { channelId: staff }, text("hello staff"));
     const toAda = await syncAudience(ada.context, audience);
     expect(toAda.messages.map((message) => message.channelId)).toEqual([staff]);
     expect((await texts(ada.context, staff)).sort()).toEqual(["hello staff", "staff only"]);
@@ -80,7 +80,7 @@ describe("server channels in the messaging engine", () => {
     await syncAudience(ada.context, audience);
     await syncAudience(grace.context, audience);
 
-    await sendToChannel(ada.context, audience, general, text("for general"));
+    await sendToChannel(ada.context, audience, { channelId: general }, text("for general"));
     const sent = instance.messages.get(audienceId)?.at(-1);
     if (sent !== undefined) {
       sent.channelId = staff;
@@ -96,7 +96,7 @@ describe("server channels in the messaging engine", () => {
     await joinAudience(grace.context, audience);
     await syncAudience(ada.context, audience);
     await syncAudience(grace.context, audience);
-    await sendToChannel(ada.context, audience, general, text("before Alan"));
+    await sendToChannel(ada.context, audience, { channelId: general }, text("before Alan"));
     await syncAudience(grace.context, audience);
     const before = instance.bundles;
 
@@ -115,13 +115,13 @@ describe("server channels in the messaging engine", () => {
 
   it("refuse to send before joining, or where the server refuses", async () => {
     const { ada } = await setUp();
-    await expect(sendToChannel(ada.context, audience, general, text("early"))).rejects.toBeInstanceOf(
-      ConversationError,
-    );
+    await expect(
+      sendToChannel(ada.context, audience, { channelId: general }, text("early")),
+    ).rejects.toBeInstanceOf(ConversationError);
     await joinAudience(ada.context, audience);
     const elsewhere = "0195f0e0-0000-7000-8000-00000000c009";
-    await expect(sendToChannel(ada.context, audience, elsewhere, text("nowhere"))).rejects.toBeInstanceOf(
-      ConversationError,
-    );
+    await expect(
+      sendToChannel(ada.context, audience, { channelId: elsewhere }, text("nowhere")),
+    ).rejects.toBeInstanceOf(ConversationError);
   });
 });

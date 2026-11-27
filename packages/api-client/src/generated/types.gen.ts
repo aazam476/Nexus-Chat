@@ -637,6 +637,18 @@ export type MlsSend = {
     archive?: ArchiveCopy;
 };
 
+export type ChannelSend = {
+    /**
+     * An MLSMessage holding a PrivateMessage with application content.
+     */
+    message: string;
+    archive?: ArchiveCopy;
+    /**
+     * The message whose thread this replies in; the encrypted content names it too.
+     */
+    threadRootId?: string;
+};
+
 export type ArchiveCopy = {
     /**
      * Chosen by the sender; edits, reactions and replies refer to it.
@@ -672,6 +684,23 @@ export type ServerEmoji = {
      */
     createdBy?: string;
     createdAt: string;
+};
+
+export type ChannelThread = {
+    /**
+     * The message the thread is on.
+     */
+    rootId: string;
+    /**
+     * Replies in the thread.
+     */
+    replyCount: number;
+    createdAt: string;
+    lastReplyAt: string;
+    /**
+     * Whether you follow it; followed threads notify you (M8).
+     */
+    following: boolean;
 };
 
 export type ChannelReadState = {
@@ -713,6 +742,10 @@ export type MlsMessage = {
      * In a server audience's group, the channel an application message is for.
      */
     channelId?: string;
+    /**
+     * For a reply in a thread, the message the thread is on.
+     */
+    threadRootId?: string;
 };
 
 export type ChannelArchivedMessage = {
@@ -725,6 +758,10 @@ export type ChannelArchivedMessage = {
     senderId?: string;
     sealed: string;
     createdAt: string;
+    /**
+     * For a reply in a thread, the message the thread is on.
+     */
+    threadRootId?: string;
 };
 
 export type ArchivedMessage = {
@@ -4501,7 +4538,7 @@ export type ListArchivedMessagesResponses = {
 export type ListArchivedMessagesResponse = ListArchivedMessagesResponses[keyof ListArchivedMessagesResponses];
 
 export type SendChannelMessageData = {
-    body: MlsSend;
+    body: ChannelSend;
     path: {
         serverId: string;
         channelId: string;
@@ -5663,6 +5700,140 @@ export type RevokeServerInviteResponses = {
 };
 
 export type RevokeServerInviteResponse = RevokeServerInviteResponses[keyof RevokeServerInviteResponses];
+
+export type ListChannelThreadsData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/threads';
+};
+
+export type ListChannelThreadsErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+     */
+    404: Error;
+};
+
+export type ListChannelThreadsError = ListChannelThreadsErrors[keyof ListChannelThreadsErrors];
+
+export type ListChannelThreadsResponses = {
+    /**
+     * Up to 100 threads.
+     */
+    200: Array<ChannelThread>;
+};
+
+export type ListChannelThreadsResponse = ListChannelThreadsResponses[keyof ListChannelThreadsResponses];
+
+export type ListThreadArchiveData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+        rootId: string;
+    };
+    query?: {
+        before?: string;
+        limit?: number;
+    };
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/archive';
+};
+
+export type ListThreadArchiveErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+     */
+    404: Error;
+};
+
+export type ListThreadArchiveError = ListThreadArchiveErrors[keyof ListThreadArchiveErrors];
+
+export type ListThreadArchiveResponses = {
+    /**
+     * The copies.
+     */
+    200: Array<ChannelArchivedMessage>;
+};
+
+export type ListThreadArchiveResponse = ListThreadArchiveResponses[keyof ListThreadArchiveResponses];
+
+export type UnfollowThreadData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+        rootId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow';
+};
+
+export type UnfollowThreadErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+     */
+    404: Error;
+};
+
+export type UnfollowThreadError = UnfollowThreadErrors[keyof UnfollowThreadErrors];
+
+export type UnfollowThreadResponses = {
+    /**
+     * No longer followed.
+     */
+    204: void;
+};
+
+export type UnfollowThreadResponse = UnfollowThreadResponses[keyof UnfollowThreadResponses];
+
+export type FollowThreadData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+        rootId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/threads/{rootId}/follow';
+};
+
+export type FollowThreadErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such channel you can see (`channel_not_found`), or no such thread (`thread_not_found`).
+     */
+    404: Error;
+};
+
+export type FollowThreadError = FollowThreadErrors[keyof FollowThreadErrors];
+
+export type FollowThreadResponses = {
+    /**
+     * Followed.
+     */
+    204: void;
+};
+
+export type FollowThreadResponse = FollowThreadResponses[keyof FollowThreadResponses];
 
 export type MarkChannelReadData = {
     body: ReadMark;

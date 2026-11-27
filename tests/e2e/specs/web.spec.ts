@@ -21,6 +21,7 @@ import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
 import {
   addChannel,
   addEmoji,
+  replyInThread,
   channelOrder,
   dragChannelAbove,
   joinWith,
@@ -162,6 +163,21 @@ async function manageTogether(ruth: Page, sami: Page): Promise<void> {
   await expect(sami.getByRole("img", { name: ":wave:" }).filter({ visible: true }).first()).toBeVisible({
     timeout: 30_000,
   });
+
+  // Sami replies in a thread on Ruth's first message; Ruth sees the count and the reply.
+  await replyInThread(sami, "Before you came", "Welcome thread");
+  await shown(sami, "thread-back").click();
+  await shown(ruth, "channel-back").click();
+  await openChannel(ruth, "general");
+  await ruth
+    .getByRole("button", { name: /^1 reply, last at/ })
+    .filter({ visible: true })
+    .click({ timeout: 30_000 });
+  await expect(ruth.getByText("Welcome thread", { exact: true }).filter({ visible: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expectAccessible(ruth);
+  await shown(ruth, "thread-back").click();
 }
 
 test("a server's channel carries messages, with history for those who join later", async ({ browser }) => {

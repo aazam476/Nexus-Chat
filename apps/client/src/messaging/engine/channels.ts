@@ -96,7 +96,8 @@ class AudienceSync implements AudienceHooks {
       return;
     }
     const envelope = decodePayload(plaintext);
-    if (envelope?.channel === channelId) {
+    // The server's tags must say what the sender put inside the encryption.
+    if (envelope?.channel === channelId && envelope.thread === message.threadRootId) {
       out.push({
         id: envelope.id,
         sender,
@@ -104,6 +105,7 @@ class AudienceSync implements AudienceHooks {
         sentAt: message.createdAt,
         deliveryId: message.id,
         channelId,
+        ...(envelope.thread === undefined ? {} : { thread: envelope.thread }),
       });
     }
   }

@@ -49,6 +49,8 @@ type Message struct {
 	// ChannelID is the server channel of an application message sent in an
 	// audience's group.
 	ChannelID *uuid.UUID
+	// ThreadRootID is, for a reply in a thread, the message the thread is on.
+	ThreadRootID *uuid.UUID
 }
 
 // Membership is what the delivery service asks the conversations feature.
@@ -68,6 +70,17 @@ type deliveryStore interface {
 	ArchiveBefore(ctx context.Context, params store.ArchiveBeforeParams) ([]store.ArchiveBeforeRow, error)
 	ChannelArchiveBefore(ctx context.Context, params store.ChannelArchiveBeforeParams) ([]store.ChannelArchiveBeforeRow, error)
 	readStore
+	threadStore
+}
+
+// threadStore is the part of the store about threads.
+type threadStore interface {
+	ThreadRoot(ctx context.Context, params store.ThreadRootParams) (*uuid.UUID, error)
+	ThreadExists(ctx context.Context, params store.ThreadExistsParams) (bool, error)
+	ChannelThreads(ctx context.Context, params store.ChannelThreadsParams) ([]store.ChannelThreadsRow, error)
+	ThreadArchiveBefore(ctx context.Context, params store.ThreadArchiveBeforeParams) ([]store.ThreadArchiveBeforeRow, error)
+	FollowThread(ctx context.Context, params store.FollowThreadParams) (int64, error)
+	UnfollowThread(ctx context.Context, params store.UnfollowThreadParams) error
 }
 
 // Notifier tells member devices that a conversation has new MLS messages,
