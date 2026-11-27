@@ -283,6 +283,9 @@
     "spoilerHint": "Shows the hidden text",
     "unknownMention": "someone",
     "mentionSuggestion": "Mention {{name}}",
+    "emojiSuggestion": "Insert {{name}}",
+    "moreEmoji": "More emoji",
+    "fewerEmoji": "Fewer emoji",
     "sendOriginal": "Send original quality",
     "videoOriginal": "Videos are sent in original quality."
   },
@@ -402,7 +405,14 @@
       "role_not_found": "This role is gone.",
       "member_not_found": "This person is no longer in the server.",
       "bad_order": "The list changed meanwhile. Try again.",
-      "owner_cannot_leave": "You own this server, so you cannot leave it. Delete it instead."
+      "owner_cannot_leave": "You own this server, so you cannot leave it. Delete it instead.",
+      "unsupported_image": "That file isn't an image this can use.",
+      "image_too_large": "That image is too large.",
+      "invalid_emoji_name": "An emoji name is 2 to 32 characters: lowercase letters, digits and underscores.",
+      "emoji_name_taken": "This server already has an emoji with that name.",
+      "emoji_limit": "This server has 100 emoji, the most it can have. Remove one first.",
+      "emoji_not_found": "This emoji is gone.",
+      "rate_limited": "That was a lot of changes at once. Wait a minute and try again."
     },
     "invites": {
       "title": "Invite people",
@@ -445,9 +455,24 @@
       "channels": "Channels",
       "roles": "Roles",
       "members": "Members",
+      "emoji": "Emoji",
       "delete": "Delete server",
       "deleteConfirm": "Delete {{name}} and all its channels for everyone? This cannot be undone.",
       "deleteYes": "Delete for everyone",
+      "keep": "Keep it"
+    },
+    "emojiAdmin": {
+      "title": "Emoji",
+      "intro": "Members use these in messages and reactions. PNG, GIF or WebP, up to 256 KB; they are shown at up to 128 × 128. Emoji pictures are public, like the server's icon.",
+      "count": "{{count}} of 100",
+      "none": "No emoji yet.",
+      "name": "Name",
+      "nameHint": "2 to 32 lowercase letters, digits and underscores",
+      "add": "Choose a picture and add",
+      "remove": "Remove",
+      "removeNamed": "Remove :{{name}}:",
+      "removeConfirm": "Remove :{{name}}: for everyone? Messages that used it show its name instead.",
+      "removeYes": "Remove for everyone",
       "keep": "Keep it"
     },
     "channelAdmin": {

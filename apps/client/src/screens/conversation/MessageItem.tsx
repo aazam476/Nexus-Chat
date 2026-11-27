@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import type { TimelineItem } from "../../messaging/timeline";
 import { ActionButton } from "./ActionButton";
+import { CustomReactions } from "./CustomReactions";
 import { AttachmentList } from "./AttachmentList";
 import { MessageBody } from "./MessageBody";
 import { PreviewCard } from "./PreviewCard";
@@ -80,6 +81,7 @@ function Actions({
           }}
         />
       ))}
+      <CustomReactions react={on.react} />
       {own ? <ActionButton label={t("conversation.edit")} onPress={on.edit} /> : null}
       {own ? (
         <ActionButton label={t("conversation.delete")} onPress={on.delete} testID="message-delete" />

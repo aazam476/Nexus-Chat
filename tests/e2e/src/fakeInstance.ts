@@ -8,7 +8,7 @@ import type { Dataset } from "@nexus-chat/fixtures";
 import type { Page, Route } from "@playwright/test";
 
 import { FakeMessaging } from "./fakeMessaging.js";
-import { answerServers } from "./fakeServers.js";
+import { answerServers, emojiPicture } from "./fakeServers.js";
 
 /** What the fake instance should be doing. */
 export interface FakeInstanceOptions {
@@ -97,6 +97,10 @@ function answerRequests(dataset: Dataset, options: FakeInstanceOptions): (route:
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const key = `${request.method()} ${path}`;
+    if (options.servers === true && path.startsWith("/api/v1/emoji/")) {
+      await route.fulfill({ status: 200, contentType: "image/png", body: emojiPicture });
+      return;
+    }
     const [status, body] = messaging?.answer(request.method(), path, jsonBody(request.postData())) ??
       (options.servers === true ? answerServers(dataset, request.method(), path) : undefined) ??
       table[key] ?? [404, { code: "not_found", message: key }];

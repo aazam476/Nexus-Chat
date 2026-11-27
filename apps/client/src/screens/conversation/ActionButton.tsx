@@ -9,6 +9,8 @@ export interface ActionButtonProps {
   accessibilityLabel?: string;
   /** Shown as chosen, for a reaction the user made. */
   selected?: boolean;
+  /** A picture before the label, such as a custom emoji. */
+  icon?: ReactNode;
   onPress: () => void;
   testID?: string;
 }
@@ -22,6 +24,7 @@ export function ActionButton({
   label,
   accessibilityLabel,
   selected = false,
+  icon,
   onPress,
   testID,
 }: ActionButtonProps): ReactNode {
@@ -41,7 +44,10 @@ export function ActionButton({
         },
       ]}
     >
-      <Text style={[type.small, { color: selected ? colors.primary : colors.text }]}>{label}</Text>
+      {icon}
+      {label === "" ? null : (
+        <Text style={[type.small, { color: selected ? colors.primary : colors.text }]}>{label}</Text>
+      )}
     </Pressable>
   );
 }
@@ -53,6 +59,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: minimumTouchTarget / 2,
     borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.xs,
     alignItems: "center",
     justifyContent: "center",
   },

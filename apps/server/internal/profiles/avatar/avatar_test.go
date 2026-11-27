@@ -233,7 +233,7 @@ func animatedGIFWithFrames(t *testing.T, count int) []byte {
 }
 
 func TestDecodersForOtherFormatsAreNotUsed(t *testing.T) {
-	_, err := processStill(nil, "bmp", image.Rect(0, 0, 1, 1))
+	_, err := processStill(nil, "bmp", image.Rect(0, 0, 1, 1), image.Pt(1, 1))
 
 	assert.ErrorIs(t, err, ErrUnsupported)
 }

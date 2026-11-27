@@ -27,6 +27,12 @@ const sections = [
     testID: "manage-roles",
   },
   {
+    permission: "MANAGE_EMOJI",
+    label: "servers.manage.emoji",
+    pathname: "/server/[id]/emoji",
+    testID: "manage-emoji",
+  },
+  {
     permission: "VIEW_CHANNEL",
     label: "servers.manage.members",
     pathname: "/server/[id]/members",

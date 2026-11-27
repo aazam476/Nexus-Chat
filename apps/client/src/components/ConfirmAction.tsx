@@ -5,6 +5,8 @@ import { useState, type ReactNode } from "react";
 export interface ConfirmActionProps {
   /** The button that starts it, such as "Delete channel". */
   label: string;
+  /** What screen readers say for that button, when the label leans on what is around it. */
+  accessibilityLabel?: string;
   /** What is asked before it happens. */
   question: string;
   confirmLabel: string;
@@ -15,25 +17,9 @@ export interface ConfirmActionProps {
   testID: string;
 }
 
-/**
- * A destructive action that is asked once more in place, rather than in a
- * dialog that covers what it is about.
- */
-export function ConfirmAction(props: ConfirmActionProps): ReactNode {
-  const { label, question, confirmLabel, cancelLabel, onConfirm, busy = false, testID } = props;
-  const [asking, setAsking] = useState(false);
-  if (!asking) {
-    return (
-      <Button
-        label={label}
-        variant="danger"
-        onPress={() => {
-          setAsking(true);
-        }}
-        testID={testID}
-      />
-    );
-  }
+/** The question, with buttons to go ahead or keep things as they are. */
+function Question(props: ConfirmActionProps & { onCancel: () => void }): ReactNode {
+  const { question, confirmLabel, cancelLabel, onConfirm, busy = false, testID, onCancel } = props;
   return (
     <Stack gap="sm">
       <Text live>{question}</Text>
@@ -44,13 +30,37 @@ export function ConfirmAction(props: ConfirmActionProps): ReactNode {
         busy={busy}
         testID={`${testID}-confirm`}
       />
-      <Button
-        label={cancelLabel}
-        variant="secondary"
-        onPress={() => {
-          setAsking(false);
-        }}
-      />
+      <Button label={cancelLabel} variant="secondary" onPress={onCancel} />
     </Stack>
+  );
+}
+
+/**
+ * A destructive action that is asked once more in place, rather than in a
+ * dialog that covers what it is about.
+ */
+export function ConfirmAction(props: ConfirmActionProps): ReactNode {
+  const { label, accessibilityLabel, testID } = props;
+  const [asking, setAsking] = useState(false);
+  if (!asking) {
+    return (
+      <Button
+        label={label}
+        {...(accessibilityLabel === undefined ? {} : { accessibilityLabel })}
+        variant="danger"
+        onPress={() => {
+          setAsking(true);
+        }}
+        testID={testID}
+      />
+    );
+  }
+  return (
+    <Question
+      {...props}
+      onCancel={() => {
+        setAsking(false);
+      }}
+    />
   );
 }

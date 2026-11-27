@@ -197,8 +197,17 @@ func (service *Service) Delete(ctx context.Context, scope Scope) error {
 	if err != nil {
 		return err
 	}
+	emoji, err := service.store.ServerEmojiIDs(ctx, scope.ServerID)
+	if err != nil {
+		return err
+	}
 	if err := service.store.DeleteServer(ctx, scope.ServerID); err != nil {
 		return err
+	}
+	// The pictures are public; once the server is gone nothing may serve them.
+	service.deleteIcon(ctx, a.server.IconID)
+	for _, id := range emoji {
+		service.deleteFile(ctx, emojiKey(id))
 	}
 	service.notifier.ServerChanged(ctx, members, scope.ServerID)
 	return nil

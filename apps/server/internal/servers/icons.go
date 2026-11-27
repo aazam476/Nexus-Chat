@@ -116,13 +116,9 @@ func (service *Service) OpenIcon(ctx context.Context, iconID uuid.UUID) (Icon, e
 	return Icon{Content: content, ContentType: avatar.Format(format).ContentType()}, nil
 }
 
-// deleteIcon removes an icon's file. A failure only leaves an unused file
-// behind, which is logged rather than failing the request.
+// deleteIcon removes an icon's file, if there is one.
 func (service *Service) deleteIcon(ctx context.Context, iconID *uuid.UUID) {
-	if iconID == nil {
-		return
-	}
-	if err := service.icons.Files.Delete(ctx, iconKey(*iconID)); err != nil {
-		service.icons.Logger.WarnContext(ctx, "could not delete an old server icon", slog.Any("error", err))
+	if iconID != nil {
+		service.deleteFile(ctx, iconKey(*iconID))
 	}
 }

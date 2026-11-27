@@ -656,6 +656,24 @@ export type ReadMark = {
     lastReadId: number;
 };
 
+export type ServerEmoji = {
+    id: string;
+    name: string;
+    /**
+     * Whether it is an animated GIF.
+     */
+    animated: boolean;
+    /**
+     * Where the picture is served, /api/v1/emoji/{id}.
+     */
+    url: string;
+    /**
+     * Who added it; missing once their account is gone.
+     */
+    createdBy?: string;
+    createdAt: string;
+};
+
 export type ChannelReadState = {
     channelId: string;
     lastReadId: number;
@@ -5829,6 +5847,160 @@ export type GetServerIconResponses = {
 };
 
 export type GetServerIconResponse = GetServerIconResponses[keyof GetServerIconResponses];
+
+export type ListServerEmojiData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/emoji';
+};
+
+export type ListServerEmojiErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type ListServerEmojiError = ListServerEmojiErrors[keyof ListServerEmojiErrors];
+
+export type ListServerEmojiResponses = {
+    /**
+     * Every emoji of the server.
+     */
+    200: Array<ServerEmoji>;
+};
+
+export type ListServerEmojiResponse = ListServerEmojiResponses[keyof ListServerEmojiResponses];
+
+export type AddServerEmojiData = {
+    body: Blob | File;
+    path: {
+        serverId: string;
+    };
+    query: {
+        /**
+         * 2 to 32 lowercase letters, digits and underscores, unique in the server.
+         */
+        name: string;
+    };
+    url: '/api/v1/servers/{serverId}/emoji';
+};
+
+export type AddServerEmojiErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_EMOJI (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+    /**
+     * The name is taken in this server (`emoji_name_taken`), or the
+     * server has 100 emoji already (`emoji_limit`).
+     *
+     */
+    409: Error;
+    /**
+     * The file is over 256 KB or the image over 8192 pixels on a side (`image_too_large`).
+     */
+    413: Error;
+    /**
+     * The name breaks the rules (`invalid_emoji_name`), or the file is
+     * not a PNG, GIF or WebP image that can be read (`unsupported_image`).
+     *
+     */
+    422: Error;
+    /**
+     * Too many attempts; try again later (`rate_limited`).
+     */
+    429: Error;
+};
+
+export type AddServerEmojiError = AddServerEmojiErrors[keyof AddServerEmojiErrors];
+
+export type AddServerEmojiResponses = {
+    /**
+     * Added.
+     */
+    201: CreatedId;
+};
+
+export type AddServerEmojiResponse = AddServerEmojiResponses[keyof AddServerEmojiResponses];
+
+export type RemoveServerEmojiData = {
+    body?: never;
+    path: {
+        serverId: string;
+        emojiId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/emoji/{emojiId}';
+};
+
+export type RemoveServerEmojiErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_EMOJI (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server or emoji (`server_not_found`, `emoji_not_found`).
+     */
+    404: Error;
+};
+
+export type RemoveServerEmojiError = RemoveServerEmojiErrors[keyof RemoveServerEmojiErrors];
+
+export type RemoveServerEmojiResponses = {
+    /**
+     * Removed.
+     */
+    204: void;
+};
+
+export type RemoveServerEmojiResponse = RemoveServerEmojiResponses[keyof RemoveServerEmojiResponses];
+
+export type GetEmojiData = {
+    body?: never;
+    path: {
+        emojiId: string;
+    };
+    query?: never;
+    url: '/api/v1/emoji/{emojiId}';
+};
+
+export type GetEmojiErrors = {
+    /**
+     * There is no such emoji (`emoji_not_found`).
+     */
+    404: Error;
+};
+
+export type GetEmojiError = GetEmojiErrors[keyof GetEmojiErrors];
+
+export type GetEmojiResponses = {
+    /**
+     * The picture, at most 128×128.
+     */
+    200: Blob | File;
+};
+
+export type GetEmojiResponse = GetEmojiResponses[keyof GetEmojiResponses];
 
 export type PreviewInviteData = {
     body?: never;

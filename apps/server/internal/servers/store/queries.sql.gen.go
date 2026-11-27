@@ -86,6 +86,17 @@ func (q *Queries) AudienceMemberIDs(ctx context.Context, conversationID uuid.UUI
 	return items, nil
 }
 
+const countServerEmoji = `-- name: CountServerEmoji :one
+SELECT count(*) FROM server_emoji WHERE server_id = $1
+`
+
+func (q *Queries) CountServerEmoji(ctx context.Context, serverID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countServerEmoji, serverID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countServerMembers = `-- name: CountServerMembers :one
 SELECT count(*) FROM server_members WHERE server_id = $1
 `
@@ -154,6 +165,22 @@ DELETE FROM servers WHERE id = $1
 func (q *Queries) DeleteServer(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteServer, id)
 	return err
+}
+
+const deleteServerEmoji = `-- name: DeleteServerEmoji :one
+DELETE FROM server_emoji WHERE id = $1 AND server_id = $2 RETURNING id
+`
+
+type DeleteServerEmojiParams struct {
+	ID       uuid.UUID
+	ServerID uuid.UUID
+}
+
+func (q *Queries) DeleteServerEmoji(ctx context.Context, arg DeleteServerEmojiParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, deleteServerEmoji, arg.ID, arg.ServerID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getChannel = `-- name: GetChannel :one
@@ -234,6 +261,17 @@ func (q *Queries) GetServer(ctx context.Context, id uuid.UUID) (Server, error) {
 		&i.IconFormat,
 	)
 	return i, err
+}
+
+const getServerEmojiFormat = `-- name: GetServerEmojiFormat :one
+SELECT format FROM server_emoji WHERE id = $1
+`
+
+func (q *Queries) GetServerEmojiFormat(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getServerEmojiFormat, id)
+	var format string
+	err := row.Scan(&format)
+	return format, err
 }
 
 const getServerIconFormat = `-- name: GetServerIconFormat :one
@@ -400,6 +438,32 @@ func (q *Queries) InsertServer(ctx context.Context, arg InsertServerParams) erro
 		arg.Name,
 		arg.Description,
 		arg.OwnerID,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertServerEmoji = `-- name: InsertServerEmoji :exec
+INSERT INTO server_emoji (id, server_id, name, format, created_by, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type InsertServerEmojiParams struct {
+	ID        uuid.UUID
+	ServerID  uuid.UUID
+	Name      string
+	Format    string
+	CreatedBy *uuid.UUID
+	CreatedAt time.Time
+}
+
+func (q *Queries) InsertServerEmoji(ctx context.Context, arg InsertServerEmojiParams) error {
+	_, err := q.db.Exec(ctx, insertServerEmoji,
+		arg.ID,
+		arg.ServerID,
+		arg.Name,
+		arg.Format,
+		arg.CreatedBy,
 		arg.CreatedAt,
 	)
 	return err
@@ -820,6 +884,68 @@ func (q *Queries) RemoveServerMember(ctx context.Context, arg RemoveServerMember
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const serverEmoji = `-- name: ServerEmoji :many
+SELECT id, name, format, created_by, created_at FROM server_emoji WHERE server_id = $1 ORDER BY name
+`
+
+type ServerEmojiRow struct {
+	ID        uuid.UUID
+	Name      string
+	Format    string
+	CreatedBy *uuid.UUID
+	CreatedAt time.Time
+}
+
+func (q *Queries) ServerEmoji(ctx context.Context, serverID uuid.UUID) ([]ServerEmojiRow, error) {
+	rows, err := q.db.Query(ctx, serverEmoji, serverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ServerEmojiRow
+	for rows.Next() {
+		var i ServerEmojiRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Format,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const serverEmojiIDs = `-- name: ServerEmojiIDs :many
+SELECT id FROM server_emoji WHERE server_id = $1
+`
+
+func (q *Queries) ServerEmojiIDs(ctx context.Context, serverID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, serverEmojiIDs, serverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const serverMemberIDs = `-- name: ServerMemberIDs :many

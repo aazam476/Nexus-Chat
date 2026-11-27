@@ -9,13 +9,13 @@ import (
 	"golang.org/x/image/draw"
 )
 
-// processGIF crops and resizes every frame of a (possibly animated) GIF,
-// keeping its timing and loop count.
+// processGIF scales the area from of every frame of a (possibly animated)
+// GIF to size, keeping its timing and loop count.
 //
 // GIF frames are often small patches drawn over the previous picture, so
 // each frame is first composed onto a full canvas following its disposal
 // method (GIF89a §23), and the whole canvas is then scaled.
-func processGIF(data []byte, square image.Rectangle) (Result, error) {
+func processGIF(data []byte, from image.Rectangle, size image.Point) (Result, error) {
 	animation, err := gif.DecodeAll(bytes.NewReader(data))
 	if err != nil || len(animation.Image) == 0 {
 		return Result{}, ErrDamaged
@@ -25,11 +25,11 @@ func processGIF(data []byte, square image.Rectangle) (Result, error) {
 		return Result{}, ErrTooLarge
 	}
 	canvas := image.NewRGBA(image.Rect(0, 0, width, height))
-	output := &gif.GIF{LoopCount: animation.LoopCount, Config: image.Config{Width: Size, Height: Size}}
+	output := &gif.GIF{LoopCount: animation.LoopCount, Config: image.Config{Width: size.X, Height: size.Y}}
 	for index, frame := range animation.Image {
 		before := cloneRGBA(canvas)
 		draw.Draw(canvas, frame.Bounds(), frame, frame.Bounds().Min, draw.Over)
-		output.Image = append(output.Image, quantize(scale(canvas, square), frame.Palette))
+		output.Image = append(output.Image, quantize(scale(canvas, from, size), frame.Palette))
 		output.Delay = append(output.Delay, animation.Delay[index])
 		output.Disposal = append(output.Disposal, gif.DisposalNone)
 		disposeFrame(canvas, before, frame.Bounds(), disposal(animation, index))

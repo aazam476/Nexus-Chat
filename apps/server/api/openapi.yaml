@@ -4407,6 +4407,184 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/emoji:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listServerEmoji
+      summary: The server's custom emoji, by name
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Every emoji of the server.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerEmoji"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: addServerEmoji
+      summary: Add a custom emoji (MANAGE_EMOJI)
+      description: |
+        A PNG, GIF or WebP image of at most 256 KB. The server scales it down
+        to fit 128×128, keeping its shape, and encodes it again without
+        metadata; WebP becomes PNG and GIFs keep their animation. A server
+        has at most 100 emoji. Members' devices get server_update.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: 2 to 32 lowercase letters, digits and underscores, unique in the server.
+          schema:
+            type: string
+            pattern: "^[a-z0-9_]{2,32}$"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_EMOJI (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: |
+            The name is taken in this server (`emoji_name_taken`), or the
+            server has 100 emoji already (`emoji_limit`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: The file is over 256 KB or the image over 8192 pixels on a side (`image_too_large`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: |
+            The name breaks the rules (`invalid_emoji_name`), or the file is
+            not a PNG, GIF or WebP image that can be read (`unsupported_image`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/servers/{serverId}/emoji/{emojiId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: emojiId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: removeServerEmoji
+      summary: Remove a custom emoji (MANAGE_EMOJI)
+      description: Members' devices get server_update. Messages that used it show its name instead.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_EMOJI (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server or emoji (`server_not_found`, `emoji_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/emoji/{emojiId}:
+    get:
+      operationId: getEmoji
+      summary: A custom emoji's picture
+      description: |
+        Public, like server icons; emoji IDs are random and never reused, so
+        responses can be cached forever.
+      tags: [servers]
+      parameters:
+        - name: emojiId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The picture, at most 128×128.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: There is no such emoji (`emoji_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/invites/{code}:
     parameters:
       - name: code
@@ -5516,6 +5694,28 @@ components:
           description: The ID of the last live MLS message the user has seen; negative IDs get 422.
           type: integer
           format: int64
+    ServerEmoji:
+      type: object
+      required: [id, name, animated, url, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        animated:
+          type: boolean
+          description: Whether it is an animated GIF.
+        url:
+          type: string
+          description: Where the picture is served, /api/v1/emoji/{id}.
+        createdBy:
+          type: string
+          format: uuid
+          description: Who added it; missing once their account is gone.
+        createdAt:
+          type: string
+          format: date-time
     ChannelReadState:
       type: object
       required: [channelId, lastReadId, unreadCount]

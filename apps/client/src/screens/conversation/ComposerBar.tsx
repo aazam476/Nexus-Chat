@@ -11,6 +11,7 @@ import type { ConversationAttachments } from "../../messaging/useAttachments";
 import type { Mentionable } from "../../messaging/mentions";
 import { ActionButton } from "./ActionButton";
 import { AttachmentPicker } from "./AttachmentPicker";
+import { EmojiSuggestions } from "./EmojiSuggestions";
 import { MentionSuggestions } from "./MentionSuggestions";
 import type { NameOf } from "./MessageItem";
 import type { Composer } from "./useComposer";
@@ -58,6 +59,7 @@ export function ComposerBar({ composer, nameOf, send, attachments, mention }: Co
     <View style={styles.bar}>
       <ModeLine composer={composer} nameOf={nameOf} />
       <MentionSuggestions composer={composer} people={mention.people} selfId={mention.selfId} />
+      <EmojiSuggestions composer={composer} />
       <TextField
         label={t("conversation.composer")}
         hint={t("conversation.composerHint")}

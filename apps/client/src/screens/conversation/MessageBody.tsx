@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Linking, Platform, Text as NativeText, StyleSheet, View } from "react-native";
 
 import { parseMarkdown, type Block, type Inline } from "../../messaging/markdown";
+import { CustomEmoji, emojiSizes } from "./CustomEmoji";
 import { useMentionNames } from "./MentionNames";
 
 const monospace = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
@@ -79,7 +80,7 @@ function Mention({ node, colors }: { node: MentionNode; colors: Colors }): React
   );
 }
 
-function renderNode(node: Inline, key: number, colors: Colors): ReactNode {
+function renderNode(node: Inline, key: number, colors: Colors, emojiSize: number): ReactNode {
   switch (node.type) {
     case "text":
       return node.text;
@@ -109,11 +110,21 @@ function renderNode(node: Inline, key: number, colors: Colors): ReactNode {
       );
     case "mention":
       return <Mention key={key} node={node} colors={colors} />;
+    case "emoji":
+      return <CustomEmoji key={key} name={node.name} id={node.id} size={emojiSize} />;
   }
 }
 
-function renderInline(nodes: Inline[], colors: Colors): ReactNode[] {
-  return nodes.map((node, index) => renderNode(node, index, colors));
+function renderInline(nodes: Inline[], colors: Colors, emojiSize: number = emojiSizes.inline): ReactNode[] {
+  return nodes.map((node, index) => renderNode(node, index, colors, emojiSize));
+}
+
+/** Whether a line is only custom emoji (and spaces), which are then drawn large. */
+function onlyEmoji(nodes: Inline[]): boolean {
+  return (
+    nodes.some((node) => node.type === "emoji") &&
+    nodes.every((node) => node.type === "emoji" || (node.type === "text" && node.text.trim() === ""))
+  );
 }
 
 function renderBlock(block: Block, index: number, colors: Colors): ReactNode {
@@ -128,7 +139,7 @@ function renderBlock(block: Block, index: number, colors: Colors): ReactNode {
   }
   const text = (
     <NativeText style={[type.body, { color: colors.text }]} selectable>
-      {renderInline(block.children, colors)}
+      {renderInline(block.children, colors, onlyEmoji(block.children) ? emojiSizes.alone : emojiSizes.inline)}
     </NativeText>
   );
   if (block.type === "quote") {

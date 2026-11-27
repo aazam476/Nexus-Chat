@@ -108,6 +108,10 @@ const serverScreens = (
     },
     { name: "server-roles", open: serverSettings("manage-roles", () => "@everyone") },
     {
+      name: "server-emoji",
+      open: serverSettings("manage-emoji", (data) => `:${data.servers.emoji[0] ?? ""}:`),
+    },
+    {
       name: "server-members",
       open: serverSettings("manage-members", (data) => data.messaging.contacts.at(-1)?.displayName ?? ""),
     },

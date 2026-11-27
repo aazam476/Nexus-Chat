@@ -136,6 +136,12 @@ func (service *Service) notify(ctx context.Context, serverID uuid.UUID) error {
 	if err := service.reconcile(ctx, serverID); err != nil {
 		return err
 	}
+	return service.announce(ctx, serverID)
+}
+
+// announce tells every member that the server changed, for changes that
+// leave who sees which channel as it was.
+func (service *Service) announce(ctx context.Context, serverID uuid.UUID) error {
 	members, err := service.store.ServerMemberIDs(ctx, serverID)
 	if err != nil {
 		return err

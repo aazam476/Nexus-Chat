@@ -1176,6 +1176,21 @@ type ServerDetails struct {
 	Server Server       `json:"server"`
 }
 
+// ServerEmoji defines model for ServerEmoji.
+type ServerEmoji struct {
+	// Animated Whether it is an animated GIF.
+	Animated  bool      `json:"animated"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CreatedBy Who added it; missing once their account is gone.
+	CreatedBy *openapi_types.UUID `json:"createdBy,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
+	Name      string              `json:"name"`
+
+	// Url Where the picture is served, /api/v1/emoji/{id}.
+	Url string `json:"url"`
+}
+
 // ServerInvite defines model for ServerInvite.
 type ServerInvite struct {
 	Code      string              `json:"code"`
@@ -1573,6 +1588,12 @@ type ListChannelArchiveParams struct {
 	Limit  *int       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AddServerEmojiParams defines parameters for AddServerEmoji.
+type AddServerEmojiParams struct {
+	// Name 2 to 32 lowercase letters, digits and underscores, unique in the server.
+	Name string `form:"name" json:"name"`
+}
+
 // SetAvatarParams defines parameters for SetAvatar.
 type SetAvatarParams struct {
 	CropX    *int `form:"cropX,omitempty" json:"cropX,omitempty"`
@@ -1954,6 +1975,9 @@ type ServerInterface interface {
 	// MarkConversationRead Mark the conversation read up to a delivered message
 	// (PUT /api/v1/conversations/{conversationId}/read)
 	MarkConversationRead(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID)
+	// GetEmoji A custom emoji's picture
+	// (GET /api/v1/emoji/{emojiId})
+	GetEmoji(w http.ResponseWriter, r *http.Request, emojiId openapi_types.UUID)
 	// ListFriends This user's friends and pending friend requests
 	// (GET /api/v1/friends)
 	ListFriends(w http.ResponseWriter, r *http.Request)
@@ -2065,6 +2089,15 @@ type ServerInterface interface {
 	// MarkChannelRead Mark a text channel read up to a live message
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/read)
 	MarkChannelRead(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
+	// ListServerEmoji The server's custom emoji, by name
+	// (GET /api/v1/servers/{serverId}/emoji)
+	ListServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
+	// AddServerEmoji Add a custom emoji (MANAGE_EMOJI)
+	// (POST /api/v1/servers/{serverId}/emoji)
+	AddServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params AddServerEmojiParams)
+	// RemoveServerEmoji Remove a custom emoji (MANAGE_EMOJI)
+	// (DELETE /api/v1/servers/{serverId}/emoji/{emojiId})
+	RemoveServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, emojiId openapi_types.UUID)
 	// RemoveServerIcon Remove the server's icon (MANAGE_SERVER)
 	// (DELETE /api/v1/servers/{serverId}/icon)
 	RemoveServerIcon(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -3612,6 +3645,32 @@ func (siw *ServerInterfaceWrapper) MarkConversationRead(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetEmoji operation middleware
+func (siw *ServerInterfaceWrapper) GetEmoji(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "emojiId" -------------
+	var emojiId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "emojiId", r.PathValue("emojiId"), &emojiId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "emojiId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEmoji(w, r, emojiId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListFriends operation middleware
 func (siw *ServerInterfaceWrapper) ListFriends(w http.ResponseWriter, r *http.Request) {
 
@@ -4572,6 +4631,109 @@ func (siw *ServerInterfaceWrapper) MarkChannelRead(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListServerEmoji operation middleware
+func (siw *ServerInterfaceWrapper) ListServerEmoji(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListServerEmoji(w, r, serverId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddServerEmoji operation middleware
+func (siw *ServerInterfaceWrapper) AddServerEmoji(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AddServerEmojiParams
+
+	// ------------- Required query parameter "name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "name", r.URL.Query(), &params.Name, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddServerEmoji(w, r, serverId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveServerEmoji operation middleware
+func (siw *ServerInterfaceWrapper) RemoveServerEmoji(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "emojiId" -------------
+	var emojiId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "emojiId", r.PathValue("emojiId"), &emojiId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "emojiId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveServerEmoji(w, r, serverId, emojiId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveServerIcon operation middleware
 func (siw *ServerInterfaceWrapper) RemoveServerIcon(w http.ResponseWriter, r *http.Request) {
 
@@ -5500,6 +5662,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.RemoveServerIcon)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/icon", wrapper.SetServerIcon)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/server-icons/{iconId}", wrapper.GetServerIcon)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/emoji", wrapper.ListServerEmoji)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/emoji", wrapper.AddServerEmoji)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/emoji/{emojiId}", wrapper.RemoveServerEmoji)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/emoji/{emojiId}", wrapper.GetEmoji)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/invites/{code}", wrapper.PreviewInvite)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/invites/{code}/join", wrapper.JoinServer)
 
@@ -10210,6 +10376,76 @@ func (response MarkConversationRead422JSONResponse) VisitMarkConversationReadRes
 	return err
 }
 
+type GetEmojiRequestObject struct {
+	EmojiId openapi_types.UUID `json:"emojiId"`
+}
+
+type GetEmojiResponseObject interface {
+	VisitGetEmojiResponse(w http.ResponseWriter) error
+}
+
+type GetEmoji200ResponseHeaders struct {
+	CacheControl string
+}
+
+type GetEmoji200ImagegifResponse struct {
+	Body          io.Reader
+	Headers       GetEmoji200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetEmoji200ImagegifResponse) VisitGetEmojiResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/gif")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetEmoji200ImagepngResponse struct {
+	Body          io.Reader
+	Headers       GetEmoji200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetEmoji200ImagepngResponse) VisitGetEmojiResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("Cache-Control", fmt.Sprint(response.Headers.CacheControl))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetEmoji404JSONResponse Error
+
+func (response GetEmoji404JSONResponse) VisitGetEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListFriendsRequestObject struct {
 }
 
@@ -12802,6 +13038,237 @@ func (response MarkChannelRead422JSONResponse) VisitMarkChannelReadResponse(w ht
 	return err
 }
 
+type ListServerEmojiRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+}
+
+type ListServerEmojiResponseObject interface {
+	VisitListServerEmojiResponse(w http.ResponseWriter) error
+}
+
+type ListServerEmoji200JSONResponse []ServerEmoji
+
+func (response ListServerEmoji200JSONResponse) VisitListServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerEmoji401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListServerEmoji401JSONResponse) VisitListServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerEmoji404JSONResponse Error
+
+func (response ListServerEmoji404JSONResponse) VisitListServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmojiRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	Params   AddServerEmojiParams
+	Body     io.Reader
+}
+
+type AddServerEmojiResponseObject interface {
+	VisitAddServerEmojiResponse(w http.ResponseWriter) error
+}
+
+type AddServerEmoji201JSONResponse CreatedId
+
+func (response AddServerEmoji201JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddServerEmoji401JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji403JSONResponse Error
+
+func (response AddServerEmoji403JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji404JSONResponse Error
+
+func (response AddServerEmoji404JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji409JSONResponse Error
+
+func (response AddServerEmoji409JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji413JSONResponse Error
+
+func (response AddServerEmoji413JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji422JSONResponse Error
+
+func (response AddServerEmoji422JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddServerEmoji429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response AddServerEmoji429JSONResponse) VisitAddServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveServerEmojiRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	EmojiId  openapi_types.UUID `json:"emojiId"`
+}
+
+type RemoveServerEmojiResponseObject interface {
+	VisitRemoveServerEmojiResponse(w http.ResponseWriter) error
+}
+
+type RemoveServerEmoji204Response struct {
+}
+
+func (response RemoveServerEmoji204Response) VisitRemoveServerEmojiResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveServerEmoji401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveServerEmoji401JSONResponse) VisitRemoveServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveServerEmoji403JSONResponse Error
+
+func (response RemoveServerEmoji403JSONResponse) VisitRemoveServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveServerEmoji404JSONResponse Error
+
+func (response RemoveServerEmoji404JSONResponse) VisitRemoveServerEmojiResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RemoveServerIconRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 }
@@ -14811,6 +15278,9 @@ type StrictServerInterface interface {
 	// MarkConversationRead Mark the conversation read up to a delivered message
 	// (PUT /api/v1/conversations/{conversationId}/read)
 	MarkConversationRead(ctx context.Context, request MarkConversationReadRequestObject) (MarkConversationReadResponseObject, error)
+	// GetEmoji A custom emoji's picture
+	// (GET /api/v1/emoji/{emojiId})
+	GetEmoji(ctx context.Context, request GetEmojiRequestObject) (GetEmojiResponseObject, error)
 	// ListFriends This user's friends and pending friend requests
 	// (GET /api/v1/friends)
 	ListFriends(ctx context.Context, request ListFriendsRequestObject) (ListFriendsResponseObject, error)
@@ -14922,6 +15392,15 @@ type StrictServerInterface interface {
 	// MarkChannelRead Mark a text channel read up to a live message
 	// (PUT /api/v1/servers/{serverId}/channels/{channelId}/read)
 	MarkChannelRead(ctx context.Context, request MarkChannelReadRequestObject) (MarkChannelReadResponseObject, error)
+	// ListServerEmoji The server's custom emoji, by name
+	// (GET /api/v1/servers/{serverId}/emoji)
+	ListServerEmoji(ctx context.Context, request ListServerEmojiRequestObject) (ListServerEmojiResponseObject, error)
+	// AddServerEmoji Add a custom emoji (MANAGE_EMOJI)
+	// (POST /api/v1/servers/{serverId}/emoji)
+	AddServerEmoji(ctx context.Context, request AddServerEmojiRequestObject) (AddServerEmojiResponseObject, error)
+	// RemoveServerEmoji Remove a custom emoji (MANAGE_EMOJI)
+	// (DELETE /api/v1/servers/{serverId}/emoji/{emojiId})
+	RemoveServerEmoji(ctx context.Context, request RemoveServerEmojiRequestObject) (RemoveServerEmojiResponseObject, error)
 	// RemoveServerIcon Remove the server's icon (MANAGE_SERVER)
 	// (DELETE /api/v1/servers/{serverId}/icon)
 	RemoveServerIcon(ctx context.Context, request RemoveServerIconRequestObject) (RemoveServerIconResponseObject, error)
@@ -17035,6 +17514,32 @@ func (sh *strictHandler) MarkConversationRead(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// GetEmoji operation middleware
+func (sh *strictHandler) GetEmoji(w http.ResponseWriter, r *http.Request, emojiId openapi_types.UUID) {
+	var request GetEmojiRequestObject
+
+	request.EmojiId = emojiId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEmoji(ctx, request.(GetEmojiRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEmoji")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEmojiResponseObject); ok {
+		if err := validResponse.VisitGetEmojiResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListFriends operation middleware
 func (sh *strictHandler) ListFriends(w http.ResponseWriter, r *http.Request) {
 	var request ListFriendsRequestObject
@@ -18076,6 +18581,88 @@ func (sh *strictHandler) MarkChannelRead(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(MarkChannelReadResponseObject); ok {
 		if err := validResponse.VisitMarkChannelReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListServerEmoji operation middleware
+func (sh *strictHandler) ListServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
+	var request ListServerEmojiRequestObject
+
+	request.ServerId = serverId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListServerEmoji(ctx, request.(ListServerEmojiRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListServerEmoji")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListServerEmojiResponseObject); ok {
+		if err := validResponse.VisitListServerEmojiResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddServerEmoji operation middleware
+func (sh *strictHandler) AddServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params AddServerEmojiParams) {
+	var request AddServerEmojiRequestObject
+
+	request.ServerId = serverId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddServerEmoji(ctx, request.(AddServerEmojiRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddServerEmoji")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddServerEmojiResponseObject); ok {
+		if err := validResponse.VisitAddServerEmojiResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveServerEmoji operation middleware
+func (sh *strictHandler) RemoveServerEmoji(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, emojiId openapi_types.UUID) {
+	var request RemoveServerEmojiRequestObject
+
+	request.ServerId = serverId
+	request.EmojiId = emojiId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveServerEmoji(ctx, request.(RemoveServerEmojiRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveServerEmoji")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveServerEmojiResponseObject); ok {
+		if err := validResponse.VisitRemoveServerEmojiResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

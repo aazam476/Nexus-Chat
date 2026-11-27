@@ -51,6 +51,8 @@ export interface Dataset {
     roles: { name: string; color?: number }[];
     /** Unread messages in the first text channel, for its badge. */
     channelUnread: number;
+    /** Custom emoji names, `[a-z0-9_]{2,32}`. */
+    emoji: string[];
   };
 }
 
@@ -115,6 +117,7 @@ export const demo: Dataset = {
       { name: "Readers", color: 0x30a46c },
     ],
     channelUnread: 3,
+    emoji: ["wave", "party_parrot"],
   },
 };
 
@@ -247,6 +250,8 @@ export const worstCase: Dataset = {
       { name: "🦄", color: 0xffc53d },
     ],
     channelUnread: 1,
+    // 32 characters, the maximum, and the shortest allowed.
+    emoji: ["supercalifragilisticexpialidocio", "ok", "regional_failover_2026_final_v2"],
   },
 };
 
@@ -280,5 +285,6 @@ export const rightToLeft: Dataset = {
     voiceChannels: ["الردهة"],
     roles: [{ name: "المشرفون", color: 0x3e63dd }, { name: "الأعضاء" }],
     channelUnread: 12,
+    emoji: ["ok"],
   },
 };

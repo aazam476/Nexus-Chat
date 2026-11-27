@@ -2,7 +2,8 @@
  * The Markdown subset of spec §4.5: bold (`**`), italic (`*` or `_`),
  * strikethrough (`~~`), spoilers (`||`), inline code, fenced code blocks,
  * block quotes (`> `), links (`[text](https://…)` and bare https links) and
- * mentions (`<@user>`, `<@&role>`, `<#channel>`, `@everyone`, `@here`).
+ * mentions (`<@user>`, `<@&role>`, `<#channel>`, `@everyone`, `@here`)
+ * and custom emoji (`<:name:id>`).
  *
  * Messages come from other people, so the parser never throws, never
  * nests deeper than `maximumDepth`, keeps unmatched markers as plain text,
@@ -18,7 +19,8 @@ export type Inline =
   | { type: "code"; text: string }
   | { type: "link"; url: string; children: Inline[] }
   | { type: "mention"; kind: "user" | "role" | "channel"; id: string }
-  | { type: "mention"; kind: "everyone" | "here" };
+  | { type: "mention"; kind: "everyone" | "here" }
+  | { type: "emoji"; name: string; id: string };
 
 /** A block of a message. */
 export type Block =
@@ -41,6 +43,7 @@ const escapable = new Set(["\\", "*", "_", "~", "|", "`", "[", "]", "(", ")", "<
 const safeLink = /^(https?:\/\/[^\s<>]+|mailto:[^\s<>]+)$/i;
 const bareLink = /^https?:\/\/[^\s<>]+/i;
 const mentionPattern = /^<(@&|@|#)([0-9a-zA-Z-]{1,64})>/;
+const emojiPattern = /^<:([a-z0-9_]{2,32}):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>/;
 
 /** Adds text to the end of `out`, joining it to text already there. */
 function pushText(out: Inline[], text: string): void {
@@ -67,6 +70,14 @@ function linkAt(source: string, start: number, depth: number): { node: Inline; e
     node: { type: "link", url, children: parseInline(source.slice(start + 1, close), depth + 1) },
     end: end + 1,
   };
+}
+
+/** A custom emoji `<:name:id>` at `start`, or undefined. */
+function emojiAt(source: string, start: number): { node: Inline; end: number } | undefined {
+  const match = emojiPattern.exec(source.slice(start));
+  return match === null
+    ? undefined
+    : { node: { type: "emoji", name: match[1] ?? "", id: match[2] ?? "" }, end: start + match[0].length };
 }
 
 /** A mention at `start`, or undefined. */
@@ -136,7 +147,7 @@ function tokenAt(source: string, start: number, depth: number): { node: Inline; 
     return linkAt(source, start, depth);
   }
   if (character === "<" || character === "@") {
-    return mentionAt(source, start);
+    return emojiAt(source, start) ?? mentionAt(source, start);
   }
   const link = bareLink.exec(source.slice(start));
   if (link !== null && (start === 0 || /\s/.test(source[start - 1] ?? ""))) {
@@ -240,6 +251,8 @@ export function plainText(nodes: Inline[]): string {
           return "\n";
         case "mention":
           return "id" in node ? `@${node.id}` : `@${node.kind}`;
+        case "emoji":
+          return `:${node.name}:`;
         default:
           return plainText(node.children);
       }

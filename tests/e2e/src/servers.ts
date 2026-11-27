@@ -97,3 +97,25 @@ export async function dragChannelAbove(page: Page, name: string, above: string):
   await shown(page, "channel-admin-back").click();
   await shown(page, "settings-back").click();
 }
+
+/** A 2×2 red PNG, small enough for any emoji limit. */
+const tinyPNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGO4o6HxH4QZYAwATUwIraFLCzAAAAAASUVORK5CYII=",
+  "base64",
+);
+
+/** Adds a custom emoji named `name` from the open server's settings, then goes back to the server. */
+export async function addEmoji(page: Page, name: string): Promise<void> {
+  await shown(page, "server-settings").click();
+  await shown(page, "manage-emoji").click();
+  await shown(page, "emoji-name").fill(name);
+  const chooser = page.waitForEvent("filechooser");
+  await shown(page, "emoji-add").click();
+  await (await chooser).setFiles({ name: `${name}.png`, mimeType: "image/png", buffer: tinyPNG });
+  await expect(page.getByText(`:${name}:`, { exact: true }).filter({ visible: true })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expectAccessible(page);
+  await shown(page, "emoji-admin-back").click();
+  await shown(page, "settings-back").click();
+}

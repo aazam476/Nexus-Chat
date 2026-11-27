@@ -105,6 +105,20 @@ function members(dataset: Dataset): unknown[] {
   ];
 }
 
+/** The server's custom emoji, by name. */
+function emoji(dataset: Dataset): unknown[] {
+  return dataset.servers.emoji.map((name, index) => {
+    const emojiId = id("f", index);
+    return { id: emojiId, name, animated: false, url: `/api/v1/emoji/${emojiId}`, createdAt };
+  });
+}
+
+/** A 2×2 red PNG, which every emoji's picture is. */
+export const emojiPicture = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGO4o6HxH4QZYAwATUwIraFLCzAAAAAASUVORK5CYII=",
+  "base64",
+);
+
 /** The answer to `method path`, or undefined when it is not about servers. */
 export function answerServers(dataset: Dataset, method: string, path: string): Answer | undefined {
   switch (`${method} ${path}`) {
@@ -127,6 +141,8 @@ export function answerServers(dataset: Dataset, method: string, path: string): A
       return [200, [{ channelId: id("a", 0), lastReadId: 0, unreadCount: dataset.servers.channelUnread }]];
     case `GET /api/v1/servers/${serverId}/invites`:
       return [200, []];
+    case `GET /api/v1/servers/${serverId}/emoji`:
+      return [200, emoji(dataset)];
   }
   return undefined;
 }

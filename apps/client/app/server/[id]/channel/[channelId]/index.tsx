@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useTimeline } from "../../../../../src/messaging/useConversations";
 import { useReadTracking } from "../../../../../src/messaging/useReadTracking";
+import { ServerEmojiContext, useChannelEmoji } from "../../../../../src/servers/ServerEmoji";
 import { useChannelReads } from "../../../../../src/servers/useChannelReads";
 import { AttachmentsContext, useAttachments } from "../../../../../src/messaging/useAttachments";
 import { ConversationFooter } from "../../../../../src/screens/conversation/ConversationFooter";
@@ -13,6 +14,32 @@ import { MessageList } from "../../../../../src/screens/conversation/MessageList
 import { useComposer } from "../../../../../src/screens/conversation/useComposer";
 import { ChannelHeader } from "../../../../../src/screens/servers/ChannelHeader";
 import { useChannel } from "../../../../../src/screens/servers/useChannel";
+
+/** What the channel's messages and composer read: attachments, offered emoji and mentioned names. */
+function ChannelContexts({
+  open,
+  attachments,
+  serverId,
+  children,
+}: {
+  open: ReturnType<typeof useChannel>;
+  attachments: ReturnType<typeof useAttachments>;
+  serverId: string;
+  children: ReactNode;
+}): ReactNode {
+  const { people } = open;
+  return (
+    <AttachmentsContext value={attachments}>
+      <ServerEmojiContext value={useChannelEmoji(serverId, open.channel)}>
+        <MentionNamesContext
+          value={{ nameOfId: people.nameOfId, selfId: people.userIdOf(people.self) ?? "" }}
+        >
+          {children}
+        </MentionNamesContext>
+      </ServerEmojiContext>
+    </AttachmentsContext>
+  );
+}
 
 /**
  * A server text channel: its messages and the composer, end-to-end
@@ -41,21 +68,19 @@ export default function ChannelScreen(): ReactNode {
     <Text tone="muted">{open.channel === undefined ? "" : t("servers.readOnly")}</Text>
   );
   return (
-    <AttachmentsContext value={attachments}>
-      <MentionNamesContext value={{ nameOfId: people.nameOfId, selfId: people.userIdOf(people.self) ?? "" }}>
-        <ConversationLayout
-          header={<ChannelHeader channel={open.channel} loading={open.loading} />}
-          footer={footer}
-        >
-          <MessageList
-            timeline={timeline}
-            people={people}
-            composer={composer}
-            send={send}
-            firstUnreadId={firstUnreadId}
-          />
-        </ConversationLayout>
-      </MentionNamesContext>
-    </AttachmentsContext>
+    <ChannelContexts open={open} attachments={attachments} serverId={id}>
+      <ConversationLayout
+        header={<ChannelHeader channel={open.channel} loading={open.loading} />}
+        footer={footer}
+      >
+        <MessageList
+          timeline={timeline}
+          people={people}
+          composer={composer}
+          send={send}
+          firstUnreadId={firstUnreadId}
+        />
+      </ConversationLayout>
+    </ChannelContexts>
   );
 }

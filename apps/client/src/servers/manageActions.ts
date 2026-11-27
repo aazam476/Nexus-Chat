@@ -16,6 +16,8 @@ import {
   removeServerIcon,
   setChannelOverride,
   setServerIcon,
+  addServerEmoji,
+  removeServerEmoji,
   takeServerRole,
   updateServer,
   updateServerChannel,
@@ -48,6 +50,21 @@ export async function removeServer(client: Client, serverId: string): Promise<Se
 /** Uploads an image as the server's icon. */
 export async function uploadIcon(client: Client, serverId: string, image: Blob): Promise<ServerResult> {
   return resultOf(await setServerIcon({ client, path: { serverId }, body: image }), serverId);
+}
+
+/** Adds a custom emoji named `name`; the result's ID is the emoji's. */
+export async function addEmoji(
+  client: Client,
+  serverId: string,
+  name: string,
+  image: Blob,
+): Promise<ServerResult> {
+  return resultOf(await addServerEmoji({ client, path: { serverId }, query: { name }, body: image }));
+}
+
+/** Removes one of the server's custom emoji. */
+export async function removeEmoji(client: Client, serverId: string, emojiId: string): Promise<ServerResult> {
+  return resultOf(await removeServerEmoji({ client, path: { serverId, emojiId } }), emojiId);
 }
 
 /** Removes the server's icon. */

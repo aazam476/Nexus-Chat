@@ -84,6 +84,13 @@ const known = new Set([
   "member_not_found",
   "bad_order",
   "owner_cannot_leave",
+  "unsupported_image",
+  "image_too_large",
+  "invalid_emoji_name",
+  "emoji_name_taken",
+  "emoji_limit",
+  "emoji_not_found",
+  "rate_limited",
 ]);
 
 /** What to tell the user about a server action's error code. */

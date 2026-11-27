@@ -229,6 +229,15 @@ type ServerChannelOverride struct {
 	DenyBits   int64
 }
 
+type ServerEmoji struct {
+	ID        uuid.UUID
+	ServerID  uuid.UUID
+	Name      string
+	Format    string
+	CreatedBy *uuid.UUID
+	CreatedAt time.Time
+}
+
 type ServerInvite struct {
 	Code      string
 	ServerID  uuid.UUID

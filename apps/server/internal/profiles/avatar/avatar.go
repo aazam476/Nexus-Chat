@@ -7,6 +7,9 @@
 // Images are checked against size limits before they are decoded, so a
 // small file that claims enormous dimensions cannot exhaust memory.
 //
+// [Fit] does the same for small pictures that keep their shape, such as
+// custom emoji.
+//
 // Start reading at [Process].
 package avatar
 
@@ -93,10 +96,11 @@ func Process(data []byte, crop *Crop) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	size := image.Pt(Size, Size)
 	if format == "gif" {
-		return processGIF(data, square)
+		return processGIF(data, square, size)
 	}
-	return processStill(data, format, square)
+	return processStill(data, format, square, size)
 }
 
 // cropSquare checks the user's square, or picks the centered one.
@@ -112,7 +116,8 @@ func cropSquare(width int, height int, crop *Crop) (image.Rectangle, error) {
 	return image.Rect(crop.X, crop.Y, crop.X+crop.Size, crop.Y+crop.Size), nil
 }
 
-func processStill(data []byte, format string, square image.Rectangle) (Result, error) {
+// processStill decodes a still image and scales the area from to size.
+func processStill(data []byte, format string, from image.Rectangle, size image.Point) (Result, error) {
 	var decoded image.Image
 	var err error
 	switch format {
@@ -128,7 +133,7 @@ func processStill(data []byte, format string, square image.Rectangle) (Result, e
 	if err != nil {
 		return Result{}, ErrDamaged
 	}
-	resized := scale(decoded, square)
+	resized := scale(decoded, from, size)
 	var output bytes.Buffer
 	if format == "jpeg" {
 		// Photos stay JPEG: as PNG they would be several times larger.
@@ -140,10 +145,10 @@ func processStill(data []byte, format string, square image.Rectangle) (Result, e
 	return Result{Data: output.Bytes(), Format: FormatPNG}, nil
 }
 
-// scale draws the square of source into a new 512×512 image. CatmullRom
+// scale draws the area from of source into a new image of size. CatmullRom
 // is a high-quality filter for both shrinking and enlarging.
-func scale(source image.Image, square image.Rectangle) *image.RGBA {
-	target := image.NewRGBA(image.Rect(0, 0, Size, Size))
-	draw.CatmullRom.Scale(target, target.Bounds(), source, square.Add(source.Bounds().Min), draw.Src, nil)
+func scale(source image.Image, from image.Rectangle, size image.Point) *image.RGBA {
+	target := image.NewRGBA(image.Rectangle{Max: size})
+	draw.CatmullRom.Scale(target, target.Bounds(), source, from.Add(source.Bounds().Min), draw.Src, nil)
 	return target
 }

@@ -20,6 +20,7 @@ import {
 import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
 import {
   addChannel,
+  addEmoji,
   channelOrder,
   dragChannelAbove,
   joinWith,
@@ -136,6 +137,33 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
   await Promise.all([...contexts, tabletContext].map((context) => context.close()));
 });
 
+/**
+ * Ruth changes the open server while Sami watches: a new channel, its
+ * place in the list, and a custom emoji in a message.
+ */
+async function manageTogether(ruth: Page, sami: Page): Promise<void> {
+  // Ruth adds a channel in the settings; it shows up for Sami straight away.
+  await addChannel(ruth, "announcements");
+  await shown(sami, "channel-back").click();
+  await openChannel(sami, "announcements");
+
+  // Ruth drags it to the top; Sami's list follows.
+  await dragChannelAbove(ruth, "announcements", "general");
+  await shown(sami, "channel-back").click();
+  await expect.poll(() => channelOrder(sami), { timeout: 30_000 }).toEqual(["announcements", "general"]);
+
+  // Ruth adds a custom emoji and uses it; Sami sees its picture.
+  await addEmoji(ruth, "wave");
+  await openChannel(ruth, "general");
+  await shown(ruth, "composer").fill("Hi :wa");
+  await shown(ruth, "emoji-suggestion-wave").click();
+  await shown(ruth, "composer-send").click();
+  await openChannel(sami, "general");
+  await expect(sami.getByRole("img", { name: ":wave:" }).filter({ visible: true }).first()).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
 test("a server's channel carries messages, with history for those who join later", async ({ browser }) => {
   test.setTimeout(180_000);
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
@@ -166,16 +194,8 @@ test("a server's channel carries messages, with history for those who join later
   );
   await expectAccessible(sami);
 
-  // Ruth adds a channel in the settings; it shows up for Sami straight away.
   await shown(ruth, "channel-back").click();
-  await addChannel(ruth, "announcements");
-  await shown(sami, "channel-back").click();
-  await openChannel(sami, "announcements");
-
-  // Ruth drags it to the top; Sami's list follows.
-  await dragChannelAbove(ruth, "announcements", "general");
-  await shown(sami, "channel-back").click();
-  await expect.poll(() => channelOrder(sami), { timeout: 30_000 }).toEqual(["announcements", "general"]);
+  await manageTogether(ruth, sami);
   await Promise.all(contexts.map((context) => context.close()));
 });
 

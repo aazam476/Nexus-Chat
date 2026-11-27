@@ -14,7 +14,7 @@ export interface FakeAnswer {
 /** A fake server and the client that talks to it. */
 export interface FakeServer {
   client: Client;
-  requests: { method: string; path: string; body: unknown; authorization: string | null }[];
+  requests: { method: string; path: string; search: string; body: unknown; authorization: string | null }[];
   /** Sets the answer for "METHOD /path". */
   answer: (route: string, answer: FakeAnswer) => void;
   fetch: typeof fetch;
@@ -38,11 +38,12 @@ export function fakeServer(token?: () => string | undefined): FakeServer {
   const requests: FakeServer["requests"] = [];
   const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request = new Request(input, init);
-    const path = new URL(request.url).pathname;
+    const { pathname: path, search } = new URL(request.url);
     const text = await request.text();
     requests.push({
       method: request.method,
       path,
+      search,
       body: parsedBody(text),
       authorization: request.headers.get("Authorization"),
     });

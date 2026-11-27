@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 
 import type { TimelineItem } from "../../messaging/timeline";
+import { parseEmojiToken } from "../../servers/emojiTokens";
 import { ActionButton } from "./ActionButton";
+import { CustomEmoji } from "./CustomEmoji";
 import type { NameOf } from "./MessageItem";
 
 /** Props of {@link Reactions}. */
@@ -26,12 +28,19 @@ export function Reactions({ reactions, self, nameOf, onToggle }: ReactionsProps)
     <View style={styles.row}>
       {reactions.map(({ emoji, users }) => {
         const mine = users.includes(self);
+        const custom = parseEmojiToken(emoji);
+        const named = custom === undefined ? emoji : `:${custom.name}:`;
         return (
           <ActionButton
             key={emoji}
-            label={t("conversation.reaction", { emoji, count: users.length })}
+            icon={custom === undefined ? undefined : <CustomEmoji name={custom.name} id={custom.id} />}
+            label={
+              custom === undefined
+                ? t("conversation.reaction", { emoji, count: users.length })
+                : String(users.length)
+            }
             accessibilityLabel={t("conversation.reactionLabel", {
-              emoji,
+              emoji: named,
               count: users.length,
               users: users.map(nameOf).join(", "),
             })}

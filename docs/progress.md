@@ -500,6 +500,22 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   buttons stay for keyboards and screen readers. The release gate's
   browser test drags a channel to the top, and the other member's list
   follows.
+- Custom emoji on the server side: members with `MANAGE_EMOJI` add PNG,
+  GIF or WebP pictures of up to 256 KB, named `[a-z0-9_]{2,32}`, at most
+  100 per server. The server scales them down to fit 128×128, keeping their
+  shape, and encodes them again without metadata (WebP becomes PNG, GIFs
+  stay animated). They are public assets under random IDs, cacheable
+  forever at `/api/v1/emoji/{id}`, and deleting a server deletes them and
+  its icon.
+- Custom emoji in the app: a server's Emoji settings list, add and remove
+  them. In a channel, typing `:` and part of a name suggests them, and
+  messages carry `<:name:id>`, drawn as the picture (larger when a line is
+  only emoji) and read out as `:name:`; a picture that cannot load shows
+  the name. Messages can be reacted to with them, the first few offered
+  directly and the rest behind "More emoji". Only members with
+  `USE_CUSTOM_EMOJI` in the channel are offered them. The release gate's
+  browser test uploads one and has the other member see it, and the visual
+  checks cover the Emoji settings.
 - Visual checks of the server screens (the list, a server, its settings,
   and the channel, role and member settings) with demo, worst-case and
   right-to-left servers, in both themes and at every checked width.
