@@ -128,6 +128,9 @@ func TestEndpointsNeedASession(t *testing.T) {
 		func() error {
 			return second(handler.ListChannelArchive(ctx, api.ListChannelArchiveRequestObject{ChannelId: id}))
 		},
+		func() error {
+			return second(handler.DeleteChannelMessage(ctx, api.DeleteChannelMessageRequestObject{ChannelId: id, MessageId: id}))
+		},
 	} {
 		require.ErrorIs(t, call(), errNoPrincipal)
 	}

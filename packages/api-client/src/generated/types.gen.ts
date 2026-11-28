@@ -13,6 +13,30 @@ export type OverrideTargetKind = 'role' | 'member';
 
 export type ServerChannelKind = 'category' | 'text' | 'voice';
 
+export type Sanction = {
+    reason?: string;
+};
+
+export type BanSpec = {
+    reason?: string;
+    deleteMessageSeconds?: number;
+};
+
+export type TimeoutSpec = {
+    seconds: number;
+};
+
+export type ServerBan = {
+    user: {
+        id: string;
+        username: string;
+        displayName: string;
+    };
+    bannedBy?: string;
+    reason: string;
+    createdAt: string;
+};
+
 export type AuditEntry = {
     id: number;
     /**
@@ -165,6 +189,10 @@ export type ServerDetails = {
 export type ServerMember = {
     user: UserSummary;
     joinedAt: string;
+    /**
+     * While a timeout lasts, when it ends.
+     */
+    timedOutUntil?: string;
     roleIds: Array<string>;
 };
 
@@ -4632,6 +4660,47 @@ export type SendChannelMessageResponses = {
 
 export type SendChannelMessageResponse = SendChannelMessageResponses[keyof SendChannelMessageResponses];
 
+export type DeleteChannelMessageData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+        messageId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId}';
+};
+
+export type DeleteChannelMessageErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_MESSAGES in the channel (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such channel you can see (`channel_not_found`), or no such message in it (`message_not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteChannelMessageError = DeleteChannelMessageErrors[keyof DeleteChannelMessageErrors];
+
+export type DeleteChannelMessageResponses = {
+    /**
+     * Deleted.
+     */
+    204: void;
+};
+
+export type DeleteChannelMessageResponse = DeleteChannelMessageResponses[keyof DeleteChannelMessageResponses];
+
 export type ListChannelArchiveData = {
     body?: never;
     path: {
@@ -5121,6 +5190,257 @@ export type LeaveServerResponses = {
 };
 
 export type LeaveServerResponse = LeaveServerResponses[keyof LeaveServerResponses];
+
+export type KickServerMemberData = {
+    body: Sanction;
+    path: {
+        serverId: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members/{userId}/kick';
+};
+
+export type KickServerMemberErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+     */
+    404: Error;
+    /**
+     * The reason is over 512 characters (`invalid_sanction`).
+     */
+    422: Error;
+};
+
+export type KickServerMemberError = KickServerMemberErrors[keyof KickServerMemberErrors];
+
+export type KickServerMemberResponses = {
+    /**
+     * Kicked.
+     */
+    204: void;
+};
+
+export type KickServerMemberResponse = KickServerMemberResponses[keyof KickServerMemberResponses];
+
+export type EndServerMemberTimeoutData = {
+    body?: never;
+    path: {
+        serverId: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members/{userId}/timeout';
+};
+
+export type EndServerMemberTimeoutErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+     */
+    404: Error;
+};
+
+export type EndServerMemberTimeoutError = EndServerMemberTimeoutErrors[keyof EndServerMemberTimeoutErrors];
+
+export type EndServerMemberTimeoutResponses = {
+    /**
+     * Lifted, or there was none.
+     */
+    204: void;
+};
+
+export type EndServerMemberTimeoutResponse = EndServerMemberTimeoutResponses[keyof EndServerMemberTimeoutResponses];
+
+export type TimeoutServerMemberData = {
+    body: TimeoutSpec;
+    path: {
+        serverId: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/members/{userId}/timeout';
+};
+
+export type TimeoutServerMemberErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+     */
+    404: Error;
+    /**
+     * The length is outside 60 seconds to 28 days (`invalid_timeout`).
+     */
+    422: Error;
+};
+
+export type TimeoutServerMemberError = TimeoutServerMemberErrors[keyof TimeoutServerMemberErrors];
+
+export type TimeoutServerMemberResponses = {
+    /**
+     * Timed out.
+     */
+    204: void;
+};
+
+export type TimeoutServerMemberResponse = TimeoutServerMemberResponses[keyof TimeoutServerMemberResponses];
+
+export type ListServerBansData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/bans';
+};
+
+export type ListServerBansErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack BAN_MEMBERS (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type ListServerBansError = ListServerBansErrors[keyof ListServerBansErrors];
+
+export type ListServerBansResponses = {
+    /**
+     * The bans, most recent first.
+     */
+    200: Array<ServerBan>;
+};
+
+export type ListServerBansResponse = ListServerBansResponses[keyof ListServerBansResponses];
+
+export type UnbanServerMemberData = {
+    body?: never;
+    path: {
+        serverId: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/bans/{userId}';
+};
+
+export type UnbanServerMemberErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack BAN_MEMBERS (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or that user is not banned (`not_banned`).
+     */
+    404: Error;
+};
+
+export type UnbanServerMemberError = UnbanServerMemberErrors[keyof UnbanServerMemberErrors];
+
+export type UnbanServerMemberResponses = {
+    /**
+     * They may join again.
+     */
+    204: void;
+};
+
+export type UnbanServerMemberResponse = UnbanServerMemberResponses[keyof UnbanServerMemberResponses];
+
+export type BanServerMemberData = {
+    body: BanSpec;
+    path: {
+        serverId: string;
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/bans/{userId}';
+};
+
+export type BanServerMemberErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+     */
+    404: Error;
+    /**
+     * The reason is over 512 characters, or more than 7 days of messages were asked to go (`invalid_sanction`).
+     */
+    422: Error;
+};
+
+export type BanServerMemberError = BanServerMemberErrors[keyof BanServerMemberErrors];
+
+export type BanServerMemberResponses = {
+    /**
+     * Banned; banning again replaces the reason.
+     */
+    204: void;
+};
+
+export type BanServerMemberResponse = BanServerMemberResponses[keyof BanServerMemberResponses];
 
 export type TakeServerRoleData = {
     body?: never;
@@ -6355,6 +6675,10 @@ export type JoinServerErrors = {
      * The request has no valid session token (`unauthorized`).
      */
     401: Error;
+    /**
+     * You are banned from the server (`banned`).
+     */
+    403: Error;
     /**
      * No such invite, or it expired or was used up (`invite_invalid`).
      */

@@ -71,6 +71,8 @@ type deliveryStore interface {
 	ChannelArchiveBefore(ctx context.Context, params store.ChannelArchiveBeforeParams) ([]store.ChannelArchiveBeforeRow, error)
 	readStore
 	threadStore
+	DeleteChannelMessage(ctx context.Context, params store.DeleteChannelArchiveParams) (store.DeletedMessage, error)
+	Purge(ctx context.Context, conversationIDs []uuid.UUID, userID uuid.UUID, since time.Time) (int64, error)
 }
 
 // threadStore is the part of the store about threads.

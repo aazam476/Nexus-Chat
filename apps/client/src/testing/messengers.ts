@@ -34,7 +34,7 @@ export async function readyMessenger(
     database: createMemoryDatabase(),
     user,
     where: { domain: "chat.example.com", deviceId },
-    instanceKey: new Uint8Array(32),
+    instanceKey: instance.instanceKey,
   });
   if (start.status !== "ready") {
     throw new Error("a new account's messenger is ready at once");

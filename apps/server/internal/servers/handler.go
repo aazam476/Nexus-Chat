@@ -71,6 +71,9 @@ func refusals() []refusalCode {
 		{ErrBadOrder, http.StatusUnprocessableEntity, "bad_order"},
 		{ErrBadPermission, http.StatusUnprocessableEntity, "unknown_permission"},
 		{ErrOwnerLeaving, http.StatusUnprocessableEntity, "owner_cannot_leave"},
+		{ErrNotBanned, http.StatusNotFound, "not_banned"},
+		{ErrBadSanction, http.StatusUnprocessableEntity, "invalid_sanction"},
+		{ErrTimeoutRange, http.StatusUnprocessableEntity, "invalid_timeout"},
 	}
 }
 

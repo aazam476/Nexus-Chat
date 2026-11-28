@@ -29,6 +29,8 @@ type ChannelGrant struct {
 	// MayReplyInThreads and MayStartThreads are SEND_IN_THREADS and CREATE_THREADS.
 	MayReplyInThreads bool
 	MayStartThreads   bool
+	// MayManageMessages is MANAGE_MESSAGES: deleting others' messages.
+	MayManageMessages bool
 	// HistorySince is the oldest archive copy the user may fetch; zero
 	// when the channel lets them read history from before they joined.
 	HistorySince time.Time
@@ -41,6 +43,8 @@ type ChannelAccess interface {
 	// TextChannels lists the server's text channels the user can see, or
 	// returns ErrNotFound when they are not in the server.
 	TextChannels(ctx context.Context, serverID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error)
+	// MessageDeleted records a moderator's deletion in the server's audit log.
+	MessageDeleted(ctx context.Context, ref ChannelRef, deleted DeletedMessage) error
 }
 
 // SendToChannel accepts a message for a server channel, in the current

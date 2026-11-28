@@ -36,6 +36,7 @@ func (service *Service) ChannelGrant(ctx context.Context, ref delivery.ChannelRe
 	grant := delivery.ChannelGrant{
 		AudienceID: *channel.AudienceID, MaySend: mine.Has(permissions.SendMessages),
 		MayReplyInThreads: mine.Has(permissions.SendInThreads), MayStartThreads: mine.Has(permissions.CreateThreads),
+		MayManageMessages: mine.Has(permissions.ManageMessages),
 	}
 	if !mine.Has(permissions.ReadHistoryBeforeJoin) {
 		grant.HistorySince = a.joinedAt

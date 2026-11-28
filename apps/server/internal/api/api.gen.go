@@ -546,6 +546,12 @@ type BackupCodes struct {
 	Codes []string `json:"codes"`
 }
 
+// BanSpec defines model for BanSpec.
+type BanSpec struct {
+	DeleteMessageSeconds *int    `json:"deleteMessageSeconds,omitempty"`
+	Reason               *string `json:"reason,omitempty"`
+}
+
 // BeginProviderLinkRequest defines model for BeginProviderLinkRequest.
 type BeginProviderLinkRequest struct {
 	// ReturnTo As for `begin`.
@@ -1251,6 +1257,11 @@ type RoleSpec struct {
 	Permissions []PermissionName `json:"permissions"`
 }
 
+// Sanction defines model for Sanction.
+type Sanction struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
 // SecondFactors defines model for SecondFactors.
 type SecondFactors struct {
 	Authenticators       []Authenticator `json:"authenticators"`
@@ -1272,6 +1283,18 @@ type Server struct {
 	Id      openapi_types.UUID `json:"id"`
 	Name    string             `json:"name"`
 	OwnerId openapi_types.UUID `json:"ownerId"`
+}
+
+// ServerBan defines model for ServerBan.
+type ServerBan struct {
+	BannedBy  *openapi_types.UUID `json:"bannedBy,omitempty"`
+	CreatedAt time.Time           `json:"createdAt"`
+	Reason    string              `json:"reason"`
+	User      struct {
+		DisplayName string             `json:"displayName"`
+		Id          openapi_types.UUID `json:"id"`
+		Username    string             `json:"username"`
+	} `json:"user"`
 }
 
 // ServerChannel defines model for ServerChannel.
@@ -1344,6 +1367,9 @@ type ServerInvite struct {
 type ServerMember struct {
 	JoinedAt time.Time            `json:"joinedAt"`
 	RoleIds  []openapi_types.UUID `json:"roleIds"`
+
+	// TimedOutUntil While a timeout lasts, when it ends.
+	TimedOutUntil *time.Time `json:"timedOutUntil,omitempty"`
 
 	// User Enough to show another user in a list.
 	User UserSummary `json:"user"`
@@ -1475,6 +1501,11 @@ type SmtpSettings struct {
 type StoredAttachment struct {
 	Id   openapi_types.UUID `json:"id"`
 	Size int64              `json:"size"`
+}
+
+// TimeoutSpec defines model for TimeoutSpec.
+type TimeoutSpec struct {
+	Seconds int `json:"seconds"`
 }
 
 // TlsStatus defines model for TlsStatus.
@@ -1881,6 +1912,9 @@ type CreateServerJSONRequestBody = NewServer
 // UpdateServerJSONRequestBody defines body for UpdateServer for application/json ContentType.
 type UpdateServerJSONRequestBody = ServerSettings
 
+// BanServerMemberJSONRequestBody defines body for BanServerMember for application/json ContentType.
+type BanServerMemberJSONRequestBody = BanSpec
+
 // OrderServerChannelsJSONRequestBody defines body for OrderServerChannels for application/json ContentType.
 type OrderServerChannelsJSONRequestBody = OrderServerChannelsJSONBody
 
@@ -1901,6 +1935,12 @@ type MarkChannelReadJSONRequestBody = ReadMark
 
 // CreateServerInviteJSONRequestBody defines body for CreateServerInvite for application/json ContentType.
 type CreateServerInviteJSONRequestBody = NewServerInvite
+
+// KickServerMemberJSONRequestBody defines body for KickServerMember for application/json ContentType.
+type KickServerMemberJSONRequestBody = Sanction
+
+// TimeoutServerMemberJSONRequestBody defines body for TimeoutServerMember for application/json ContentType.
+type TimeoutServerMemberJSONRequestBody = TimeoutSpec
 
 // OrderServerRolesJSONRequestBody defines body for OrderServerRoles for application/json ContentType.
 type OrderServerRolesJSONRequestBody = RoleOrder
@@ -2228,6 +2268,15 @@ type ServerInterface interface {
 	// ListServerAuditLog A server's audit log (VIEW_AUDIT_LOG)
 	// (GET /api/v1/servers/{serverId}/audit-log)
 	ListServerAuditLog(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params ListServerAuditLogParams)
+	// ListServerBans Who is banned from the server (BAN_MEMBERS)
+	// (GET /api/v1/servers/{serverId}/bans)
+	ListServerBans(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
+	// UnbanServerMember Lift a ban (BAN_MEMBERS)
+	// (DELETE /api/v1/servers/{serverId}/bans/{userId})
+	UnbanServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID)
+	// BanServerMember Ban someone from the server (BAN_MEMBERS)
+	// (PUT /api/v1/servers/{serverId}/bans/{userId})
+	BanServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID)
 	// OrderServerChannels Place every channel (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channel-order)
 	OrderServerChannels(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -2246,6 +2295,9 @@ type ServerInterface interface {
 	// SendChannelMessage Send a message in a server text channel
 	// (POST /api/v1/servers/{serverId}/channels/{channelId}/messages)
 	SendChannelMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
+	// DeleteChannelMessage Delete someone's message from a channel (MANAGE_MESSAGES)
+	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId})
+	DeleteChannelMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, messageId openapi_types.UUID)
 	// ClearChannelOverride Remove a channel override (MANAGE_CHANNELS)
 	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	ClearChannelOverride(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, targetKind OverrideTargetKind, targetId openapi_types.UUID)
@@ -2297,12 +2349,21 @@ type ServerInterface interface {
 	// LeaveServer Leave a server
 	// (DELETE /api/v1/servers/{serverId}/members/me)
 	LeaveServer(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
+	// KickServerMember Take a member out of the server (KICK_MEMBERS)
+	// (POST /api/v1/servers/{serverId}/members/{userId}/kick)
+	KickServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID)
 	// TakeServerRole Take a role from a member (MANAGE_ROLES)
 	// (DELETE /api/v1/servers/{serverId}/members/{userId}/roles/{roleId})
 	TakeServerRole(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID, roleId openapi_types.UUID)
 	// GiveServerRole Give a member a role (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/members/{userId}/roles/{roleId})
 	GiveServerRole(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID, roleId openapi_types.UUID)
+	// EndServerMemberTimeout Lift a member's timeout (TIMEOUT_MEMBERS)
+	// (DELETE /api/v1/servers/{serverId}/members/{userId}/timeout)
+	EndServerMemberTimeout(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID)
+	// TimeoutServerMember Time a member out (TIMEOUT_MEMBERS)
+	// (PUT /api/v1/servers/{serverId}/members/{userId}/timeout)
+	TimeoutServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID)
 	// ListChannelReadStates Your read state in each text channel of the server you can see
 	// (GET /api/v1/servers/{serverId}/read-state)
 	ListChannelReadStates(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -4574,6 +4635,102 @@ func (siw *ServerInterfaceWrapper) ListServerAuditLog(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ListServerBans operation middleware
+func (siw *ServerInterfaceWrapper) ListServerBans(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListServerBans(w, r, serverId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnbanServerMember operation middleware
+func (siw *ServerInterfaceWrapper) UnbanServerMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnbanServerMember(w, r, serverId, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BanServerMember operation middleware
+func (siw *ServerInterfaceWrapper) BanServerMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BanServerMember(w, r, serverId, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // OrderServerChannels operation middleware
 func (siw *ServerInterfaceWrapper) OrderServerChannels(w http.ResponseWriter, r *http.Request) {
 
@@ -4786,6 +4943,50 @@ func (siw *ServerInterfaceWrapper) SendChannelMessage(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendChannelMessage(w, r, serverId, channelId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteChannelMessage operation middleware
+func (siw *ServerInterfaceWrapper) DeleteChannelMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", r.PathValue("messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteChannelMessage(w, r, serverId, channelId, messageId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5426,6 +5627,41 @@ func (siw *ServerInterfaceWrapper) LeaveServer(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// KickServerMember operation middleware
+func (siw *ServerInterfaceWrapper) KickServerMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KickServerMember(w, r, serverId, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // TakeServerRole operation middleware
 func (siw *ServerInterfaceWrapper) TakeServerRole(w http.ResponseWriter, r *http.Request) {
 
@@ -5505,6 +5741,76 @@ func (siw *ServerInterfaceWrapper) GiveServerRole(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GiveServerRole(w, r, serverId, userId, roleId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EndServerMemberTimeout operation middleware
+func (siw *ServerInterfaceWrapper) EndServerMemberTimeout(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EndServerMemberTimeout(w, r, serverId, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TimeoutServerMember operation middleware
+func (siw *ServerInterfaceWrapper) TimeoutServerMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TimeoutServerMember(w, r, serverId, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6129,6 +6435,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/read-state", wrapper.ListReadStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive", wrapper.ListArchivedMessages)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/messages", wrapper.SendChannelMessage)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId}", wrapper.DeleteChannelMessage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/archive", wrapper.ListChannelArchive)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
@@ -6144,6 +6451,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/servers/{serverId}", wrapper.UpdateServer)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/members", wrapper.ListServerMembers)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/members/me", wrapper.LeaveServer)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/members/{userId}/kick", wrapper.KickServerMember)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/members/{userId}/timeout", wrapper.EndServerMemberTimeout)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/members/{userId}/timeout", wrapper.TimeoutServerMember)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/bans", wrapper.ListServerBans)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/bans/{userId}", wrapper.UnbanServerMember)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/bans/{userId}", wrapper.BanServerMember)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}", wrapper.TakeServerRole)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}", wrapper.GiveServerRole)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels", wrapper.CreateServerChannel)
@@ -11491,6 +11804,20 @@ func (response JoinServer401JSONResponse) VisitJoinServerResponse(w http.Respons
 	return err
 }
 
+type JoinServer403JSONResponse Error
+
+func (response JoinServer403JSONResponse) VisitJoinServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type JoinServer404JSONResponse Error
 
 func (response JoinServer404JSONResponse) VisitJoinServerResponse(w http.ResponseWriter) error {
@@ -12886,6 +13213,245 @@ func (response ListServerAuditLog404JSONResponse) VisitListServerAuditLogRespons
 	return err
 }
 
+type ListServerBansRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+}
+
+type ListServerBansResponseObject interface {
+	VisitListServerBansResponse(w http.ResponseWriter) error
+}
+
+type ListServerBans200JSONResponse []ServerBan
+
+func (response ListServerBans200JSONResponse) VisitListServerBansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerBans400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListServerBans400JSONResponse) VisitListServerBansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerBans401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListServerBans401JSONResponse) VisitListServerBansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerBans403JSONResponse Error
+
+func (response ListServerBans403JSONResponse) VisitListServerBansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerBans404JSONResponse Error
+
+func (response ListServerBans404JSONResponse) VisitListServerBansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnbanServerMemberRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	UserId   openapi_types.UUID `json:"userId"`
+}
+
+type UnbanServerMemberResponseObject interface {
+	VisitUnbanServerMemberResponse(w http.ResponseWriter) error
+}
+
+type UnbanServerMember204Response struct {
+}
+
+func (response UnbanServerMember204Response) VisitUnbanServerMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnbanServerMember400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UnbanServerMember400JSONResponse) VisitUnbanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnbanServerMember401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnbanServerMember401JSONResponse) VisitUnbanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnbanServerMember403JSONResponse Error
+
+func (response UnbanServerMember403JSONResponse) VisitUnbanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnbanServerMember404JSONResponse Error
+
+func (response UnbanServerMember404JSONResponse) VisitUnbanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BanServerMemberRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	UserId   openapi_types.UUID `json:"userId"`
+	Body     *BanServerMemberJSONRequestBody
+}
+
+type BanServerMemberResponseObject interface {
+	VisitBanServerMemberResponse(w http.ResponseWriter) error
+}
+
+type BanServerMember204Response struct {
+}
+
+func (response BanServerMember204Response) VisitBanServerMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type BanServerMember400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response BanServerMember400JSONResponse) VisitBanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BanServerMember401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response BanServerMember401JSONResponse) VisitBanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BanServerMember403JSONResponse Error
+
+func (response BanServerMember403JSONResponse) VisitBanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BanServerMember404JSONResponse Error
+
+func (response BanServerMember404JSONResponse) VisitBanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BanServerMember422JSONResponse Error
+
+func (response BanServerMember422JSONResponse) VisitBanServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type OrderServerChannelsRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 	Body     *OrderServerChannelsJSONRequestBody
@@ -13411,6 +13977,80 @@ func (response SendChannelMessage422JSONResponse) VisitSendChannelMessageRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteChannelMessageRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	MessageId openapi_types.UUID `json:"messageId"`
+}
+
+type DeleteChannelMessageResponseObject interface {
+	VisitDeleteChannelMessageResponse(w http.ResponseWriter) error
+}
+
+type DeleteChannelMessage204Response struct {
+}
+
+func (response DeleteChannelMessage204Response) VisitDeleteChannelMessageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteChannelMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteChannelMessage400JSONResponse) VisitDeleteChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteChannelMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteChannelMessage401JSONResponse) VisitDeleteChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteChannelMessage403JSONResponse Error
+
+func (response DeleteChannelMessage403JSONResponse) VisitDeleteChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteChannelMessage404JSONResponse Error
+
+func (response DeleteChannelMessage404JSONResponse) VisitDeleteChannelMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -14710,6 +15350,94 @@ func (response LeaveServer422JSONResponse) VisitLeaveServerResponse(w http.Respo
 	return err
 }
 
+type KickServerMemberRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	UserId   openapi_types.UUID `json:"userId"`
+	Body     *KickServerMemberJSONRequestBody
+}
+
+type KickServerMemberResponseObject interface {
+	VisitKickServerMemberResponse(w http.ResponseWriter) error
+}
+
+type KickServerMember204Response struct {
+}
+
+func (response KickServerMember204Response) VisitKickServerMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type KickServerMember400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response KickServerMember400JSONResponse) VisitKickServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KickServerMember401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response KickServerMember401JSONResponse) VisitKickServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KickServerMember403JSONResponse Error
+
+func (response KickServerMember403JSONResponse) VisitKickServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KickServerMember404JSONResponse Error
+
+func (response KickServerMember404JSONResponse) VisitKickServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KickServerMember422JSONResponse Error
+
+func (response KickServerMember422JSONResponse) VisitKickServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type TakeServerRoleRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 	UserId   openapi_types.UUID `json:"userId"`
@@ -14875,6 +15603,167 @@ func (response GiveServerRole404JSONResponse) VisitGiveServerRoleResponse(w http
 type GiveServerRole422JSONResponse Error
 
 func (response GiveServerRole422JSONResponse) VisitGiveServerRoleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EndServerMemberTimeoutRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	UserId   openapi_types.UUID `json:"userId"`
+}
+
+type EndServerMemberTimeoutResponseObject interface {
+	VisitEndServerMemberTimeoutResponse(w http.ResponseWriter) error
+}
+
+type EndServerMemberTimeout204Response struct {
+}
+
+func (response EndServerMemberTimeout204Response) VisitEndServerMemberTimeoutResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type EndServerMemberTimeout400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response EndServerMemberTimeout400JSONResponse) VisitEndServerMemberTimeoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EndServerMemberTimeout401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response EndServerMemberTimeout401JSONResponse) VisitEndServerMemberTimeoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EndServerMemberTimeout403JSONResponse Error
+
+func (response EndServerMemberTimeout403JSONResponse) VisitEndServerMemberTimeoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EndServerMemberTimeout404JSONResponse Error
+
+func (response EndServerMemberTimeout404JSONResponse) VisitEndServerMemberTimeoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TimeoutServerMemberRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	UserId   openapi_types.UUID `json:"userId"`
+	Body     *TimeoutServerMemberJSONRequestBody
+}
+
+type TimeoutServerMemberResponseObject interface {
+	VisitTimeoutServerMemberResponse(w http.ResponseWriter) error
+}
+
+type TimeoutServerMember204Response struct {
+}
+
+func (response TimeoutServerMember204Response) VisitTimeoutServerMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type TimeoutServerMember400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response TimeoutServerMember400JSONResponse) VisitTimeoutServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TimeoutServerMember401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response TimeoutServerMember401JSONResponse) VisitTimeoutServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TimeoutServerMember403JSONResponse Error
+
+func (response TimeoutServerMember403JSONResponse) VisitTimeoutServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TimeoutServerMember404JSONResponse Error
+
+func (response TimeoutServerMember404JSONResponse) VisitTimeoutServerMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TimeoutServerMember422JSONResponse Error
+
+func (response TimeoutServerMember422JSONResponse) VisitTimeoutServerMemberResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -16203,6 +17092,15 @@ type StrictServerInterface interface {
 	// ListServerAuditLog A server's audit log (VIEW_AUDIT_LOG)
 	// (GET /api/v1/servers/{serverId}/audit-log)
 	ListServerAuditLog(ctx context.Context, request ListServerAuditLogRequestObject) (ListServerAuditLogResponseObject, error)
+	// ListServerBans Who is banned from the server (BAN_MEMBERS)
+	// (GET /api/v1/servers/{serverId}/bans)
+	ListServerBans(ctx context.Context, request ListServerBansRequestObject) (ListServerBansResponseObject, error)
+	// UnbanServerMember Lift a ban (BAN_MEMBERS)
+	// (DELETE /api/v1/servers/{serverId}/bans/{userId})
+	UnbanServerMember(ctx context.Context, request UnbanServerMemberRequestObject) (UnbanServerMemberResponseObject, error)
+	// BanServerMember Ban someone from the server (BAN_MEMBERS)
+	// (PUT /api/v1/servers/{serverId}/bans/{userId})
+	BanServerMember(ctx context.Context, request BanServerMemberRequestObject) (BanServerMemberResponseObject, error)
 	// OrderServerChannels Place every channel (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channel-order)
 	OrderServerChannels(ctx context.Context, request OrderServerChannelsRequestObject) (OrderServerChannelsResponseObject, error)
@@ -16221,6 +17119,9 @@ type StrictServerInterface interface {
 	// SendChannelMessage Send a message in a server text channel
 	// (POST /api/v1/servers/{serverId}/channels/{channelId}/messages)
 	SendChannelMessage(ctx context.Context, request SendChannelMessageRequestObject) (SendChannelMessageResponseObject, error)
+	// DeleteChannelMessage Delete someone's message from a channel (MANAGE_MESSAGES)
+	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId})
+	DeleteChannelMessage(ctx context.Context, request DeleteChannelMessageRequestObject) (DeleteChannelMessageResponseObject, error)
 	// ClearChannelOverride Remove a channel override (MANAGE_CHANNELS)
 	// (DELETE /api/v1/servers/{serverId}/channels/{channelId}/overrides/{targetKind}/{targetId})
 	ClearChannelOverride(ctx context.Context, request ClearChannelOverrideRequestObject) (ClearChannelOverrideResponseObject, error)
@@ -16272,12 +17173,21 @@ type StrictServerInterface interface {
 	// LeaveServer Leave a server
 	// (DELETE /api/v1/servers/{serverId}/members/me)
 	LeaveServer(ctx context.Context, request LeaveServerRequestObject) (LeaveServerResponseObject, error)
+	// KickServerMember Take a member out of the server (KICK_MEMBERS)
+	// (POST /api/v1/servers/{serverId}/members/{userId}/kick)
+	KickServerMember(ctx context.Context, request KickServerMemberRequestObject) (KickServerMemberResponseObject, error)
 	// TakeServerRole Take a role from a member (MANAGE_ROLES)
 	// (DELETE /api/v1/servers/{serverId}/members/{userId}/roles/{roleId})
 	TakeServerRole(ctx context.Context, request TakeServerRoleRequestObject) (TakeServerRoleResponseObject, error)
 	// GiveServerRole Give a member a role (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/members/{userId}/roles/{roleId})
 	GiveServerRole(ctx context.Context, request GiveServerRoleRequestObject) (GiveServerRoleResponseObject, error)
+	// EndServerMemberTimeout Lift a member's timeout (TIMEOUT_MEMBERS)
+	// (DELETE /api/v1/servers/{serverId}/members/{userId}/timeout)
+	EndServerMemberTimeout(ctx context.Context, request EndServerMemberTimeoutRequestObject) (EndServerMemberTimeoutResponseObject, error)
+	// TimeoutServerMember Time a member out (TIMEOUT_MEMBERS)
+	// (PUT /api/v1/servers/{serverId}/members/{userId}/timeout)
+	TimeoutServerMember(ctx context.Context, request TimeoutServerMemberRequestObject) (TimeoutServerMemberResponseObject, error)
 	// ListChannelReadStates Your read state in each text channel of the server you can see
 	// (GET /api/v1/servers/{serverId}/read-state)
 	ListChannelReadStates(ctx context.Context, request ListChannelReadStatesRequestObject) (ListChannelReadStatesResponseObject, error)
@@ -19203,6 +20113,93 @@ func (sh *strictHandler) ListServerAuditLog(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// ListServerBans operation middleware
+func (sh *strictHandler) ListServerBans(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
+	var request ListServerBansRequestObject
+
+	request.ServerId = serverId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListServerBans(ctx, request.(ListServerBansRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListServerBans")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListServerBansResponseObject); ok {
+		if err := validResponse.VisitListServerBansResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnbanServerMember operation middleware
+func (sh *strictHandler) UnbanServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID) {
+	var request UnbanServerMemberRequestObject
+
+	request.ServerId = serverId
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnbanServerMember(ctx, request.(UnbanServerMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnbanServerMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnbanServerMemberResponseObject); ok {
+		if err := validResponse.VisitUnbanServerMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BanServerMember operation middleware
+func (sh *strictHandler) BanServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID) {
+	var request BanServerMemberRequestObject
+
+	request.ServerId = serverId
+	request.UserId = userId
+
+	var body BanServerMemberJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BanServerMember(ctx, request.(BanServerMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BanServerMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BanServerMemberResponseObject); ok {
+		if err := validResponse.VisitBanServerMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // OrderServerChannels operation middleware
 func (sh *strictHandler) OrderServerChannels(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
 	var request OrderServerChannelsRequestObject
@@ -19385,6 +20382,34 @@ func (sh *strictHandler) SendChannelMessage(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SendChannelMessageResponseObject); ok {
 		if err := validResponse.VisitSendChannelMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteChannelMessage operation middleware
+func (sh *strictHandler) DeleteChannelMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, messageId openapi_types.UUID) {
+	var request DeleteChannelMessageRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteChannelMessage(ctx, request.(DeleteChannelMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteChannelMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteChannelMessageResponseObject); ok {
+		if err := validResponse.VisitDeleteChannelMessageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -19877,6 +20902,40 @@ func (sh *strictHandler) LeaveServer(w http.ResponseWriter, r *http.Request, ser
 	}
 }
 
+// KickServerMember operation middleware
+func (sh *strictHandler) KickServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID) {
+	var request KickServerMemberRequestObject
+
+	request.ServerId = serverId
+	request.UserId = userId
+
+	var body KickServerMemberJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.KickServerMember(ctx, request.(KickServerMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "KickServerMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(KickServerMemberResponseObject); ok {
+		if err := validResponse.VisitKickServerMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // TakeServerRole operation middleware
 func (sh *strictHandler) TakeServerRole(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID, roleId openapi_types.UUID) {
 	var request TakeServerRoleRequestObject
@@ -19926,6 +20985,67 @@ func (sh *strictHandler) GiveServerRole(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GiveServerRoleResponseObject); ok {
 		if err := validResponse.VisitGiveServerRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EndServerMemberTimeout operation middleware
+func (sh *strictHandler) EndServerMemberTimeout(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID) {
+	var request EndServerMemberTimeoutRequestObject
+
+	request.ServerId = serverId
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.EndServerMemberTimeout(ctx, request.(EndServerMemberTimeoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EndServerMemberTimeout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(EndServerMemberTimeoutResponseObject); ok {
+		if err := validResponse.VisitEndServerMemberTimeoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TimeoutServerMember operation middleware
+func (sh *strictHandler) TimeoutServerMember(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, userId openapi_types.UUID) {
+	var request TimeoutServerMemberRequestObject
+
+	request.ServerId = serverId
+	request.UserId = userId
+
+	var body TimeoutServerMemberJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TimeoutServerMember(ctx, request.(TimeoutServerMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TimeoutServerMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TimeoutServerMemberResponseObject); ok {
+		if err := validResponse.VisitTimeoutServerMemberResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

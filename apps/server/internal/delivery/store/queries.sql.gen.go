@@ -342,8 +342,8 @@ func (q *Queries) InsertArchive(ctx context.Context, arg InsertArchiveParams) er
 }
 
 const insertMessage = `-- name: InsertMessage :one
-INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id, thread_root_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id, thread_root_id, message_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id
 `
 
@@ -356,6 +356,7 @@ type InsertMessageParams struct {
 	CreatedAt      time.Time
 	ChannelID      *uuid.UUID
 	ThreadRootID   *uuid.UUID
+	MessageID      *uuid.UUID
 }
 
 func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (int64, error) {
@@ -368,6 +369,7 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (i
 		arg.CreatedAt,
 		arg.ChannelID,
 		arg.ThreadRootID,
+		arg.MessageID,
 	)
 	var id int64
 	err := row.Scan(&id)

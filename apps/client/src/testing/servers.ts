@@ -77,9 +77,10 @@ export function answerServer(server: FakeServer, details: ServerDetails = bookCl
   server.answer(`GET /api/v1/servers/${details.server.id}/members`, { status: 200, body: bookClubMembers });
 }
 
-/** Ada's and Grace's messengers, both in Book club's audience group. */
-export async function messengersInServer(): Promise<{ ada: Messenger; grace: Messenger }> {
-  const instance = new FakeInstance();
+/** Ada's and Grace's messengers, both in Book club's audience group, on `instance`. */
+export async function messengersInServer(
+  instance = new FakeInstance(),
+): Promise<{ ada: Messenger; grace: Messenger }> {
   instance.addChannel(general, audienceId);
   const adaMessenger = await readyMessenger(instance, ada, "ada-laptop");
   const graceMessenger = await readyMessenger(instance, grace, "grace-phone");

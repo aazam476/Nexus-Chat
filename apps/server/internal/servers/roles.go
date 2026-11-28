@@ -226,6 +226,8 @@ type Member struct {
 	AvatarID    *uuid.UUID
 	JoinedAt    time.Time
 	RoleIDs     []uuid.UUID
+	// TimedOutUntil is set while a timeout lasts.
+	TimedOutUntil *time.Time
 }
 
 // Members lists the server's members to another member.
@@ -249,8 +251,16 @@ func (service *Service) Members(ctx context.Context, scope Scope) ([]Member, err
 	for _, row := range rows {
 		members = append(members, Member{
 			UserID: row.UserID, Username: row.Username, DisplayName: row.DisplayName, AvatarID: row.AvatarID,
-			JoinedAt: row.JoinedAt, RoleIDs: append([]uuid.UUID{}, roles[row.UserID]...),
+			JoinedAt: row.JoinedAt, RoleIDs: append([]uuid.UUID{}, roles[row.UserID]...), TimedOutUntil: service.lasting(row.TimedOutUntil),
 		})
 	}
 	return members, nil
+}
+
+// lasting is a timeout's end while it lasts, and nil after.
+func (service *Service) lasting(until *time.Time) *time.Time {
+	if until == nil || !until.After(service.clock.Now()) {
+		return nil
+	}
+	return until
 }

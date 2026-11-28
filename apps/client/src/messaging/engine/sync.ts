@@ -17,17 +17,16 @@ import {
   saveGroup,
   userOf,
   decodeDeviceCredential,
-  verifyDirective,
   type Group,
 } from "@nexus-chat/crypto";
 
 import { decodePayload, type Payload } from "../payload";
 import type { DeliveredMessage } from "./api";
-import { fromBase64 } from "./bytes";
 import { loadState, saveState, type EngineContext } from "./context";
 import { noteHistoryKey, saveHistoryKeys } from "./archive";
 import { forgetMember, heldMembers } from "./device";
 import { storeMessages } from "./history";
+import { readDirective, removalOf, type Directive, type Removal } from "./moderation";
 
 /** A decrypted message, ready for the conversation view. */
 export interface DecryptedMessage {
@@ -54,6 +53,8 @@ export interface AudienceHooks {
   received(plaintext: Uint8Array, message: DeliveredMessage, sender: string, out: DecryptedMessage[]): void;
   /** Hears that a commit moved the group from `before` to `after`. */
   committed(before: Group, after: Group): void;
+  /** Hears that a moderator removed messages, which the pass must drop. */
+  removed(removal: Removal): void;
   /** Notes the history keys of the group's current epoch. */
   noteKeys(group: Group): Promise<void>;
   /** Keeps what the pass decrypted and learned, and returns the group as it then is. */
@@ -101,19 +102,8 @@ async function decrypt(pass: Pass, group: Group, message: DeliveredMessage): Pro
   return received.group;
 }
 
-/** The user a validly signed removal directive removes, or undefined. */
-async function directiveTarget(context: EngineContext, data: Uint8Array): Promise<string | undefined> {
-  const signed = JSON.parse(new TextDecoder().decode(data)) as { directive?: string; signature?: string };
-  const directive = fromBase64(signed.directive ?? "");
-  if (!(await verifyDirective(context.instanceKey, directive, fromBase64(signed.signature ?? "")))) {
-    return undefined;
-  }
-  const parsed = JSON.parse(new TextDecoder().decode(directive)) as { type?: string; userId?: string };
-  return parsed.type === "remove" ? parsed.userId : undefined;
-}
-
 /** The user ID behind a device address, through the conversation's members. */
-function userIdOf(context: EngineContext, address: string | undefined): string | undefined {
+export function userIdOf(context: EngineContext, address: string | undefined): string | undefined {
   const user = address === undefined ? undefined : userOf(address);
   return user === undefined ? undefined : context.userOfAddress(user);
 }
@@ -149,9 +139,9 @@ async function applyDirective(
   context: EngineContext,
   conversationId: string,
   group: Group,
-  data: Uint8Array,
+  directive: Directive,
 ): Promise<Group | undefined> {
-  const target = await directiveTarget(context, data).catch(() => undefined);
+  const target = directive.type === "remove" ? directive.userId : undefined;
   if (target === undefined) {
     return group;
   }
@@ -201,8 +191,15 @@ async function apply(
     }
     case "application":
       return decrypt(pass, group, message);
-    case "directive":
-      return applyDirective(context, conversationId, group, message.data);
+    case "directive": {
+      const directive = await readDirective(context, message.data).catch(() => undefined);
+      const removal = removalOf(directive);
+      if (removal !== undefined) {
+        pass.audience?.removed(removal);
+        return group;
+      }
+      return directive === undefined ? group : applyDirective(context, conversationId, group, directive);
+    }
     default:
       return group;
   }

@@ -39,6 +39,8 @@ export class FakeInstance {
   messages = new Map<string, DeliveredMessage[]>();
   /** Archive copies per conversation, oldest first. */
   archives = new Map<string, StoredArchive[]>();
+  /** The instance's public key, which signs directives; zeros unless a test signs some. */
+  instanceKey = new Uint8Array(32);
   /** The last time a message was stamped with. */
   private lastStamp = 0;
 

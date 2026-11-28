@@ -154,6 +154,13 @@ leaf). MLS handles this with standard mechanisms:
   device is online. Until the commit lands, the server stops delivering
   anything to the removed devices and refuses their sends, so they gain
   nothing from the delay.
+- **Moderator deletions** (spec §4.7). A moderator deletes a channel message
+  by deleting its ciphertext on the server, and a ban can delete what the
+  member sent in the last 7 days. The server then signs a directive with the
+  same key and label: `{type: "delete", groupId, channelId, messageId,
+userId}` or `{type: "purge", groupId, userId, since}`. Devices drop the
+  decrypted copies, and their search index entries, only for directives the
+  instance signed, so a member cannot make others forget messages.
 - **Authorization of commits (application policy, RFC 9420 §12.1.8 and
   §13.4 leave this to the application).** Clients reject a commit that
   removes another user's leaf unless a valid directive backs it, so one

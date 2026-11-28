@@ -16,10 +16,17 @@ type grants struct {
 	err      error
 	asked    []ChannelRef
 	channels []uuid.UUID
+	deleted  []DeletedMessage
+	auditErr error
 }
 
 func (fake *grants) TextChannels(context.Context, uuid.UUID, uuid.UUID) ([]uuid.UUID, error) {
 	return fake.channels, fake.err
+}
+
+func (fake *grants) MessageDeleted(_ context.Context, _ ChannelRef, deleted DeletedMessage) error {
+	fake.deleted = append(fake.deleted, deleted)
+	return fake.auditErr
 }
 
 func (fake *grants) ChannelGrant(_ context.Context, ref ChannelRef) (ChannelGrant, error) {

@@ -138,3 +138,16 @@ export async function indexMessages(
   }
   await pass.finish();
 }
+
+/** Takes messages out of the index, as a moderator's deletion asks. */
+export async function unindexMessages(database: LocalDatabase, messageIds: readonly string[]): Promise<void> {
+  const pass = new Pass(database);
+  for (const id of messageIds) {
+    const key = await locationOf(database, id);
+    if (key !== undefined) {
+      removeDoc(await pass.chunk(key), id);
+      await setLocation(database, id, undefined);
+    }
+  }
+  await pass.finish();
+}

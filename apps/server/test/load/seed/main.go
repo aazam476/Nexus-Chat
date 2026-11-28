@@ -145,3 +145,7 @@ type quiet struct{}
 func (quiet) ServerChanged(context.Context, []uuid.UUID, uuid.UUID) {}
 
 func (quiet) MemberLeft(context.Context, uuid.UUID, uuid.UUID) error { return nil }
+
+func (quiet) PurgeMessages(context.Context, []uuid.UUID, uuid.UUID, time.Time) (int64, error) {
+	return 0, nil
+}

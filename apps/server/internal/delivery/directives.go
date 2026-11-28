@@ -16,15 +16,31 @@ import (
 // instance key signs.
 const directiveLabel = "nexus-chat membership directive v1\n"
 
+// Kinds of directive.
+const (
+	// DirectiveRemove tells members to commit a user's removal.
+	DirectiveRemove = "remove"
+	// DirectiveDelete tells members that a moderator deleted a message.
+	DirectiveDelete = "delete"
+	// DirectivePurge tells members that a user's messages since a time were deleted.
+	DirectivePurge = "purge"
+)
+
 // Directive tells members' devices to commit a removal (docs/e2ee-design.md
-// §3.2). Devices check the signature with the instance's published key and
-// reject removals of other users that no directive backs.
+// §3.2), or that a moderator deleted messages (spec §4.7). Devices check
+// the signature with the instance's published key and reject removals of
+// other users, and deletions, that no directive backs.
 type Directive struct {
 	Type     string    `json:"type"`
 	GroupID  []byte    `json:"groupId"`
 	UserID   uuid.UUID `json:"userId"`
 	Reason   string    `json:"reason"`
 	IssuedAt time.Time `json:"issuedAt"`
+	// MessageID and ChannelID name a deleted message.
+	MessageID *uuid.UUID `json:"messageId,omitempty"`
+	ChannelID *uuid.UUID `json:"channelId,omitempty"`
+	// Since is when a purge's messages start.
+	Since *time.Time `json:"since,omitempty"`
 }
 
 // SignedDirective is what is stored and delivered: the directive's exact
@@ -51,13 +67,18 @@ func VerifyDirective(key ed25519.PublicKey, signed SignedDirective) bool {
 // MemberLeft publishes a directive removing userID's devices from the
 // conversation's group. It implements conversations.MembershipListener.
 func (service *Service) MemberLeft(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) error {
+	return service.publish(ctx, conversationID, Directive{Type: DirectiveRemove, UserID: userID, Reason: "left"})
+}
+
+// publish signs a directive for the conversation's group, in its current
+// epoch, and delivers it to the members.
+func (service *Service) publish(ctx context.Context, conversationID uuid.UUID, directive Directive) error {
 	group, err := service.state(ctx, conversationID)
 	if err != nil {
 		return err
 	}
-	signed, err := SignDirective(service.dependencies.DirectiveKey, Directive{
-		Type: "remove", GroupID: group.GroupID, UserID: userID, Reason: "left", IssuedAt: service.dependencies.Clock.Now(),
-	})
+	directive.GroupID, directive.IssuedAt = group.GroupID, service.dependencies.Clock.Now()
+	signed, err := SignDirective(service.dependencies.DirectiveKey, directive)
 	if err != nil {
 		return err
 	}

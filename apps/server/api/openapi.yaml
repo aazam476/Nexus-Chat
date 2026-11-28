@@ -3085,6 +3085,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteChannelMessage
+      summary: Delete someone's message from a channel (MANAGE_MESSAGES)
+      description: |
+        Deletes the message's ciphertext from the server, and tells members'
+        devices with a signed directive, so they drop it. Senders delete
+        their own messages with an encrypted deletion instead.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_MESSAGES in the channel (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such channel you can see (`channel_not_found`), or no such message in it (`message_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/servers/{serverId}/channels/{channelId}/archive:
     parameters:
       - name: serverId
@@ -3564,6 +3613,257 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           description: A name, description or topic out of range or a bad parent (`invalid`), an order that does not list everything once (`bad_order`), an unknown permission (`unknown_permission`), or the owner leaving (`owner_cannot_leave`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/members/{userId}/kick:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: kickServerMember
+      summary: Take a member out of the server (KICK_MEMBERS)
+      description: They may join again with an invite.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sanction"
+      responses:
+        "204":
+          description: Kicked.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: The reason is over 512 characters (`invalid_sanction`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/members/{userId}/timeout:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: timeoutServerMember
+      summary: Time a member out (TIMEOUT_MEMBERS)
+      description: |
+        For 60 seconds to 28 days they can read but not send, react, start
+        threads, speak or join calls. Setting it again replaces the end.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeoutSpec"
+      responses:
+        "204":
+          description: Timed out.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: The length is outside 60 seconds to 28 days (`invalid_timeout`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: endServerMemberTimeout
+      summary: Lift a member's timeout (TIMEOUT_MEMBERS)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Lifted, or there was none.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/bans:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listServerBans
+      summary: Who is banned from the server (BAN_MEMBERS)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The bans, most recent first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerBan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack BAN_MEMBERS (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/bans/{userId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: banServerMember
+      summary: Ban someone from the server (BAN_MEMBERS)
+      description: |
+        Takes them out if they are a member, and keeps them from joining
+        until unbanned. `deleteMessageSeconds` (up to 7 days) also deletes
+        what they sent to the server's channels in that time, for everyone.
+        Someone who is not a member can be banned too.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BanSpec"
+      responses:
+        "204":
+          description: Banned; banning again replaces the reason.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack the permission this needs, or the member is the owner, yourself, or at or above your highest role (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or no such member or user (`member_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: The reason is over 512 characters, or more than 7 days of messages were asked to go (`invalid_sanction`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: unbanServerMember
+      summary: Lift a ban (BAN_MEMBERS)
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: They may join again.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack BAN_MEMBERS (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`); or that user is not banned (`not_banned`).
           content:
             application/json:
               schema:
@@ -4903,6 +5203,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You are banned from the server (`banned`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: No such invite, or it expired or was used up (`invite_invalid`).
           content:
@@ -5026,6 +5332,54 @@ components:
     ServerChannelKind:
       type: string
       enum: [category, text, voice]
+    Sanction:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+    BanSpec:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+        deleteMessageSeconds:
+          type: integer
+          minimum: 0
+          maximum: 604800
+          default: 0
+    TimeoutSpec:
+      type: object
+      required: [seconds]
+      properties:
+        seconds:
+          type: integer
+          minimum: 60
+          maximum: 2419200
+    ServerBan:
+      type: object
+      required: [user, reason, createdAt]
+      properties:
+        user:
+          type: object
+          required: [id, username, displayName]
+          properties:
+            id:
+              type: string
+              format: uuid
+            username:
+              type: string
+            displayName:
+              type: string
+        bannedBy:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     AuditEntry:
       type: object
       required: [id, action, details, createdAt]
@@ -5273,6 +5627,10 @@ components:
         joinedAt:
           type: string
           format: date-time
+        timedOutUntil:
+          type: string
+          format: date-time
+          description: While a timeout lasts, when it ends.
         roleIds:
           type: array
           items:

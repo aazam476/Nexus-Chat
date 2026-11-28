@@ -90,6 +90,9 @@ func (handler *Handler) JoinServer(ctx context.Context, request api.JoinServerRe
 	if errors.Is(err, ErrInviteInvalid) {
 		return api.JoinServer404JSONResponse(apiresponse.Error("invite_invalid", err)), nil
 	}
+	if errors.Is(err, ErrBanned) {
+		return api.JoinServer403JSONResponse(apiresponse.Error("banned", err)), nil
+	}
 	if err != nil {
 		return nil, err
 	}

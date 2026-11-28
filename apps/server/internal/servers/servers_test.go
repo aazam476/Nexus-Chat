@@ -60,7 +60,21 @@ type removal struct {
 type leaves struct {
 	mutex    sync.Mutex
 	removals []removal
+	purges   []purge
 	fail     error
+}
+
+type purge struct {
+	audienceIDs []uuid.UUID
+	userID      uuid.UUID
+	since       time.Time
+}
+
+func (fake *leaves) PurgeMessages(_ context.Context, audienceIDs []uuid.UUID, userID uuid.UUID, since time.Time) (int64, error) {
+	fake.mutex.Lock()
+	defer fake.mutex.Unlock()
+	fake.purges = append(fake.purges, purge{audienceIDs: audienceIDs, userID: userID, since: since})
+	return int64(len(audienceIDs)), fake.fail
 }
 
 func (fake *leaves) MemberLeft(_ context.Context, audienceID uuid.UUID, userID uuid.UUID) error {

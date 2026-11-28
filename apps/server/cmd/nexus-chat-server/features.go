@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -145,6 +146,11 @@ type leaveForwarder struct {
 // servers.AudienceListener.
 func (forwarder *leaveForwarder) MemberLeft(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) error {
 	return forwarder.delivery.MemberLeft(ctx, conversationID, userID)
+}
+
+// PurgeMessages implements servers.AudienceListener.
+func (forwarder *leaveForwarder) PurgeMessages(ctx context.Context, audienceIDs []uuid.UUID, userID uuid.UUID, since time.Time) (int64, error) {
+	return forwarder.delivery.PurgeMessages(ctx, audienceIDs, userID, since)
 }
 
 // typingForwarder answers the gateway's typing questions from the

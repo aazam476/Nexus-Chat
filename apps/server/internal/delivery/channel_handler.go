@@ -128,3 +128,23 @@ func (handler *Handler) ListChannelReadStates(ctx context.Context, request api.L
 	}
 	return out, nil
 }
+
+// DeleteChannelMessage answers DELETE /api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId}.
+func (handler *Handler) DeleteChannelMessage(ctx context.Context, request api.DeleteChannelMessageRequestObject) (api.DeleteChannelMessageResponseObject, error) {
+	me, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = handler.service.DeleteChannelMessage(ctx, ChannelRef{ServerID: request.ServerId, ChannelID: request.ChannelId, UserID: me}, request.MessageId)
+	switch {
+	case errors.Is(err, ErrNotAllowed):
+		return api.DeleteChannelMessage403JSONResponse(apiresponse.Error("missing_permission", err)), nil
+	case errors.Is(err, ErrNotFound):
+		return api.DeleteChannelMessage404JSONResponse(channelNotFound(err)), nil
+	case errors.Is(err, ErrNoMessage):
+		return api.DeleteChannelMessage404JSONResponse(apiresponse.Error("message_not_found", err)), nil
+	case err != nil:
+		return nil, err
+	}
+	return api.DeleteChannelMessage204Response{}, nil
+}

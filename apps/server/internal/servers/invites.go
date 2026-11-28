@@ -204,6 +204,13 @@ func (service *Service) Join(ctx context.Context, code string, userID uuid.UUID)
 	if _, err := service.load(ctx, Scope{ServerID: invite.ServerID, UserID: userID}); err == nil {
 		return invite.ServerID, nil
 	}
+	banned, err := service.store.IsBanned(ctx, store.IsBannedParams{ServerID: invite.ServerID, UserID: userID})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if banned {
+		return uuid.Nil, ErrBanned
+	}
 	serverID, err := service.store.UseInvite(ctx, store.UseInviteParams{Code: code, Now: service.clock.Now()})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, ErrInviteInvalid

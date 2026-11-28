@@ -29,7 +29,8 @@ import { keptHistoryKeys, saveHistoryKeys } from "./archive";
 import { fromBase64, toBase64, utf8 } from "./bytes";
 import type { EngineContext } from "./context";
 import { storeMessages } from "./history";
-import { memberUsers, syncConversation, type AudienceHooks, type DecryptedMessage } from "./sync";
+import { applyRemovals, removes, type Removal } from "./moderation";
+import { memberUsers, syncConversation, userIdOf, type AudienceHooks, type DecryptedMessage } from "./sync";
 
 /** A server audience as this device sees it. */
 export interface Audience {
@@ -68,6 +69,7 @@ class AudienceSync implements AudienceHooks {
   private readonly keys = new Map<string, Record<string, string>>();
   private readonly owed = new Set<string>();
   private readonly bundled = new Set<string>();
+  private readonly removals: Removal[] = [];
 
   constructor(
     private readonly context: EngineContext,
@@ -130,13 +132,21 @@ class AudienceSync implements AudienceHooks {
     }
   }
 
+  removed(removal: Removal): void {
+    this.removals.push(removal);
+  }
+
   async finish(group: Group | undefined, out: DecryptedMessage[]): Promise<Group | undefined> {
+    const userOf = (sender: string): string | undefined => userIdOf(this.context, sender);
     for (const [channelId, noted] of this.keys) {
-      await storeMessages(
-        this.context,
-        channelId,
-        out.filter((message) => message.channelId === channelId),
+      // What arrived before a removal in this pass goes with it.
+      const kept = out.filter(
+        (message) =>
+          message.channelId === channelId &&
+          !this.removals.some((removal) => removes(removal, channelId, message, userOf)),
       );
+      await storeMessages(this.context, channelId, kept);
+      await applyRemovals(this.context, channelId, this.removals, userOf);
       await saveHistoryKeys(this.context, channelKeysId(channelId), noted);
     }
     let current = group;

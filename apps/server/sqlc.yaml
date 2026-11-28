@@ -119,7 +119,7 @@ sql:
         out: internal/conversations/store
   - engine: postgresql
     schema: internal/platform/database/migrations
-    queries: internal/delivery/store/queries.sql
+    queries: [internal/delivery/store/queries.sql, internal/delivery/store/moderation.sql]
     gen:
       go:
         <<: *go-options

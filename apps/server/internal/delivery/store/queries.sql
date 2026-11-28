@@ -13,8 +13,8 @@ WHERE conversation_id = sqlc.arg(conversation_id) AND epoch = sqlc.arg(expected_
 RETURNING epoch;
 
 -- name: InsertMessage :one
-INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id, thread_root_id)
-VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id), sqlc.narg(thread_root_id))
+INSERT INTO mls_messages (conversation_id, kind, epoch, sender_id, data, created_at, channel_id, thread_root_id, message_id)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(channel_id), sqlc.narg(thread_root_id), sqlc.narg(message_id))
 RETURNING id;
 
 -- name: MessagesAfter :many

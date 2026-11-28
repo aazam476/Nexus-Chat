@@ -117,7 +117,7 @@ func (writer *Writer) Send(ctx context.Context, params SendParams) (int64, error
 		}
 		id, err = queries.InsertMessage(ctx, InsertMessageParams{
 			ConversationID: params.ConversationID, Kind: "application", Epoch: params.Epoch, SenderID: &params.SenderID, Data: params.Message, CreatedAt: params.Now,
-			ChannelID: params.ChannelID, ThreadRootID: root,
+			ChannelID: params.ChannelID, ThreadRootID: root, MessageID: params.ArchiveID,
 		})
 		if err != nil || params.ArchiveID == nil {
 			return err

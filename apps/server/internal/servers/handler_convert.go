@@ -62,7 +62,7 @@ func memberResponse(member Member) api.ServerMember {
 			Id: member.UserID, Username: member.Username, DisplayName: member.DisplayName,
 			AvatarUrl: apiresponse.AvatarPath(member.AvatarID),
 		},
-		JoinedAt: member.JoinedAt, RoleIds: nonNil(member.RoleIDs),
+		JoinedAt: member.JoinedAt, RoleIds: nonNil(member.RoleIDs), TimedOutUntil: member.TimedOutUntil,
 	}
 }
 

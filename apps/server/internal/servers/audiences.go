@@ -25,6 +25,8 @@ import (
 // delivery service implements it by publishing a removal directive.
 type AudienceListener interface {
 	MemberLeft(ctx context.Context, audienceID uuid.UUID, userID uuid.UUID) error
+	// PurgeMessages deletes what userID sent to the audiences since a time.
+	PurgeMessages(ctx context.Context, audienceIDs []uuid.UUID, userID uuid.UUID, since time.Time) (int64, error)
 }
 
 // audienceIdentity is a new audience's conversation ID and MLS group ID.
