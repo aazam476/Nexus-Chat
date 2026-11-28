@@ -13,6 +13,27 @@ export type OverrideTargetKind = 'role' | 'member';
 
 export type ServerChannelKind = 'category' | 'text' | 'voice';
 
+export type AuditEntry = {
+    id: number;
+    /**
+     * Absent once the actor's account is gone.
+     */
+    actorId?: string;
+    /**
+     * For example `channel.create`, `member.ban` or `role.update`.
+     */
+    action: string;
+    targetKind?: 'server' | 'channel' | 'role' | 'member' | 'invite' | 'emoji' | 'message' | 'report';
+    targetId?: string;
+    /**
+     * What the action changed. Never message content.
+     */
+    details: {
+        [key: string]: unknown;
+    };
+    createdAt: string;
+};
+
 export type NameSearchResults = {
     servers: Array<FoundServer>;
     channels: Array<FoundChannel>;
@@ -5630,6 +5651,54 @@ export type OrderServerRolesResponses = {
 };
 
 export type OrderServerRolesResponse = OrderServerRolesResponses[keyof OrderServerRolesResponses];
+
+export type ListServerAuditLogData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: {
+        /**
+         * The ID of the oldest entry already shown, for the next page.
+         */
+        before?: number;
+        actorId?: string;
+        action?: string;
+        targetId?: string;
+        limit?: number;
+    };
+    url: '/api/v1/servers/{serverId}/audit-log';
+};
+
+export type ListServerAuditLogErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack VIEW_AUDIT_LOG (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type ListServerAuditLogError = ListServerAuditLogErrors[keyof ListServerAuditLogErrors];
+
+export type ListServerAuditLogResponses = {
+    /**
+     * The entries, newest first.
+     */
+    200: Array<AuditEntry>;
+};
+
+export type ListServerAuditLogResponse = ListServerAuditLogResponses[keyof ListServerAuditLogResponses];
 
 export type ListServerInvitesData = {
     body?: never;

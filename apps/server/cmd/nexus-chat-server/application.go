@@ -49,6 +49,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
 	registrationstore "github.com/aazam476/nexus-chat/apps/server/internal/registration/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/secrets"
+	"github.com/aazam476/nexus-chat/apps/server/internal/servers"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
 	setupstore "github.com/aazam476/nexus-chat/apps/server/internal/setup/store"
 	"github.com/aazam476/nexus-chat/apps/server/internal/tlsconfig"
@@ -64,6 +65,9 @@ const shutdownTimeout = 8 * time.Second
 // checked for changes and the certificate for upcoming expiry.
 const certificateCheckInterval = 30 * time.Second
 
+// auditPruneInterval is how often audit entries past their retention are deleted.
+const auditPruneInterval = time.Hour
+
 // application holds every long-lived dependency of the running server.
 type application struct {
 	logger       *slog.Logger
@@ -77,6 +81,8 @@ type application struct {
 	gateway      *realtime.Gateway
 	// typing reaches the conversations feature, built after the gateway.
 	typing *typingForwarder
+	// serverService is kept to prune its audit log.
+	serverService *servers.Service
 }
 
 // newApplication prepares everything the server needs before it accepts
@@ -314,6 +320,7 @@ func (app *application) serve(ctx context.Context, sockets listeners) error {
 	// Watch and Run stop when ctx is cancelled.
 	go app.certificates.Watch(ctx, certificateCheckInterval)
 	go realtime.NewSweeper(app.hub, accountsstore.New(app.pool), app.logger).Run(ctx, realtime.SweepInterval())
+	go servers.AuditPruner{Service: app.serverService, Logger: app.logger}.Run(ctx, auditPruneInterval)
 
 	var failure error
 	select {

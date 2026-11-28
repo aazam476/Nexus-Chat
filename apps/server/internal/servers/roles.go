@@ -76,7 +76,8 @@ func (service *Service) CreateRole(ctx context.Context, scope Scope, spec RoleSp
 	if err := service.store.OrderRoles(ctx, order); err != nil {
 		return uuid.Nil, err
 	}
-	return id, service.notify(ctx, scope.ServerID)
+	created := event(ActionRoleCreate, TargetKindRole, id, map[string]any{"name": name, "permissions": spec.Permissions.Strings()})
+	return id, service.logged(ctx, scope, created, service.notify(ctx, scope.ServerID))
 }
 
 // UpdateRole changes a role below the member's highest; @everyone counts
@@ -104,7 +105,8 @@ func (service *Service) UpdateRole(ctx context.Context, scope Scope, roleID uuid
 	if err := service.store.UpdateRole(ctx, store.UpdateRoleParams{ID: roleID, Name: name, Color: spec.Color, Permissions: int64(spec.Permissions)}); err != nil { //nolint:gosec // permissions use 27 bits
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	updated := event(ActionRoleUpdate, TargetKindRole, roleID, map[string]any{"name": name, "permissions": spec.Permissions.Strings()})
+	return service.logged(ctx, scope, updated, service.notify(ctx, scope.ServerID))
 }
 
 // DeleteRole removes a role below the member's highest; @everyone stays (MANAGE_ROLES).
@@ -123,7 +125,8 @@ func (service *Service) DeleteRole(ctx context.Context, scope Scope, roleID uuid
 	if err := service.store.DeleteRole(ctx, roleID); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	deleted := event(ActionRoleDelete, TargetKindRole, roleID, map[string]any{"name": role.Name})
+	return service.logged(ctx, scope, deleted, service.notify(ctx, scope.ServerID))
 }
 
 // OrderRoles sets the order of the roles, lowest first, @everyone left
@@ -153,7 +156,7 @@ func (service *Service) OrderRoles(ctx context.Context, scope Scope, order []uui
 	if err := service.store.OrderRoles(ctx, order); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	return service.logged(ctx, scope, auditEvent{action: ActionRoleOrder}, service.notify(ctx, scope.ServerID))
 }
 
 // samePeople reports whether two lists hold the same IDs, each once.
@@ -207,7 +210,12 @@ func (service *Service) SetMemberRole(ctx context.Context, scope Scope, change R
 	if err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	action := ActionMemberRoleTake
+	if give {
+		action = ActionMemberRoleGive
+	}
+	changed := event(action, TargetKindMember, targetID, map[string]any{"roleId": roleID, "role": role.Name})
+	return service.logged(ctx, scope, changed, service.notify(ctx, scope.ServerID))
 }
 
 // Member is someone in a server, with their roles.

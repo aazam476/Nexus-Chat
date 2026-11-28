@@ -133,7 +133,7 @@ sql:
         out: internal/attachments/store
   - engine: postgresql
     schema: internal/platform/database/migrations
-    queries: internal/servers/store/queries.sql
+    queries: [internal/servers/store/queries.sql, internal/servers/store/moderation.sql]
     gen:
       go:
         <<: *go-options

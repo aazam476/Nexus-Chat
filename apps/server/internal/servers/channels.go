@@ -65,7 +65,8 @@ func (service *Service) CreateChannel(ctx context.Context, scope Scope, spec New
 	if err := service.store.InsertChannel(ctx, params); err != nil {
 		return uuid.Nil, err
 	}
-	return params.ID, service.notify(ctx, scope.ServerID)
+	created := event(ActionChannelCreate, TargetKindChannel, params.ID, map[string]any{"name": name, "kind": spec.Kind})
+	return params.ID, service.logged(ctx, scope, created, service.notify(ctx, scope.ServerID))
 }
 
 // checkNewChannel validates a channel to create and returns its clean name.
@@ -107,7 +108,8 @@ func (service *Service) UpdateChannel(ctx context.Context, scope Scope, channelI
 	if err := service.store.UpdateChannel(ctx, store.UpdateChannelParams{ID: channelID, Name: name, Topic: topic}); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	updated := event(ActionChannelUpdate, TargetKindChannel, channelID, map[string]any{"name": name, "topic": topic})
+	return service.logged(ctx, scope, updated, service.notify(ctx, scope.ServerID))
 }
 
 // DeleteChannel removes a channel; a category's channels stay, uncategorized (MANAGE_CHANNELS).
@@ -115,13 +117,15 @@ func (service *Service) DeleteChannel(ctx context.Context, scope Scope, channelI
 	if _, err := service.managing(ctx, scope); err != nil {
 		return err
 	}
-	if _, err := service.channelIn(ctx, scope.ServerID, channelID); err != nil {
+	channel, err := service.channelIn(ctx, scope.ServerID, channelID)
+	if err != nil {
 		return err
 	}
 	if err := service.store.DeleteChannel(ctx, channelID); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	deleted := event(ActionChannelDelete, TargetKindChannel, channelID, map[string]any{"name": channel.Name, "kind": channel.Kind})
+	return service.logged(ctx, scope, deleted, service.notify(ctx, scope.ServerID))
 }
 
 // Placement is where one channel goes: in which category, if any.
@@ -155,7 +159,7 @@ func (service *Service) OrderChannels(ctx context.Context, scope Scope, order []
 	if err := service.store.MoveChannels(ctx, moves); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	return service.logged(ctx, scope, auditEvent{action: ActionChannelOrder}, service.notify(ctx, scope.ServerID))
 }
 
 // placements checks that order lists every channel once, in categories
@@ -218,7 +222,10 @@ func (service *Service) SetOverride(ctx context.Context, scope Scope, channelID 
 	}); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	set := event(ActionOverrideSet, TargetKindChannel, channelID, map[string]any{
+		"targetKind": override.TargetKind, "targetId": override.TargetID, "allow": override.Allow.Strings(), "deny": override.Deny.Strings(),
+	})
+	return service.logged(ctx, scope, set, service.notify(ctx, scope.ServerID))
 }
 
 // ClearOverride removes a channel's override for a role or member (MANAGE_CHANNELS).
@@ -232,7 +239,8 @@ func (service *Service) ClearOverride(ctx context.Context, scope Scope, channelI
 	if err := service.store.DeleteOverride(ctx, store.DeleteOverrideParams{ChannelID: channelID, TargetKind: target.Kind, TargetID: target.ID}); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	cleared := event(ActionOverrideClear, TargetKindChannel, channelID, map[string]any{"targetKind": target.Kind, "targetId": target.ID})
+	return service.logged(ctx, scope, cleared, service.notify(ctx, scope.ServerID))
 }
 
 // validTarget checks that an override's role or member belongs to the server.

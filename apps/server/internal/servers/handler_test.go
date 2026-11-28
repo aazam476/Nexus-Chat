@@ -45,6 +45,7 @@ func calls(ctx context.Context, handler *Handler, serverID uuid.UUID) []error {
 	add(handler.DeleteServerRole(ctx, api.DeleteServerRoleRequestObject{ServerId: serverID, RoleId: id}))
 	add(handler.OrderServerRoles(ctx, api.OrderServerRolesRequestObject{ServerId: serverID, Body: &api.RoleOrder{RoleIds: []uuid.UUID{}}}))
 	add(handler.ListServerInvites(ctx, api.ListServerInvitesRequestObject{ServerId: serverID}))
+	add(handler.ListServerAuditLog(ctx, api.ListServerAuditLogRequestObject{ServerId: serverID}))
 	add(handler.CreateServerInvite(ctx, api.CreateServerInviteRequestObject{ServerId: serverID, Body: &api.NewServerInvite{}}))
 	add(handler.RevokeServerInvite(ctx, api.RevokeServerInviteRequestObject{ServerId: serverID, Code: "x"}))
 	add(handler.PreviewInvite(ctx, api.PreviewInviteRequestObject{Code: "x"}))

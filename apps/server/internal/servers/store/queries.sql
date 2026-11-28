@@ -189,7 +189,7 @@ INSERT INTO server_emoji (id, server_id, name, format, created_by, created_at)
 VALUES (sqlc.arg(id), sqlc.arg(server_id), sqlc.arg(name), sqlc.arg(format), sqlc.arg(created_by), sqlc.arg(created_at));
 
 -- name: DeleteServerEmoji :one
-DELETE FROM server_emoji WHERE id = sqlc.arg(id) AND server_id = sqlc.arg(server_id) RETURNING id;
+DELETE FROM server_emoji WHERE id = sqlc.arg(id) AND server_id = sqlc.arg(server_id) RETURNING name;
 
 -- name: GetServerEmojiFormat :one
 SELECT format FROM server_emoji WHERE id = $1;

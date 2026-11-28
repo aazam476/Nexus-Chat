@@ -102,7 +102,7 @@ func (service *Service) AddEmoji(ctx context.Context, scope Scope, name string, 
 		service.deleteFile(ctx, emojiKey(id))
 		return uuid.Nil, emojiStoreError(err)
 	}
-	return id, service.announce(ctx, scope.ServerID)
+	return id, service.logged(ctx, scope, event(ActionEmojiAdd, TargetKindEmoji, id, map[string]any{"name": name}), service.announce(ctx, scope.ServerID))
 }
 
 func emojiStoreError(err error) error {
@@ -124,7 +124,7 @@ func (service *Service) RemoveEmoji(ctx context.Context, scope Scope, emojiID uu
 	if err := a.require(permissions.ManageEmoji); err != nil {
 		return err
 	}
-	_, err = service.store.DeleteServerEmoji(ctx, store.DeleteServerEmojiParams{ID: emojiID, ServerID: scope.ServerID})
+	name, err := service.store.DeleteServerEmoji(ctx, store.DeleteServerEmojiParams{ID: emojiID, ServerID: scope.ServerID})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrEmojiNotFound
 	}
@@ -132,7 +132,7 @@ func (service *Service) RemoveEmoji(ctx context.Context, scope Scope, emojiID uu
 		return fmt.Errorf("deleting emoji: %w", err)
 	}
 	service.deleteFile(ctx, emojiKey(emojiID))
-	return service.announce(ctx, scope.ServerID)
+	return service.logged(ctx, scope, event(ActionEmojiRemove, TargetKindEmoji, emojiID, map[string]any{"name": name}), service.announce(ctx, scope.ServerID))
 }
 
 // OpenEmoji returns an existing emoji's picture, or ErrEmojiNotFound.

@@ -168,7 +168,7 @@ func (q *Queries) DeleteServer(ctx context.Context, id uuid.UUID) error {
 }
 
 const deleteServerEmoji = `-- name: DeleteServerEmoji :one
-DELETE FROM server_emoji WHERE id = $1 AND server_id = $2 RETURNING id
+DELETE FROM server_emoji WHERE id = $1 AND server_id = $2 RETURNING name
 `
 
 type DeleteServerEmojiParams struct {
@@ -176,11 +176,11 @@ type DeleteServerEmojiParams struct {
 	ServerID uuid.UUID
 }
 
-func (q *Queries) DeleteServerEmoji(ctx context.Context, arg DeleteServerEmojiParams) (uuid.UUID, error) {
+func (q *Queries) DeleteServerEmoji(ctx context.Context, arg DeleteServerEmojiParams) (string, error) {
 	row := q.db.QueryRow(ctx, deleteServerEmoji, arg.ID, arg.ServerID)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
+	var name string
+	err := row.Scan(&name)
+	return name, err
 }
 
 const findChannels = `-- name: FindChannels :many

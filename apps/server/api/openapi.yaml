@@ -4112,6 +4112,84 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/audit-log:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listServerAuditLog
+      summary: A server's audit log (VIEW_AUDIT_LOG)
+      description: |
+        Every moderation and configuration action of the last 90 days,
+        newest first. Filters combine; `action` also takes the first part
+        of an action (`role` for every `role.*`).
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          required: false
+          description: The ID of the oldest entry already shown, for the next page.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: actorId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: targetId
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: The entries, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack VIEW_AUDIT_LOG (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/servers/{serverId}/invites:
     parameters:
       - name: serverId
@@ -4948,6 +5026,32 @@ components:
     ServerChannelKind:
       type: string
       enum: [category, text, voice]
+    AuditEntry:
+      type: object
+      required: [id, action, details, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        actorId:
+          type: string
+          format: uuid
+          description: Absent once the actor's account is gone.
+        action:
+          type: string
+          description: For example `channel.create`, `member.ban` or `role.update`.
+        targetKind:
+          type: string
+          enum: [server, channel, role, member, invite, emoji, message, report]
+        targetId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+          description: What the action changed. Never message content.
+        createdAt:
+          type: string
+          format: date-time
     NameSearchResults:
       type: object
       required: [servers, channels, people]

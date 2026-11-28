@@ -181,7 +181,10 @@ func (service *Service) Update(ctx context.Context, scope Scope, settings Settin
 	}); err != nil {
 		return err
 	}
-	return service.notify(ctx, scope.ServerID)
+	updated := event(ActionServerUpdate, TargetKindServer, scope.ServerID, map[string]any{
+		"name": name, "description": settings.Description, "attachmentMaxBytes": settings.AttachmentMaxBytes, "compressMedia": settings.CompressMedia,
+	})
+	return service.logged(ctx, scope, updated, service.notify(ctx, scope.ServerID))
 }
 
 // Delete removes the server and everything in it; only its owner may.

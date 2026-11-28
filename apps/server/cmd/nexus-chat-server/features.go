@@ -85,6 +85,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	// them; the forwarder lets each be built with the other.
 	leaves := &leaveForwarder{}
 	serverService := app.newServers(configuration, leaves, system)
+	app.serverService = serverService
 	features.Servers = servers.NewHandler(serverService)
 	socialService := social.NewService(social.Dependencies{
 		Store: socialstore.New(app.pool), Notifier: app.hub, Servers: serverService,

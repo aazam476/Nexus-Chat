@@ -88,6 +88,10 @@ func (service *Service) CreateInvite(ctx context.Context, scope Scope, limits In
 	if err := service.store.InsertInvite(ctx, params); err != nil {
 		return Invite{}, err
 	}
+	created := auditEvent{action: ActionInviteCreate, targetKind: TargetKindInvite, targetID: inviteHint(params.Code), details: map[string]any{"maxUses": limits.MaxUses}}
+	if err := service.record(ctx, scope, created); err != nil {
+		return Invite{}, err
+	}
 	return Invite{Code: params.Code, ServerID: scope.ServerID, CreatedBy: params.CreatedBy, MaxUses: params.MaxUses, ExpiresAt: params.ExpiresAt, CreatedAt: now}, nil
 }
 
@@ -135,8 +139,19 @@ func (service *Service) RevokeInvite(ctx context.Context, scope Scope, code stri
 	if !ownInvite && a.require(permissions.ManageServer) != nil {
 		return ErrForbidden
 	}
-	_, err = service.store.DeleteInvite(ctx, store.DeleteInviteParams{Code: code, ServerID: scope.ServerID})
-	return err
+	if _, err = service.store.DeleteInvite(ctx, store.DeleteInviteParams{Code: code, ServerID: scope.ServerID}); err != nil {
+		return err
+	}
+	return service.record(ctx, scope, auditEvent{action: ActionInviteRevoke, targetKind: TargetKindInvite, targetID: inviteHint(code)})
+}
+
+// inviteHint is the start of an invite code, enough to tell invites apart
+// in the audit log without letting its readers join with it.
+func inviteHint(code string) string {
+	if len(code) <= 4 {
+		return code
+	}
+	return code[:4] + "…"
 }
 
 // Preview is what an invite shows before joining.

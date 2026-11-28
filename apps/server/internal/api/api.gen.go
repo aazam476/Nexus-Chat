@@ -19,6 +19,42 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AuditEntryTargetKind.
+const (
+	AuditEntryTargetKindChannel AuditEntryTargetKind = "channel"
+	AuditEntryTargetKindEmoji   AuditEntryTargetKind = "emoji"
+	AuditEntryTargetKindInvite  AuditEntryTargetKind = "invite"
+	AuditEntryTargetKindMember  AuditEntryTargetKind = "member"
+	AuditEntryTargetKindMessage AuditEntryTargetKind = "message"
+	AuditEntryTargetKindReport  AuditEntryTargetKind = "report"
+	AuditEntryTargetKindRole    AuditEntryTargetKind = "role"
+	AuditEntryTargetKindServer  AuditEntryTargetKind = "server"
+)
+
+// Valid indicates whether the value is a known member of the AuditEntryTargetKind enum.
+func (e AuditEntryTargetKind) Valid() bool {
+	switch e {
+	case AuditEntryTargetKindChannel:
+		return true
+	case AuditEntryTargetKindEmoji:
+		return true
+	case AuditEntryTargetKindInvite:
+		return true
+	case AuditEntryTargetKindMember:
+		return true
+	case AuditEntryTargetKindMessage:
+		return true
+	case AuditEntryTargetKindReport:
+		return true
+	case AuditEntryTargetKindRole:
+		return true
+	case AuditEntryTargetKindServer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConversationKind.
 const (
 	ConversationKindDm    ConversationKind = "dm"
@@ -463,6 +499,25 @@ type ArchivedMessage struct {
 	Sealed    []byte              `json:"sealed"`
 	SenderId  *openapi_types.UUID `json:"senderId,omitempty"`
 }
+
+// AuditEntry defines model for AuditEntry.
+type AuditEntry struct {
+	// Action For example `channel.create`, `member.ban` or `role.update`.
+	Action string `json:"action"`
+
+	// ActorId Absent once the actor's account is gone.
+	ActorId   *openapi_types.UUID `json:"actorId,omitempty"`
+	CreatedAt time.Time           `json:"createdAt"`
+
+	// Details What the action changed. Never message content.
+	Details    map[string]interface{} `json:"details"`
+	Id         int64                  `json:"id"`
+	TargetId   *string                `json:"targetId,omitempty"`
+	TargetKind *AuditEntryTargetKind  `json:"targetKind,omitempty"`
+}
+
+// AuditEntryTargetKind defines model for AuditEntry.TargetKind.
+type AuditEntryTargetKind string
 
 // Authenticator defines model for Authenticator.
 type Authenticator struct {
@@ -1667,6 +1722,16 @@ type SearchNamesParams struct {
 	Q string `form:"q" json:"q"`
 }
 
+// ListServerAuditLogParams defines parameters for ListServerAuditLog.
+type ListServerAuditLogParams struct {
+	// Before The ID of the oldest entry already shown, for the next page.
+	Before   *int64              `form:"before,omitempty" json:"before,omitempty"`
+	ActorId  *openapi_types.UUID `form:"actorId,omitempty" json:"actorId,omitempty"`
+	Action   *string             `form:"action,omitempty" json:"action,omitempty"`
+	TargetId *string             `form:"targetId,omitempty" json:"targetId,omitempty"`
+	Limit    *int                `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // OrderServerChannelsJSONBody defines parameters for OrderServerChannels.
 type OrderServerChannelsJSONBody = []ChannelPlacement
 
@@ -2160,6 +2225,9 @@ type ServerInterface interface {
 	// UpdateServer Change a server's settings (MANAGE_SERVER)
 	// (PATCH /api/v1/servers/{serverId})
 	UpdateServer(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
+	// ListServerAuditLog A server's audit log (VIEW_AUDIT_LOG)
+	// (GET /api/v1/servers/{serverId}/audit-log)
+	ListServerAuditLog(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params ListServerAuditLogParams)
 	// OrderServerChannels Place every channel (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channel-order)
 	OrderServerChannels(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -4412,6 +4480,100 @@ func (siw *ServerInterfaceWrapper) UpdateServer(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListServerAuditLog operation middleware
+func (siw *ServerInterfaceWrapper) ListServerAuditLog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListServerAuditLogParams
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "actorId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "actorId", r.URL.Query(), &params.ActorId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "actorId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "actorId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "action" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "action", r.URL.Query(), &params.Action, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "action"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "action", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "targetId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "targetId", r.URL.Query(), &params.TargetId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "targetId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "targetId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListServerAuditLog(w, r, serverId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // OrderServerChannels operation middleware
 func (siw *ServerInterfaceWrapper) OrderServerChannels(w http.ResponseWriter, r *http.Request) {
 
@@ -5994,6 +6156,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/roles/{roleId}", wrapper.DeleteServerRole)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v1/servers/{serverId}/roles/{roleId}", wrapper.UpdateServerRole)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/servers/{serverId}/role-order", wrapper.OrderServerRoles)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/audit-log", wrapper.ListServerAuditLog)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.ListServerInvites)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites", wrapper.CreateServerInvite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/invites/{code}", wrapper.RevokeServerInvite)
@@ -12644,6 +12807,85 @@ func (response UpdateServer422JSONResponse) VisitUpdateServerResponse(w http.Res
 	return err
 }
 
+type ListServerAuditLogRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	Params   ListServerAuditLogParams
+}
+
+type ListServerAuditLogResponseObject interface {
+	VisitListServerAuditLogResponse(w http.ResponseWriter) error
+}
+
+type ListServerAuditLog200JSONResponse []AuditEntry
+
+func (response ListServerAuditLog200JSONResponse) VisitListServerAuditLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerAuditLog400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListServerAuditLog400JSONResponse) VisitListServerAuditLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerAuditLog401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListServerAuditLog401JSONResponse) VisitListServerAuditLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerAuditLog403JSONResponse Error
+
+func (response ListServerAuditLog403JSONResponse) VisitListServerAuditLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerAuditLog404JSONResponse Error
+
+func (response ListServerAuditLog404JSONResponse) VisitListServerAuditLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type OrderServerChannelsRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 	Body     *OrderServerChannelsJSONRequestBody
@@ -15958,6 +16200,9 @@ type StrictServerInterface interface {
 	// UpdateServer Change a server's settings (MANAGE_SERVER)
 	// (PATCH /api/v1/servers/{serverId})
 	UpdateServer(ctx context.Context, request UpdateServerRequestObject) (UpdateServerResponseObject, error)
+	// ListServerAuditLog A server's audit log (VIEW_AUDIT_LOG)
+	// (GET /api/v1/servers/{serverId}/audit-log)
+	ListServerAuditLog(ctx context.Context, request ListServerAuditLogRequestObject) (ListServerAuditLogResponseObject, error)
 	// OrderServerChannels Place every channel (MANAGE_CHANNELS)
 	// (PUT /api/v1/servers/{serverId}/channel-order)
 	OrderServerChannels(ctx context.Context, request OrderServerChannelsRequestObject) (OrderServerChannelsResponseObject, error)
@@ -18924,6 +19169,33 @@ func (sh *strictHandler) UpdateServer(w http.ResponseWriter, r *http.Request, se
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateServerResponseObject); ok {
 		if err := validResponse.VisitUpdateServerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListServerAuditLog operation middleware
+func (sh *strictHandler) ListServerAuditLog(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params ListServerAuditLogParams) {
+	var request ListServerAuditLogRequestObject
+
+	request.ServerId = serverId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListServerAuditLog(ctx, request.(ListServerAuditLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListServerAuditLog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListServerAuditLogResponseObject); ok {
+		if err := validResponse.VisitListServerAuditLogResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

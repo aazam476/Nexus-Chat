@@ -80,7 +80,8 @@ func (service *Service) SetIcon(ctx context.Context, scope Scope, upload []byte)
 		return fmt.Errorf("saving icon: %w", err)
 	}
 	service.deleteIcon(ctx, a.server.IconID)
-	return service.notify(ctx, scope.ServerID)
+	changed := event(ActionServerIcon, TargetKindServer, scope.ServerID, map[string]any{"icon": "set"})
+	return service.logged(ctx, scope, changed, service.notify(ctx, scope.ServerID))
 }
 
 // RemoveIcon removes the server's icon (MANAGE_SERVER).
@@ -96,7 +97,8 @@ func (service *Service) RemoveIcon(ctx context.Context, scope Scope) error {
 		return fmt.Errorf("removing icon: %w", err)
 	}
 	service.deleteIcon(ctx, a.server.IconID)
-	return service.notify(ctx, scope.ServerID)
+	changed := event(ActionServerIcon, TargetKindServer, scope.ServerID, map[string]any{"icon": "removed"})
+	return service.logged(ctx, scope, changed, service.notify(ctx, scope.ServerID))
 }
 
 // OpenIcon returns a current icon, or ErrIconNotFound. Replaced icons are

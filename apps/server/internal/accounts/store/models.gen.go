@@ -166,6 +166,7 @@ type MlsMessage struct {
 	CreatedAt      time.Time
 	ChannelID      *uuid.UUID
 	ThreadRootID   *uuid.UUID
+	MessageID      *uuid.UUID
 }
 
 type OidcFlow struct {
@@ -218,6 +219,25 @@ type Server struct {
 	CreatedAt          time.Time
 	IconID             *uuid.UUID
 	IconFormat         *string
+}
+
+type ServerAuditLog struct {
+	ID         int64
+	ServerID   uuid.UUID
+	ActorID    *uuid.UUID
+	Action     string
+	TargetKind *string
+	TargetID   *string
+	Details    []byte
+	CreatedAt  time.Time
+}
+
+type ServerBan struct {
+	ServerID  uuid.UUID
+	UserID    uuid.UUID
+	BannedBy  *uuid.UUID
+	Reason    string
+	CreatedAt time.Time
 }
 
 type ServerChannel struct {
