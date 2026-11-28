@@ -13,6 +13,52 @@ export type OverrideTargetKind = 'role' | 'member';
 
 export type ServerChannelKind = 'category' | 'text' | 'voice';
 
+export type NewReport = {
+    serverId?: string;
+    channelId?: string;
+    conversationId?: string;
+    messageId: string;
+    evidence: string;
+    comment?: string;
+};
+
+export type CreatedReport = {
+    id: string;
+};
+
+export type ReportResolution = {
+    resolution?: string;
+};
+
+export type Report = {
+    id: string;
+    serverId?: string;
+    channelId?: string;
+    conversationId?: string;
+    messageId: string;
+    reporterId?: string;
+    senderId?: string;
+    /**
+     * The message and its sender's signature, as the reporter's device gave them.
+     */
+    evidence: string;
+    /**
+     * The instance's receipt for the stored copy, as JSON.
+     */
+    receipt: string;
+    /**
+     * Ed25519, by the instance's signing key, over "nexus-chat report receipt v1\n" and the receipt.
+     */
+    receiptSignature: string;
+    comment: string;
+    status: 'open' | 'resolved';
+    escalated: boolean;
+    resolution: string;
+    resolvedBy?: string;
+    resolvedAt?: string;
+    createdAt: string;
+};
+
 export type Sanction = {
     reason?: string;
 };
@@ -1695,6 +1741,262 @@ export type UpdateUploadSettingsResponses = {
 };
 
 export type UpdateUploadSettingsResponse = UpdateUploadSettingsResponses[keyof UpdateUploadSettingsResponses];
+
+export type SubmitReportData = {
+    body: NewReport;
+    path?: never;
+    query?: never;
+    url: '/api/v1/reports';
+};
+
+export type SubmitReportErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such message that you can read (`message_not_found`).
+     */
+    404: Error;
+    /**
+     * You already reported this message (`already_reported`).
+     */
+    409: Error;
+    /**
+     * Your own message (`own_message`), evidence that is not about this message (`bad_evidence`), or a comment over 1000 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type SubmitReportError = SubmitReportErrors[keyof SubmitReportErrors];
+
+export type SubmitReportResponses = {
+    /**
+     * Filed.
+     */
+    201: CreatedReport;
+};
+
+export type SubmitReportResponse = SubmitReportResponses[keyof SubmitReportResponses];
+
+export type ListServerReportsData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: {
+        status?: 'open' | 'resolved';
+    };
+    url: '/api/v1/servers/{serverId}/reports';
+};
+
+export type ListServerReportsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_MESSAGES (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server, or you are not in it (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type ListServerReportsError = ListServerReportsErrors[keyof ListServerReportsErrors];
+
+export type ListServerReportsResponses = {
+    /**
+     * The reports.
+     */
+    200: Array<Report>;
+};
+
+export type ListServerReportsResponse = ListServerReportsResponses[keyof ListServerReportsResponses];
+
+export type ResolveServerReportData = {
+    body: ReportResolution;
+    path: {
+        serverId: string;
+        reportId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/reports/{reportId}/resolve';
+};
+
+export type ResolveServerReportErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_MESSAGES (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server or report (`not_found`).
+     */
+    404: Error;
+    /**
+     * Already resolved (`already_handled`).
+     */
+    409: Error;
+    /**
+     * A resolution over 1000 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type ResolveServerReportError = ResolveServerReportErrors[keyof ResolveServerReportErrors];
+
+export type ResolveServerReportResponses = {
+    /**
+     * Resolved.
+     */
+    204: void;
+};
+
+export type ResolveServerReportResponse = ResolveServerReportResponses[keyof ResolveServerReportResponses];
+
+export type EscalateServerReportData = {
+    body?: never;
+    path: {
+        serverId: string;
+        reportId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/reports/{reportId}/escalate';
+};
+
+export type EscalateServerReportErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * You lack MANAGE_MESSAGES (`missing_permission`).
+     */
+    403: Error;
+    /**
+     * No such server or report (`not_found`).
+     */
+    404: Error;
+    /**
+     * Already resolved or passed on (`already_handled`).
+     */
+    409: Error;
+};
+
+export type EscalateServerReportError = EscalateServerReportErrors[keyof EscalateServerReportErrors];
+
+export type EscalateServerReportResponses = {
+    /**
+     * Passed on.
+     */
+    204: void;
+};
+
+export type EscalateServerReportResponse = EscalateServerReportResponses[keyof EscalateServerReportResponses];
+
+export type ListAdminReportsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: 'open' | 'resolved';
+    };
+    url: '/api/v1/admin/reports';
+};
+
+export type ListAdminReportsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type ListAdminReportsError = ListAdminReportsErrors[keyof ListAdminReportsErrors];
+
+export type ListAdminReportsResponses = {
+    /**
+     * The reports, newest first, at most 100.
+     */
+    200: Array<Report>;
+};
+
+export type ListAdminReportsResponse = ListAdminReportsResponses[keyof ListAdminReportsResponses];
+
+export type ResolveAdminReportData = {
+    body: ReportResolution;
+    path: {
+        reportId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/reports/{reportId}/resolve';
+};
+
+export type ResolveAdminReportErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such report for the admins (`not_found`).
+     */
+    404: Error;
+    /**
+     * Already resolved (`already_handled`).
+     */
+    409: Error;
+    /**
+     * A resolution over 1000 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type ResolveAdminReportError = ResolveAdminReportErrors[keyof ResolveAdminReportErrors];
+
+export type ResolveAdminReportResponses = {
+    /**
+     * Resolved.
+     */
+    204: void;
+};
+
+export type ResolveAdminReportResponse = ResolveAdminReportResponses[keyof ResolveAdminReportResponses];
 
 export type GetPreviewSettingsData = {
     body?: never;
@@ -4571,6 +4873,42 @@ export type ListReadStatesResponses = {
 
 export type ListReadStatesResponse = ListReadStatesResponses[keyof ListReadStatesResponses];
 
+export type GetArchivedMessageData = {
+    body?: never;
+    path: {
+        conversationId: string;
+        messageId: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversationId}/archive/{messageId}';
+};
+
+export type GetArchivedMessageErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such conversation you are in, or no such message in it (`not_found`).
+     */
+    404: Error;
+};
+
+export type GetArchivedMessageError = GetArchivedMessageErrors[keyof GetArchivedMessageErrors];
+
+export type GetArchivedMessageResponses = {
+    /**
+     * The archive copy.
+     */
+    200: ArchivedMessage;
+};
+
+export type GetArchivedMessageResponse = GetArchivedMessageResponses[keyof GetArchivedMessageResponses];
+
 export type ListArchivedMessagesData = {
     body?: never;
     path: {
@@ -4700,6 +5038,43 @@ export type DeleteChannelMessageResponses = {
 };
 
 export type DeleteChannelMessageResponse = DeleteChannelMessageResponses[keyof DeleteChannelMessageResponses];
+
+export type GetChannelArchivedMessageData = {
+    body?: never;
+    path: {
+        serverId: string;
+        channelId: string;
+        messageId: string;
+    };
+    query?: never;
+    url: '/api/v1/servers/{serverId}/channels/{channelId}/archive/{messageId}';
+};
+
+export type GetChannelArchivedMessageErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * No such channel you can see (`channel_not_found`), or no such message in it that you may read (`message_not_found`).
+     */
+    404: Error;
+};
+
+export type GetChannelArchivedMessageError = GetChannelArchivedMessageErrors[keyof GetChannelArchivedMessageErrors];
+
+export type GetChannelArchivedMessageResponses = {
+    /**
+     * The archive copy.
+     */
+    200: ChannelArchivedMessage;
+};
+
+export type GetChannelArchivedMessageResponse = GetChannelArchivedMessageResponses[keyof GetChannelArchivedMessageResponses];
 
 export type ListChannelArchiveData = {
     body?: never;

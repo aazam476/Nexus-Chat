@@ -209,6 +209,26 @@ type PrivacySetting struct {
 	WhoCanFriendRequest string
 }
 
+type Report struct {
+	ID             uuid.UUID
+	ServerID       *uuid.UUID
+	ChannelID      *uuid.UUID
+	ConversationID *uuid.UUID
+	MessageID      uuid.UUID
+	ReporterID     *uuid.UUID
+	SenderID       *uuid.UUID
+	Evidence       []byte
+	Receipt        []byte
+	ReceiptSig     []byte
+	Comment        string
+	Status         string
+	Escalated      bool
+	Resolution     string
+	ResolvedBy     *uuid.UUID
+	ResolvedAt     *time.Time
+	CreatedAt      time.Time
+}
+
 type Server struct {
 	ID                 uuid.UUID
 	Name               string

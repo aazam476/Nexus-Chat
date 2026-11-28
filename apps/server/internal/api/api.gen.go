@@ -379,6 +379,24 @@ func (e Relationship) Valid() bool {
 	}
 }
 
+// Defines values for ReportStatus.
+const (
+	ReportStatusOpen     ReportStatus = "open"
+	ReportStatusResolved ReportStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the ReportStatus enum.
+func (e ReportStatus) Valid() bool {
+	switch e {
+	case ReportStatusOpen:
+		return true
+	case ReportStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ServerChannelKind.
 const (
 	ServerChannelKindCategory ServerChannelKind = "category"
@@ -478,6 +496,42 @@ func (e WebAuthnKind) Valid() bool {
 	case WebAuthnKindPasskey:
 		return true
 	case WebAuthnKindSecurityKey:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListAdminReportsParamsStatus.
+const (
+	ListAdminReportsParamsStatusOpen     ListAdminReportsParamsStatus = "open"
+	ListAdminReportsParamsStatusResolved ListAdminReportsParamsStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the ListAdminReportsParamsStatus enum.
+func (e ListAdminReportsParamsStatus) Valid() bool {
+	switch e {
+	case ListAdminReportsParamsStatusOpen:
+		return true
+	case ListAdminReportsParamsStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListServerReportsParamsStatus.
+const (
+	ListServerReportsParamsStatusOpen     ListServerReportsParamsStatus = "open"
+	ListServerReportsParamsStatusResolved ListServerReportsParamsStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the ListServerReportsParamsStatus enum.
+func (e ListServerReportsParamsStatus) Valid() bool {
+	switch e {
+	case ListServerReportsParamsStatusOpen:
+		return true
+	case ListServerReportsParamsStatusResolved:
 		return true
 	default:
 		return false
@@ -753,6 +807,11 @@ type CreatedInvite struct {
 	// Code The invite code. Shown only this once.
 	Code string             `json:"code"`
 	Id   openapi_types.UUID `json:"id"`
+}
+
+// CreatedReport defines model for CreatedReport.
+type CreatedReport struct {
+	Id openapi_types.UUID `json:"id"`
 }
 
 // CurrentUser defines model for CurrentUser.
@@ -1094,6 +1153,16 @@ type NewGroupConversation struct {
 	Name      *string              `json:"name,omitempty"`
 }
 
+// NewReport defines model for NewReport.
+type NewReport struct {
+	ChannelId      *openapi_types.UUID `json:"channelId,omitempty"`
+	Comment        *string             `json:"comment,omitempty"`
+	ConversationId *openapi_types.UUID `json:"conversationId,omitempty"`
+	Evidence       []byte              `json:"evidence"`
+	MessageId      openapi_types.UUID  `json:"messageId"`
+	ServerId       *openapi_types.UUID `json:"serverId,omitempty"`
+}
+
 // NewServer defines model for NewServer.
 type NewServer struct {
 	Description *string `json:"description,omitempty"`
@@ -1243,6 +1312,41 @@ type RelationshipChange struct {
 	// them; a user you are blocked by shows as `none`.
 	Relationship Relationship       `json:"relationship"`
 	UserId       openapi_types.UUID `json:"userId"`
+}
+
+// Report defines model for Report.
+type Report struct {
+	ChannelId      *openapi_types.UUID `json:"channelId,omitempty"`
+	Comment        string              `json:"comment"`
+	ConversationId *openapi_types.UUID `json:"conversationId,omitempty"`
+	CreatedAt      time.Time           `json:"createdAt"`
+	Escalated      bool                `json:"escalated"`
+
+	// Evidence The message and its sender's signature, as the reporter's device gave them.
+	Evidence  []byte             `json:"evidence"`
+	Id        openapi_types.UUID `json:"id"`
+	MessageId openapi_types.UUID `json:"messageId"`
+
+	// Receipt The instance's receipt for the stored copy, as JSON.
+	Receipt []byte `json:"receipt"`
+
+	// ReceiptSignature Ed25519, by the instance's signing key, over "nexus-chat report receipt v1\n" and the receipt.
+	ReceiptSignature []byte              `json:"receiptSignature"`
+	ReporterId       *openapi_types.UUID `json:"reporterId,omitempty"`
+	Resolution       string              `json:"resolution"`
+	ResolvedAt       *time.Time          `json:"resolvedAt,omitempty"`
+	ResolvedBy       *openapi_types.UUID `json:"resolvedBy,omitempty"`
+	SenderId         *openapi_types.UUID `json:"senderId,omitempty"`
+	ServerId         *openapi_types.UUID `json:"serverId,omitempty"`
+	Status           ReportStatus        `json:"status"`
+}
+
+// ReportStatus defines model for Report.Status.
+type ReportStatus string
+
+// ReportResolution defines model for ReportResolution.
+type ReportResolution struct {
+	Resolution *string `json:"resolution,omitempty"`
 }
 
 // RoleOrder defines model for RoleOrder.
@@ -1711,6 +1815,14 @@ type ValidationFailed = Error
 // WebAuthnUnavailable defines model for WebAuthnUnavailable.
 type WebAuthnUnavailable = Error
 
+// ListAdminReportsParams defines parameters for ListAdminReports.
+type ListAdminReportsParams struct {
+	Status *ListAdminReportsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListAdminReportsParamsStatus defines parameters for ListAdminReports.
+type ListAdminReportsParamsStatus string
+
 // ProviderCallbackParams defines parameters for ProviderCallback.
 type ProviderCallbackParams struct {
 	State *string `form:"state,omitempty" json:"state,omitempty"`
@@ -1785,6 +1897,14 @@ type AddServerEmojiParams struct {
 	Name string `form:"name" json:"name"`
 }
 
+// ListServerReportsParams defines parameters for ListServerReports.
+type ListServerReportsParams struct {
+	Status *ListServerReportsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListServerReportsParamsStatus defines parameters for ListServerReports.
+type ListServerReportsParamsStatus string
+
 // SetAvatarParams defines parameters for SetAvatar.
 type SetAvatarParams struct {
 	CropX    *int `form:"cropX,omitempty" json:"cropX,omitempty"`
@@ -1803,6 +1923,9 @@ type UpdateOidcProviderJSONRequestBody = UpdateOidcProviderRequest
 
 // UpdatePreviewSettingsJSONRequestBody defines body for UpdatePreviewSettings for application/json ContentType.
 type UpdatePreviewSettingsJSONRequestBody = PreviewSettings
+
+// ResolveAdminReportJSONRequestBody defines body for ResolveAdminReport for application/json ContentType.
+type ResolveAdminReportJSONRequestBody = ReportResolution
 
 // UpdateSmtpSettingsJSONRequestBody defines body for UpdateSmtpSettings for application/json ContentType.
 type UpdateSmtpSettingsJSONRequestBody = UpdateSmtpSettingsRequest
@@ -1906,6 +2029,9 @@ type UploadKeyPackagesJSONRequestBody = KeyPackageUpload
 // UpdatePrivacySettingsJSONRequestBody defines body for UpdatePrivacySettings for application/json ContentType.
 type UpdatePrivacySettingsJSONRequestBody = PrivacySettings
 
+// SubmitReportJSONRequestBody defines body for SubmitReport for application/json ContentType.
+type SubmitReportJSONRequestBody = NewReport
+
 // CreateServerJSONRequestBody defines body for CreateServer for application/json ContentType.
 type CreateServerJSONRequestBody = NewServer
 
@@ -1941,6 +2067,9 @@ type KickServerMemberJSONRequestBody = Sanction
 
 // TimeoutServerMemberJSONRequestBody defines body for TimeoutServerMember for application/json ContentType.
 type TimeoutServerMemberJSONRequestBody = TimeoutSpec
+
+// ResolveServerReportJSONRequestBody defines body for ResolveServerReport for application/json ContentType.
+type ResolveServerReportJSONRequestBody = ReportResolution
 
 // OrderServerRolesJSONRequestBody defines body for OrderServerRoles for application/json ContentType.
 type OrderServerRolesJSONRequestBody = RoleOrder
@@ -1989,6 +2118,12 @@ type ServerInterface interface {
 	// UpdatePreviewSettings Turn the link preview proxy on or off
 	// (PUT /api/v1/admin/previews)
 	UpdatePreviewSettings(w http.ResponseWriter, r *http.Request)
+	// ListAdminReports Reports for the instance admins
+	// (GET /api/v1/admin/reports)
+	ListAdminReports(w http.ResponseWriter, r *http.Request, params ListAdminReportsParams)
+	// ResolveAdminReport Close a report as an instance admin
+	// (POST /api/v1/admin/reports/{reportId}/resolve)
+	ResolveAdminReport(w http.ResponseWriter, r *http.Request, reportId openapi_types.UUID)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(w http.ResponseWriter, r *http.Request)
@@ -2142,6 +2277,9 @@ type ServerInterface interface {
 	// ListArchivedMessages Archive copies, newest first, for scrolling back and search
 	// (GET /api/v1/conversations/{conversationId}/archive)
 	ListArchivedMessages(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params ListArchivedMessagesParams)
+	// GetArchivedMessage One archive copy, to report its message
+	// (GET /api/v1/conversations/{conversationId}/archive/{messageId})
+	GetArchivedMessage(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, messageId openapi_types.UUID)
 	// UploadAttachment Upload an encrypted attachment
 	// (POST /api/v1/conversations/{conversationId}/attachments)
 	UploadAttachment(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params UploadAttachmentParams)
@@ -2244,6 +2382,9 @@ type ServerInterface interface {
 	// ListReadStates Read position and unread count of each of the caller's conversations
 	// (GET /api/v1/read-state)
 	ListReadStates(w http.ResponseWriter, r *http.Request)
+	// SubmitReport Report a message to moderators
+	// (POST /api/v1/reports)
+	SubmitReport(w http.ResponseWriter, r *http.Request)
 	// SearchNames Search the names of your servers, channels and people
 	// (GET /api/v1/search)
 	SearchNames(w http.ResponseWriter, r *http.Request, params SearchNamesParams)
@@ -2292,6 +2433,9 @@ type ServerInterface interface {
 	// ListChannelArchive A text channel's archive copies, newest first
 	// (GET /api/v1/servers/{serverId}/channels/{channelId}/archive)
 	ListChannelArchive(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, params ListChannelArchiveParams)
+	// GetChannelArchivedMessage One channel message's archive copy, to report it
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/archive/{messageId})
+	GetChannelArchivedMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, messageId openapi_types.UUID)
 	// SendChannelMessage Send a message in a server text channel
 	// (POST /api/v1/servers/{serverId}/channels/{channelId}/messages)
 	SendChannelMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID)
@@ -2367,6 +2511,15 @@ type ServerInterface interface {
 	// ListChannelReadStates Your read state in each text channel of the server you can see
 	// (GET /api/v1/servers/{serverId}/read-state)
 	ListChannelReadStates(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
+	// ListServerReports A server's reports (MANAGE_MESSAGES)
+	// (GET /api/v1/servers/{serverId}/reports)
+	ListServerReports(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params ListServerReportsParams)
+	// EscalateServerReport Pass one of a server's reports on to the instance admins (MANAGE_MESSAGES)
+	// (POST /api/v1/servers/{serverId}/reports/{reportId}/escalate)
+	EscalateServerReport(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, reportId openapi_types.UUID)
+	// ResolveServerReport Close one of a server's reports (MANAGE_MESSAGES)
+	// (POST /api/v1/servers/{serverId}/reports/{reportId}/resolve)
+	ResolveServerReport(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, reportId openapi_types.UUID)
 	// OrderServerRoles Order the roles (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/role-order)
 	OrderServerRoles(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
@@ -2579,6 +2732,65 @@ func (siw *ServerInterfaceWrapper) UpdatePreviewSettings(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdatePreviewSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAdminReports operation middleware
+func (siw *ServerInterfaceWrapper) ListAdminReports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAdminReportsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAdminReports(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveAdminReport operation middleware
+func (siw *ServerInterfaceWrapper) ResolveAdminReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "reportId" -------------
+	var reportId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reportId", r.PathValue("reportId"), &reportId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reportId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveAdminReport(w, r, reportId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3544,6 +3756,41 @@ func (siw *ServerInterfaceWrapper) ListArchivedMessages(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetArchivedMessage operation middleware
+func (siw *ServerInterfaceWrapper) GetArchivedMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "conversationId" -------------
+	var conversationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "conversationId", r.PathValue("conversationId"), &conversationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversationId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", r.PathValue("messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetArchivedMessage(w, r, conversationId, messageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadAttachment operation middleware
 func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 
@@ -4376,6 +4623,20 @@ func (siw *ServerInterfaceWrapper) ListReadStates(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// SubmitReport operation middleware
+func (siw *ServerInterfaceWrapper) SubmitReport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SearchNames operation middleware
 func (siw *ServerInterfaceWrapper) SearchNames(w http.ResponseWriter, r *http.Request) {
 
@@ -4908,6 +5169,50 @@ func (siw *ServerInterfaceWrapper) ListChannelArchive(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelArchive(w, r, serverId, channelId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChannelArchivedMessage operation middleware
+func (siw *ServerInterfaceWrapper) GetChannelArchivedMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", r.PathValue("channelId"), &channelId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channelId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "messageId" -------------
+	var messageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "messageId", r.PathValue("messageId"), &messageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "messageId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChannelArchivedMessage(w, r, serverId, channelId, messageId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5846,6 +6151,118 @@ func (siw *ServerInterfaceWrapper) ListChannelReadStates(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListServerReports operation middleware
+func (siw *ServerInterfaceWrapper) ListServerReports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListServerReportsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListServerReports(w, r, serverId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EscalateServerReport operation middleware
+func (siw *ServerInterfaceWrapper) EscalateServerReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reportId" -------------
+	var reportId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reportId", r.PathValue("reportId"), &reportId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reportId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EscalateServerReport(w, r, serverId, reportId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveServerReport operation middleware
+func (siw *ServerInterfaceWrapper) ResolveServerReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "reportId" -------------
+	var reportId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reportId", r.PathValue("reportId"), &reportId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reportId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveServerReport(w, r, serverId, reportId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // OrderServerRoles operation middleware
 func (siw *ServerInterfaceWrapper) OrderServerRoles(w http.ResponseWriter, r *http.Request) {
 
@@ -6351,6 +6768,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/tls", wrapper.InstallTlsCertificate)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/uploads", wrapper.GetUploadSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/uploads", wrapper.UpdateUploadSettings)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/reports", wrapper.SubmitReport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/reports", wrapper.ListServerReports)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/reports/{reportId}/resolve", wrapper.ResolveServerReport)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/reports/{reportId}/escalate", wrapper.EscalateServerReport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/reports", wrapper.ListAdminReports)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/reports/{reportId}/resolve", wrapper.ResolveAdminReport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/previews", wrapper.GetPreviewSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/previews", wrapper.UpdatePreviewSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.GetSmtpSettings)
@@ -6433,9 +6856,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/link-previews", wrapper.GetLinkPreview)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/link-previews/image", wrapper.GetLinkPreviewImage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/read-state", wrapper.ListReadStates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive/{messageId}", wrapper.GetArchivedMessage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/conversations/{conversationId}/archive", wrapper.ListArchivedMessages)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/messages", wrapper.SendChannelMessage)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/messages/{messageId}", wrapper.DeleteChannelMessage)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/archive/{messageId}", wrapper.GetChannelArchivedMessage)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers/{serverId}/channels/{channelId}/archive", wrapper.ListChannelArchive)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/avatars/{avatarId}", wrapper.GetAvatar)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/instance", wrapper.GetInstanceInfo)
@@ -7098,6 +7523,171 @@ func (response UpdatePreviewSettings403JSONResponse) VisitUpdatePreviewSettingsR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminReportsRequestObject struct {
+	Params ListAdminReportsParams
+}
+
+type ListAdminReportsResponseObject interface {
+	VisitListAdminReportsResponse(w http.ResponseWriter) error
+}
+
+type ListAdminReports200JSONResponse []Report
+
+func (response ListAdminReports200JSONResponse) VisitListAdminReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminReports400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListAdminReports400JSONResponse) VisitListAdminReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminReports401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListAdminReports401JSONResponse) VisitListAdminReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminReports403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListAdminReports403JSONResponse) VisitListAdminReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveAdminReportRequestObject struct {
+	ReportId openapi_types.UUID `json:"reportId"`
+	Body     *ResolveAdminReportJSONRequestBody
+}
+
+type ResolveAdminReportResponseObject interface {
+	VisitResolveAdminReportResponse(w http.ResponseWriter) error
+}
+
+type ResolveAdminReport204Response struct {
+}
+
+func (response ResolveAdminReport204Response) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResolveAdminReport400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ResolveAdminReport400JSONResponse) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveAdminReport401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ResolveAdminReport401JSONResponse) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveAdminReport403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ResolveAdminReport403JSONResponse) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveAdminReport404JSONResponse Error
+
+func (response ResolveAdminReport404JSONResponse) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveAdminReport409JSONResponse Error
+
+func (response ResolveAdminReport409JSONResponse) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveAdminReport422JSONResponse Error
+
+func (response ResolveAdminReport422JSONResponse) VisitResolveAdminReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -10273,6 +10863,71 @@ func (response ListArchivedMessages404JSONResponse) VisitListArchivedMessagesRes
 	return err
 }
 
+type GetArchivedMessageRequestObject struct {
+	ConversationId openapi_types.UUID `json:"conversationId"`
+	MessageId      openapi_types.UUID `json:"messageId"`
+}
+
+type GetArchivedMessageResponseObject interface {
+	VisitGetArchivedMessageResponse(w http.ResponseWriter) error
+}
+
+type GetArchivedMessage200JSONResponse ArchivedMessage
+
+func (response GetArchivedMessage200JSONResponse) VisitGetArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetArchivedMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetArchivedMessage400JSONResponse) VisitGetArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetArchivedMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetArchivedMessage401JSONResponse) VisitGetArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetArchivedMessage404JSONResponse Error
+
+func (response GetArchivedMessage404JSONResponse) VisitGetArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UploadAttachmentRequestObject struct {
 	ConversationId openapi_types.UUID `json:"conversationId"`
 	Params         UploadAttachmentParams
@@ -12628,6 +13283,98 @@ func (response ListReadStates401JSONResponse) VisitListReadStatesResponse(w http
 	return err
 }
 
+type SubmitReportRequestObject struct {
+	Body *SubmitReportJSONRequestBody
+}
+
+type SubmitReportResponseObject interface {
+	VisitSubmitReportResponse(w http.ResponseWriter) error
+}
+
+type SubmitReport201JSONResponse CreatedReport
+
+func (response SubmitReport201JSONResponse) VisitSubmitReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitReport400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SubmitReport400JSONResponse) VisitSubmitReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitReport401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SubmitReport401JSONResponse) VisitSubmitReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitReport404JSONResponse Error
+
+func (response SubmitReport404JSONResponse) VisitSubmitReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitReport409JSONResponse Error
+
+func (response SubmitReport409JSONResponse) VisitSubmitReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitReport422JSONResponse Error
+
+func (response SubmitReport422JSONResponse) VisitSubmitReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchNamesRequestObject struct {
 	Params SearchNamesParams
 }
@@ -13862,6 +14609,72 @@ func (response ListChannelArchive401JSONResponse) VisitListChannelArchiveRespons
 type ListChannelArchive404JSONResponse Error
 
 func (response ListChannelArchive404JSONResponse) VisitListChannelArchiveResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChannelArchivedMessageRequestObject struct {
+	ServerId  openapi_types.UUID `json:"serverId"`
+	ChannelId openapi_types.UUID `json:"channelId"`
+	MessageId openapi_types.UUID `json:"messageId"`
+}
+
+type GetChannelArchivedMessageResponseObject interface {
+	VisitGetChannelArchivedMessageResponse(w http.ResponseWriter) error
+}
+
+type GetChannelArchivedMessage200JSONResponse ChannelArchivedMessage
+
+func (response GetChannelArchivedMessage200JSONResponse) VisitGetChannelArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChannelArchivedMessage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetChannelArchivedMessage400JSONResponse) VisitGetChannelArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChannelArchivedMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetChannelArchivedMessage401JSONResponse) VisitGetChannelArchivedMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChannelArchivedMessage404JSONResponse Error
+
+func (response GetChannelArchivedMessage404JSONResponse) VisitGetChannelArchivedMessageResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -15839,6 +16652,274 @@ func (response ListChannelReadStates404JSONResponse) VisitListChannelReadStatesR
 	return err
 }
 
+type ListServerReportsRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	Params   ListServerReportsParams
+}
+
+type ListServerReportsResponseObject interface {
+	VisitListServerReportsResponse(w http.ResponseWriter) error
+}
+
+type ListServerReports200JSONResponse []Report
+
+func (response ListServerReports200JSONResponse) VisitListServerReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerReports400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListServerReports400JSONResponse) VisitListServerReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerReports401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListServerReports401JSONResponse) VisitListServerReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerReports403JSONResponse Error
+
+func (response ListServerReports403JSONResponse) VisitListServerReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListServerReports404JSONResponse Error
+
+func (response ListServerReports404JSONResponse) VisitListServerReportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EscalateServerReportRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	ReportId openapi_types.UUID `json:"reportId"`
+}
+
+type EscalateServerReportResponseObject interface {
+	VisitEscalateServerReportResponse(w http.ResponseWriter) error
+}
+
+type EscalateServerReport204Response struct {
+}
+
+func (response EscalateServerReport204Response) VisitEscalateServerReportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type EscalateServerReport400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response EscalateServerReport400JSONResponse) VisitEscalateServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EscalateServerReport401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response EscalateServerReport401JSONResponse) VisitEscalateServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EscalateServerReport403JSONResponse Error
+
+func (response EscalateServerReport403JSONResponse) VisitEscalateServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EscalateServerReport404JSONResponse Error
+
+func (response EscalateServerReport404JSONResponse) VisitEscalateServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EscalateServerReport409JSONResponse Error
+
+func (response EscalateServerReport409JSONResponse) VisitEscalateServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveServerReportRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+	ReportId openapi_types.UUID `json:"reportId"`
+	Body     *ResolveServerReportJSONRequestBody
+}
+
+type ResolveServerReportResponseObject interface {
+	VisitResolveServerReportResponse(w http.ResponseWriter) error
+}
+
+type ResolveServerReport204Response struct {
+}
+
+func (response ResolveServerReport204Response) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResolveServerReport400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ResolveServerReport400JSONResponse) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveServerReport401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ResolveServerReport401JSONResponse) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveServerReport403JSONResponse Error
+
+func (response ResolveServerReport403JSONResponse) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveServerReport404JSONResponse Error
+
+func (response ResolveServerReport404JSONResponse) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveServerReport409JSONResponse Error
+
+func (response ResolveServerReport409JSONResponse) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveServerReport422JSONResponse Error
+
+func (response ResolveServerReport422JSONResponse) VisitResolveServerReportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type OrderServerRolesRequestObject struct {
 	ServerId openapi_types.UUID `json:"serverId"`
 	Body     *OrderServerRolesJSONRequestBody
@@ -16813,6 +17894,12 @@ type StrictServerInterface interface {
 	// UpdatePreviewSettings Turn the link preview proxy on or off
 	// (PUT /api/v1/admin/previews)
 	UpdatePreviewSettings(ctx context.Context, request UpdatePreviewSettingsRequestObject) (UpdatePreviewSettingsResponseObject, error)
+	// ListAdminReports Reports for the instance admins
+	// (GET /api/v1/admin/reports)
+	ListAdminReports(ctx context.Context, request ListAdminReportsRequestObject) (ListAdminReportsResponseObject, error)
+	// ResolveAdminReport Close a report as an instance admin
+	// (POST /api/v1/admin/reports/{reportId}/resolve)
+	ResolveAdminReport(ctx context.Context, request ResolveAdminReportRequestObject) (ResolveAdminReportResponseObject, error)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(ctx context.Context, request GetSmtpSettingsRequestObject) (GetSmtpSettingsResponseObject, error)
@@ -16966,6 +18053,9 @@ type StrictServerInterface interface {
 	// ListArchivedMessages Archive copies, newest first, for scrolling back and search
 	// (GET /api/v1/conversations/{conversationId}/archive)
 	ListArchivedMessages(ctx context.Context, request ListArchivedMessagesRequestObject) (ListArchivedMessagesResponseObject, error)
+	// GetArchivedMessage One archive copy, to report its message
+	// (GET /api/v1/conversations/{conversationId}/archive/{messageId})
+	GetArchivedMessage(ctx context.Context, request GetArchivedMessageRequestObject) (GetArchivedMessageResponseObject, error)
 	// UploadAttachment Upload an encrypted attachment
 	// (POST /api/v1/conversations/{conversationId}/attachments)
 	UploadAttachment(ctx context.Context, request UploadAttachmentRequestObject) (UploadAttachmentResponseObject, error)
@@ -17068,6 +18158,9 @@ type StrictServerInterface interface {
 	// ListReadStates Read position and unread count of each of the caller's conversations
 	// (GET /api/v1/read-state)
 	ListReadStates(ctx context.Context, request ListReadStatesRequestObject) (ListReadStatesResponseObject, error)
+	// SubmitReport Report a message to moderators
+	// (POST /api/v1/reports)
+	SubmitReport(ctx context.Context, request SubmitReportRequestObject) (SubmitReportResponseObject, error)
 	// SearchNames Search the names of your servers, channels and people
 	// (GET /api/v1/search)
 	SearchNames(ctx context.Context, request SearchNamesRequestObject) (SearchNamesResponseObject, error)
@@ -17116,6 +18209,9 @@ type StrictServerInterface interface {
 	// ListChannelArchive A text channel's archive copies, newest first
 	// (GET /api/v1/servers/{serverId}/channels/{channelId}/archive)
 	ListChannelArchive(ctx context.Context, request ListChannelArchiveRequestObject) (ListChannelArchiveResponseObject, error)
+	// GetChannelArchivedMessage One channel message's archive copy, to report it
+	// (GET /api/v1/servers/{serverId}/channels/{channelId}/archive/{messageId})
+	GetChannelArchivedMessage(ctx context.Context, request GetChannelArchivedMessageRequestObject) (GetChannelArchivedMessageResponseObject, error)
 	// SendChannelMessage Send a message in a server text channel
 	// (POST /api/v1/servers/{serverId}/channels/{channelId}/messages)
 	SendChannelMessage(ctx context.Context, request SendChannelMessageRequestObject) (SendChannelMessageResponseObject, error)
@@ -17191,6 +18287,15 @@ type StrictServerInterface interface {
 	// ListChannelReadStates Your read state in each text channel of the server you can see
 	// (GET /api/v1/servers/{serverId}/read-state)
 	ListChannelReadStates(ctx context.Context, request ListChannelReadStatesRequestObject) (ListChannelReadStatesResponseObject, error)
+	// ListServerReports A server's reports (MANAGE_MESSAGES)
+	// (GET /api/v1/servers/{serverId}/reports)
+	ListServerReports(ctx context.Context, request ListServerReportsRequestObject) (ListServerReportsResponseObject, error)
+	// EscalateServerReport Pass one of a server's reports on to the instance admins (MANAGE_MESSAGES)
+	// (POST /api/v1/servers/{serverId}/reports/{reportId}/escalate)
+	EscalateServerReport(ctx context.Context, request EscalateServerReportRequestObject) (EscalateServerReportResponseObject, error)
+	// ResolveServerReport Close one of a server's reports (MANAGE_MESSAGES)
+	// (POST /api/v1/servers/{serverId}/reports/{reportId}/resolve)
+	ResolveServerReport(ctx context.Context, request ResolveServerReportRequestObject) (ResolveServerReportResponseObject, error)
 	// OrderServerRoles Order the roles (MANAGE_ROLES)
 	// (PUT /api/v1/servers/{serverId}/role-order)
 	OrderServerRoles(ctx context.Context, request OrderServerRolesRequestObject) (OrderServerRolesResponseObject, error)
@@ -17523,6 +18628,65 @@ func (sh *strictHandler) UpdatePreviewSettings(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdatePreviewSettingsResponseObject); ok {
 		if err := validResponse.VisitUpdatePreviewSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAdminReports operation middleware
+func (sh *strictHandler) ListAdminReports(w http.ResponseWriter, r *http.Request, params ListAdminReportsParams) {
+	var request ListAdminReportsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAdminReports(ctx, request.(ListAdminReportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAdminReports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAdminReportsResponseObject); ok {
+		if err := validResponse.VisitListAdminReportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveAdminReport operation middleware
+func (sh *strictHandler) ResolveAdminReport(w http.ResponseWriter, r *http.Request, reportId openapi_types.UUID) {
+	var request ResolveAdminReportRequestObject
+
+	request.ReportId = reportId
+
+	var body ResolveAdminReportJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveAdminReport(ctx, request.(ResolveAdminReportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveAdminReport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveAdminReportResponseObject); ok {
+		if err := validResponse.VisitResolveAdminReportResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18953,6 +20117,33 @@ func (sh *strictHandler) ListArchivedMessages(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// GetArchivedMessage operation middleware
+func (sh *strictHandler) GetArchivedMessage(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, messageId openapi_types.UUID) {
+	var request GetArchivedMessageRequestObject
+
+	request.ConversationId = conversationId
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetArchivedMessage(ctx, request.(GetArchivedMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetArchivedMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetArchivedMessageResponseObject); ok {
+		if err := validResponse.VisitGetArchivedMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UploadAttachment operation middleware
 func (sh *strictHandler) UploadAttachment(w http.ResponseWriter, r *http.Request, conversationId openapi_types.UUID, params UploadAttachmentParams) {
 	var request UploadAttachmentRequestObject
@@ -19894,6 +21085,37 @@ func (sh *strictHandler) ListReadStates(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// SubmitReport operation middleware
+func (sh *strictHandler) SubmitReport(w http.ResponseWriter, r *http.Request) {
+	var request SubmitReportRequestObject
+
+	var body SubmitReportJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitReport(ctx, request.(SubmitReportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitReport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitReportResponseObject); ok {
+		if err := validResponse.VisitSubmitReportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SearchNames operation middleware
 func (sh *strictHandler) SearchNames(w http.ResponseWriter, r *http.Request, params SearchNamesParams) {
 	var request SearchNamesRequestObject
@@ -20348,6 +21570,34 @@ func (sh *strictHandler) ListChannelArchive(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListChannelArchiveResponseObject); ok {
 		if err := validResponse.VisitListChannelArchiveResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetChannelArchivedMessage operation middleware
+func (sh *strictHandler) GetChannelArchivedMessage(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, channelId openapi_types.UUID, messageId openapi_types.UUID) {
+	var request GetChannelArchivedMessageRequestObject
+
+	request.ServerId = serverId
+	request.ChannelId = channelId
+	request.MessageId = messageId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetChannelArchivedMessage(ctx, request.(GetChannelArchivedMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetChannelArchivedMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetChannelArchivedMessageResponseObject); ok {
+		if err := validResponse.VisitGetChannelArchivedMessageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -21072,6 +22322,94 @@ func (sh *strictHandler) ListChannelReadStates(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListChannelReadStatesResponseObject); ok {
 		if err := validResponse.VisitListChannelReadStatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListServerReports operation middleware
+func (sh *strictHandler) ListServerReports(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, params ListServerReportsParams) {
+	var request ListServerReportsRequestObject
+
+	request.ServerId = serverId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListServerReports(ctx, request.(ListServerReportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListServerReports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListServerReportsResponseObject); ok {
+		if err := validResponse.VisitListServerReportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EscalateServerReport operation middleware
+func (sh *strictHandler) EscalateServerReport(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, reportId openapi_types.UUID) {
+	var request EscalateServerReportRequestObject
+
+	request.ServerId = serverId
+	request.ReportId = reportId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.EscalateServerReport(ctx, request.(EscalateServerReportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EscalateServerReport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(EscalateServerReportResponseObject); ok {
+		if err := validResponse.VisitEscalateServerReportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveServerReport operation middleware
+func (sh *strictHandler) ResolveServerReport(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID, reportId openapi_types.UUID) {
+	var request ResolveServerReportRequestObject
+
+	request.ServerId = serverId
+	request.ReportId = reportId
+
+	var body ResolveServerReportJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveServerReport(ctx, request.(ResolveServerReportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveServerReport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveServerReportResponseObject); ok {
+		if err := validResponse.VisitResolveServerReportResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

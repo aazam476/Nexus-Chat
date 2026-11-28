@@ -44,3 +44,16 @@ messages that were not reported.
   message and only at the reporter's choice.
 - For federated servers, the hosting instance's moderators verify, and the
   sender's home instance publishes the UMK used in the check.
+
+## Implementation notes
+
+- The receipt is signed when the report is filed, from the archive copy
+  the server stored when the message was sent, rather than at send time.
+  The same server keeps both, so a receipt proves the same thing either
+  way, and messages sent before reports existed can be reported too. It
+  carries the sender's address (`@name@domain`) as well as their user ID,
+  so moderators' devices compare it with the signing device's credential
+  directly.
+- The evidence is the archive copy's signed contents, which the crypto
+  package encodes as length-prefixed fields; the server reads only the
+  address and epoch from it. See docs/moderation.md.

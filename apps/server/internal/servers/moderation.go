@@ -10,6 +10,7 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/delivery"
 	"github.com/aazam476/nexus-chat/apps/server/internal/permissions"
+	"github.com/aazam476/nexus-chat/apps/server/internal/reports"
 	"github.com/aazam476/nexus-chat/apps/server/internal/servers/store"
 )
 
@@ -241,4 +242,27 @@ func (service *Service) MessageDeleted(ctx context.Context, ref delivery.Channel
 		details["senderId"] = *deleted.SenderID
 	}
 	return service.record(ctx, Scope{ServerID: ref.ServerID, UserID: ref.UserID}, event(ActionMessageDelete, TargetKindMessage, deleted.MessageID, details))
+}
+
+// MayHandleReports reports whether the member handles the server's
+// reports: MANAGE_MESSAGES (it implements reports.Moderation).
+func (service *Service) MayHandleReports(ctx context.Context, serverID uuid.UUID, userID uuid.UUID) (bool, error) {
+	a, err := service.load(ctx, Scope{ServerID: serverID, UserID: userID})
+	if errors.Is(err, ErrNotFound) {
+		return false, reports.ErrNoServer
+	}
+	if err != nil {
+		return false, err
+	}
+	return a.inServer().Has(permissions.ManageMessages), nil
+}
+
+// ReportHandled records a moderator resolving a report or passing it on
+// to the instance admins (it implements reports.Moderation).
+func (service *Service) ReportHandled(ctx context.Context, handled reports.Handled) error {
+	action := ActionReportResolve
+	if handled.Escalated {
+		action = ActionReportEscalate
+	}
+	return service.record(ctx, Scope{ServerID: handled.ServerID, UserID: handled.ActorID}, event(action, TargetKindReport, handled.ReportID, nil))
 }

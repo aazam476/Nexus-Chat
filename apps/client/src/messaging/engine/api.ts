@@ -92,4 +92,8 @@ export interface MessagingApi {
   channelArchive(channel: ChannelAddress, before?: string): Promise<StoredChannelArchive[]>;
   /** The archive of the replies in the thread on rootId. */
   threadArchive(channel: ChannelAddress, rootId: string, before?: string): Promise<StoredChannelArchive[]>;
+  /** One archive copy, to report its message; undefined if there is none this device may read. */
+  archivedCopy(conversationId: string, messageId: string): Promise<StoredArchive | undefined>;
+  /** One channel message's archive copy, to report it. */
+  channelArchivedCopy(channel: ChannelAddress, messageId: string): Promise<StoredChannelArchive | undefined>;
 }

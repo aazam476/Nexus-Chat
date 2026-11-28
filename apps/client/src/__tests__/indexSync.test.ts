@@ -1,6 +1,7 @@
 import sodium from "libsodium-wrappers-sumo";
 
-import { restoreMessenger, startMessenger, type MessengerSetup } from "../messaging/messenger";
+import { type MessengerSetup } from "../messaging/messenger";
+import { restoreMessenger, startMessenger } from "../messaging/messengerStart";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "../testing/fakeDelivery";
 

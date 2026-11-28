@@ -53,6 +53,33 @@ func (q *Queries) DeleteLiveCopies(ctx context.Context, arg DeleteLiveCopiesPara
 	return err
 }
 
+const getArchivedCopy = `-- name: GetArchivedCopy :one
+SELECT conversation_id, message_id, epoch, sender_id, sealed, created_at, channel_id, thread_root_id FROM archived_messages
+WHERE conversation_id = $1 AND message_id = $2
+`
+
+type GetArchivedCopyParams struct {
+	ConversationID uuid.UUID
+	MessageID      uuid.UUID
+}
+
+// One archive copy, for a report about it.
+func (q *Queries) GetArchivedCopy(ctx context.Context, arg GetArchivedCopyParams) (ArchivedMessage, error) {
+	row := q.db.QueryRow(ctx, getArchivedCopy, arg.ConversationID, arg.MessageID)
+	var i ArchivedMessage
+	err := row.Scan(
+		&i.ConversationID,
+		&i.MessageID,
+		&i.Epoch,
+		&i.SenderID,
+		&i.Sealed,
+		&i.CreatedAt,
+		&i.ChannelID,
+		&i.ThreadRootID,
+	)
+	return i, err
+}
+
 const purgeArchive = `-- name: PurgeArchive :execrows
 DELETE FROM archived_messages
 WHERE conversation_id = ANY($1::uuid[]) AND sender_id = $2 AND created_at >= $3

@@ -58,3 +58,19 @@ func (handler *Handler) ListArchivedMessages(ctx context.Context, request api.Li
 	}
 	return out, nil
 }
+
+// GetArchivedMessage answers GET /api/v1/conversations/{conversationId}/archive/{messageId}.
+func (handler *Handler) GetArchivedMessage(ctx context.Context, request api.GetArchivedMessageRequestObject) (api.GetArchivedMessageResponseObject, error) {
+	me, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	found, err := handler.service.ConversationCopy(ctx, me, request.ConversationId, request.MessageId)
+	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrNoMessage) {
+		return api.GetArchivedMessage404JSONResponse(notFound(err)), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return api.GetArchivedMessage200JSONResponse{MessageId: found.MessageID, Epoch: found.Epoch, SenderId: found.SenderID, Sealed: found.Sealed, CreatedAt: found.CreatedAt}, nil
+}

@@ -177,3 +177,14 @@ func TestLinkPreviewProxy(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, enabled)
 }
+
+func TestReportsToAdmins(t *testing.T) {
+	service := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "")
+	enabled, err := service.ReportsToAdmins(t.Context())
+	require.NoError(t, err)
+	assert.False(t, enabled, "only reports moderators pass on, until the admin says otherwise")
+	require.NoError(t, service.SetReportsToAdmins(t.Context(), true))
+	enabled, err = service.ReportsToAdmins(t.Context())
+	require.NoError(t, err)
+	assert.True(t, enabled)
+}

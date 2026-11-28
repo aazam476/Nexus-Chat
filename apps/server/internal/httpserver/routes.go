@@ -24,6 +24,7 @@ import (
 	"github.com/aazam476/nexus-chat/apps/server/internal/platform/clientip"
 	"github.com/aazam476/nexus-chat/apps/server/internal/profiles"
 	"github.com/aazam476/nexus-chat/apps/server/internal/registration"
+	"github.com/aazam476/nexus-chat/apps/server/internal/reports"
 	"github.com/aazam476/nexus-chat/apps/server/internal/servers"
 	"github.com/aazam476/nexus-chat/apps/server/internal/setup"
 	"github.com/aazam476/nexus-chat/apps/server/internal/social"
@@ -46,6 +47,7 @@ type Features struct {
 	OIDC          *oidc.Handler
 	Profiles      *profiles.Handler
 	Registration  *registration.Handler
+	Reports       *reports.Handler
 	Servers       *servers.Handler
 	Setup         *setup.Handler
 	Social        *social.Handler
@@ -83,6 +85,7 @@ type (
 	oidcHandler          = oidc.Handler
 	profilesHandler      = profiles.Handler
 	registrationHandler  = registration.Handler
+	reportsHandler       = reports.Handler
 	serversHandler       = servers.Handler
 	setupHandler         = setup.Handler
 	socialHandler        = social.Handler
@@ -107,6 +110,7 @@ type handlers struct {
 	*oidcHandler
 	*profilesHandler
 	*registrationHandler
+	*reportsHandler
 	*serversHandler
 	*setupHandler
 	*socialHandler
@@ -127,7 +131,7 @@ func NewHandler(features Features, options Options) http.Handler {
 			profilesHandler:     features.Profiles,
 			registrationHandler: features.Registration, setupHandler: features.Setup, serversHandler: features.Servers,
 			socialHandler: features.Social, conversationsHandler: features.Conversations, deliveryHandler: features.Delivery,
-			attachmentsHandler: features.Attachments, linkPreviewHandler: features.LinkPreviews,
+			attachmentsHandler: features.Attachments, linkPreviewHandler: features.LinkPreviews, reportsHandler: features.Reports,
 		},
 		[]api.StrictMiddlewareFunc{requireSession(options.Authenticator, options.Logger)},
 		api.StrictHTTPServerOptions{

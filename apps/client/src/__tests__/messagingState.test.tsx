@@ -3,7 +3,7 @@ import { Text } from "react-native";
 import { useEffect, type ReactNode } from "react";
 
 import { useMessaging, MessagingProvider } from "../messaging/MessagingContext";
-import { startMessenger } from "../messaging/messenger";
+import { startMessenger } from "../messaging/messengerStart";
 import type { Messaging } from "../messaging/useMessagingState";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "../testing/fakeDelivery";

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aazam476/nexus-chat/apps/server/internal/delivery"
 	"github.com/aazam476/nexus-chat/apps/server/internal/permissions"
+	"github.com/aazam476/nexus-chat/apps/server/internal/reports"
 )
 
 // moderated is a server owned by ada, where grace holds a "Mods" role with
@@ -177,4 +178,29 @@ func TestModeratorDeletionsAreAudited(t *testing.T) {
 	assert.Equal(t, general.ID.String(), entries[1].Details["channelId"])
 	assert.Equal(t, &m.grace, entries[1].ActorID)
 	assert.NotContains(t, entries[0].Details, "senderId")
+}
+
+func TestModeratorsHandleReports(t *testing.T) {
+	m := newModerated(t, permissions.ManageMessages)
+	ctx := t.Context()
+	may, err := m.f.service.MayHandleReports(ctx, m.details.Server.ID, m.grace)
+	require.NoError(t, err)
+	assert.True(t, may)
+	may, err = m.f.service.MayHandleReports(ctx, m.details.Server.ID, m.sam)
+	require.NoError(t, err)
+	assert.False(t, may)
+	_, err = m.f.service.MayHandleReports(ctx, m.details.Server.ID, uuid.New())
+	require.ErrorIs(t, err, reports.ErrNoServer)
+
+	report := uuid.New()
+	require.NoError(t, m.f.service.ReportHandled(ctx, reports.Handled{ServerID: m.details.Server.ID, ActorID: m.grace, ReportID: report, Escalated: true}))
+	require.NoError(t, m.f.service.ReportHandled(ctx, reports.Handled{ServerID: m.details.Server.ID, ActorID: m.grace, ReportID: report}))
+	entries, err := m.f.service.AuditLog(ctx, m.owner, AuditFilter{Action: "report"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{ActionReportResolve, ActionReportEscalate}, actions(entries))
+	assert.Equal(t, report.String(), entries[0].TargetID)
+
+	m.f.pool.Close()
+	_, err = m.f.service.MayHandleReports(ctx, m.details.Server.ID, m.grace)
+	require.Error(t, err)
 }

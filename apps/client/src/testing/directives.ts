@@ -68,3 +68,16 @@ export function banPurges(
   );
   deliverDirective(instance, where.audienceId, { type: "purge", ...purge }, key);
 }
+
+/** A receipt signed as apps/server/internal/reports signs it. */
+export function signReceipt(
+  receipt: object,
+  key: Uint8Array,
+): { receipt: Uint8Array; receiptSignature: Uint8Array } {
+  const bytes = utf8(JSON.stringify(receipt));
+  const label = utf8("nexus-chat report receipt v1\n");
+  return {
+    receipt: bytes,
+    receiptSignature: sodium.crypto_sign_detached(new Uint8Array([...label, ...bytes]), key),
+  };
+}

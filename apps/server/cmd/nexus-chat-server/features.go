@@ -122,6 +122,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 		Limiter: ratelimit.New(ratelimit.PerMinute(60, 20), system), Clock: system,
 	}))
 	features.Delivery = delivery.NewHandler(deliveryService)
+	features.Reports = app.newReports(deliveryService, serverService, configuration)
 }
 
 // newServers makes the servers service. Icon changes are limited per

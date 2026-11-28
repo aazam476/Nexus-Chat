@@ -11,13 +11,8 @@ import { hostOf } from "../instance/address";
 import { scopedDatabase, type LocalDatabase } from "../storage/localDatabase";
 import type { MessagingApi } from "./engine/api";
 import { fromBase64 } from "./engine/bytes";
-import {
-  confirmRecoveryPhrase,
-  restoreMessenger,
-  startMessenger,
-  type Messenger,
-  type MessengerSetup,
-} from "./messenger";
+import { type Messenger, type MessengerSetup } from "./messenger";
+import { confirmRecoveryPhrase, restoreMessenger, startMessenger } from "./messengerStart";
 
 /** Where the device's database and the server calls come from; tests pass fakes. */
 export interface MessagingEnvironment {

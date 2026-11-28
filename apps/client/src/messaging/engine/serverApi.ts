@@ -6,7 +6,9 @@
  */
 import {
   claimKeyPackages,
+  getArchivedMessage,
   getBackupBlob,
+  getChannelArchivedMessage,
   getIdentity,
   getKeyBackup,
   getKeyPackageStock,
@@ -236,6 +238,21 @@ function channelCalls(client: Client): Calls<"sendChannelMessage" | "channelArch
   };
 }
 
+function copyCalls(client: Client): Calls<"archivedCopy" | "channelArchivedCopy"> {
+  return {
+    archivedCopy: async (conversationId, messageId) => {
+      const result = await getArchivedMessage({ client, path: { conversationId, messageId } });
+      return result.data === undefined
+        ? undefined
+        : { ...result.data, sealed: fromBase64(result.data.sealed) };
+    },
+    channelArchivedCopy: async (channel, messageId) => {
+      const result = await getChannelArchivedMessage({ client, path: { ...channel, messageId } });
+      return result.data === undefined ? undefined : decodedCopies([result.data])[0];
+    },
+  };
+}
+
 /** The messaging API on top of an instance's HTTP client. */
 export function createMessagingApi(client: Client): MessagingApi {
   return {
@@ -245,5 +262,6 @@ export function createMessagingApi(client: Client): MessagingApi {
     ...groupCalls(client),
     ...fetchCalls(client),
     ...channelCalls(client),
+    ...copyCalls(client),
   };
 }

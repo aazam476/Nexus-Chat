@@ -103,15 +103,43 @@ async function decrypt(copy: ArchiveCopy, address: ArchiveAddress, key: Uint8Arr
 }
 
 /**
- * Opens an archive copy with the history key of its epoch. `check` vets
- * the sender's credential and key, as for any group member.
+ * What an archive copy proves about its message: the plaintext, the
+ * sender's credential and MLS signature key, and their signature over the
+ * message's address and plaintext. A reporter hands this to moderators
+ * (ADR 0010), who check it without the history key.
  */
-export async function openArchive(
+export interface ArchiveEvidence {
+  address: ArchiveAddress;
+  epoch: bigint;
+  plaintext: Uint8Array;
+  /** The sender's credential identity bytes. */
+  sender: Uint8Array;
+  signaturePublicKey: Uint8Array;
+  signature: Uint8Array;
+}
+
+const signedPart = (evidence: ArchiveEvidence): Uint8Array =>
+  lengthPrefixed(additionalData(evidence.address, evidence.epoch), evidence.plaintext, evidence.sender);
+
+/** Whether the sender's signature in the evidence holds. */
+async function signatureHolds(evidence: ArchiveEvidence): Promise<boolean> {
+  return verifyMemberSignature(
+    evidence.signaturePublicKey,
+    signatureLabel,
+    signedPart(evidence),
+    evidence.signature,
+  );
+}
+
+/**
+ * Opens an archive copy and returns what it proves, after checking the
+ * sender's signature (not yet their credential).
+ */
+export async function archiveEvidence(
   copy: ArchiveCopy,
   address: ArchiveAddress,
   key: Uint8Array,
-  check: CredentialCheck,
-): Promise<OpenedArchive> {
+): Promise<ArchiveEvidence> {
   const fields = readFields(await decrypt(copy, address, key), 4);
   if (fields === undefined) {
     throw new ArchiveError("the archive copy is malformed");
@@ -122,12 +150,71 @@ export async function openArchive(
     Uint8Array,
     Uint8Array,
   ];
-  const signed = lengthPrefixed(additionalData(address, copy.epoch), plaintext, sender);
-  if (!(await verifyMemberSignature(signaturePublicKey, signatureLabel, signed, signature))) {
+  const evidence = { address, epoch: copy.epoch, plaintext, sender, signaturePublicKey, signature };
+  if (!(await signatureHolds(evidence))) {
     throw new ArchiveError("the sender's signature does not match");
   }
-  if (!(await check(sender, signaturePublicKey))) {
+  return evidence;
+}
+
+/**
+ * Checks evidence someone else handed over: the sender signed exactly this
+ * plaintext at this address, and `check` accepts their credential and key.
+ */
+export async function verifyEvidence(evidence: ArchiveEvidence, check: CredentialCheck): Promise<boolean> {
+  return (await signatureHolds(evidence)) && (await check(evidence.sender, evidence.signaturePublicKey));
+}
+
+/** Evidence as bytes, to send in a report. */
+export function encodeEvidence(evidence: ArchiveEvidence): Uint8Array {
+  return lengthPrefixed(
+    utf8(signatureLabel),
+    evidence.address.channelId,
+    evidence.address.messageId,
+    uint64(evidence.epoch),
+    evidence.plaintext,
+    evidence.sender,
+    evidence.signaturePublicKey,
+    evidence.signature,
+  );
+}
+
+/** Evidence from bytes, or undefined if they are not evidence. */
+export function decodeEvidence(bytes: Uint8Array): ArchiveEvidence | undefined {
+  const fields = readFields(bytes, 8);
+  if (fields === undefined) {
+    return undefined;
+  }
+  const [label, channelId, messageId, at, plaintext, sender, signaturePublicKey, signature] = fields as [
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+  ];
+  if (new TextDecoder().decode(label) !== signatureLabel || at.length !== 8) {
+    return undefined;
+  }
+  const epoch = new DataView(at.buffer, at.byteOffset, 8).getBigUint64(0);
+  return { address: { channelId, messageId }, epoch, plaintext, sender, signaturePublicKey, signature };
+}
+
+/**
+ * Opens an archive copy with the history key of its epoch. `check` vets
+ * the sender's credential and key, as for any group member.
+ */
+export async function openArchive(
+  copy: ArchiveCopy,
+  address: ArchiveAddress,
+  key: Uint8Array,
+  check: CredentialCheck,
+): Promise<OpenedArchive> {
+  const evidence = await archiveEvidence(copy, address, key);
+  if (!(await check(evidence.sender, evidence.signaturePublicKey))) {
     throw new ArchiveError("the sender's credential could not be verified");
   }
-  return { plaintext, sender };
+  return { plaintext: evidence.plaintext, sender: evidence.sender };
 }

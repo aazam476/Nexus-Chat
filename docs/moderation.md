@@ -35,6 +35,39 @@ The server deletes its ciphertext, uncounts it from its thread, and signs a
 directive so members' devices drop it. Senders delete their own messages
 with an encrypted deletion instead, which needs no permission.
 
+## Reports
+
+Anyone can report a message they can read (`POST /api/v1/reports`), once.
+The reporter's device opens the message's archive copy and hands over what
+it proves (ADR 0010): the plaintext, and the sender's signature over it, its
+channel or conversation, its message ID and its epoch. The server checks
+that the evidence names that message, then signs a **receipt** with the
+instance key for the copy it stores: the conversation and channel, the
+message ID, the sender's user ID and address (`@name@domain`), the epoch,
+the SHA-256 of the archive copy and when it was sent.
+
+A moderator's device checks every report itself before showing it as
+verified:
+
+1. the instance signed the receipt;
+2. the evidence is about the message the receipt names, at the same place
+   and epoch;
+3. the sender's signature covers exactly this plaintext at that address;
+4. the signing device's credential chains to the sender's published
+   identity, and the sender is the user the receipt names.
+
+Reworded messages fail (3), a reporter's own message passed off as someone
+else's fails (4), evidence about one message with another's receipt fails
+(2), and a made-up or altered receipt fails (1). The server never needs a
+history key, and never reads messages nobody reported.
+
+Reports about a server's channels go to members with `MANAGE_MESSAGES`
+there, who resolve them with a note or pass them on to the instance admins.
+Reports about direct and group messages go to the instance admins. An admin
+setting sends every server's reports to the admins too. Resolving and
+passing on are recorded in the server's audit log (`report.resolve`,
+`report.escalate`).
+
 ## Audit log
 
 Every moderation and configuration action in a server is recorded: who did

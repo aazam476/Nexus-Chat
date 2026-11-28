@@ -315,6 +315,12 @@ export class FakeInstance {
         Promise.resolve(this.channelArchiveBefore(channel.channelId, undefined, before)),
       threadArchive: (channel, rootId, before) =>
         Promise.resolve(this.channelArchiveBefore(channel.channelId, rootId, before)),
+      archivedCopy: (conversationId, messageId) =>
+        Promise.resolve(this.archives.get(conversationId)?.find((copy) => copy.messageId === messageId)),
+      channelArchivedCopy: (channel, messageId) =>
+        Promise.resolve(
+          this.channelArchives.get(channel.channelId)?.find((copy) => copy.messageId === messageId),
+        ),
     };
   }
 }

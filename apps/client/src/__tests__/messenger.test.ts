@@ -1,13 +1,8 @@
 import { createIdentity, members } from "@nexus-chat/crypto";
 import sodium from "libsodium-wrappers-sumo";
 
-import {
-  confirmRecoveryPhrase,
-  restoreMessenger,
-  startMessenger,
-  type Messenger,
-  type MessengerSetup,
-} from "../messaging/messenger";
+import { type Messenger, type MessengerSetup } from "../messaging/messenger";
+import { confirmRecoveryPhrase, restoreMessenger, startMessenger } from "../messaging/messengerStart";
 import { loadState } from "../messaging/engine/context";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "../testing/fakeDelivery";

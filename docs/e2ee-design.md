@@ -366,7 +366,9 @@ hash, channel, sender and server timestamp). A moderator's client verifies:
 certificate chains to the sender's UMK, (3) the server receipt, which
 proves when the message was sent and that the reporter did not fabricate it
 after the fact. No new primitive is needed. The cost, already present in MLS,
-is that messages are not deniable.
+is that messages are not deniable. The server signs the receipt when the
+report is filed, from the archive copy it stored at send time; see
+docs/moderation.md for the checks a moderator's device makes.
 
 ## 11. Upgrades and agility
 

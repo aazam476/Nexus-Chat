@@ -21,4 +21,7 @@ const (
 	// KeyLinkPreviewProxy turns the web app's link preview proxy on
 	// (JSON boolean); off unless the admin turns it on.
 	KeyLinkPreviewProxy = "previews.proxy_enabled"
+	// KeyReportsToAdmins sends every server's reports to the instance admins
+	// too, not only those its moderators pass on (JSON boolean).
+	KeyReportsToAdmins = "reports.to_admins"
 )

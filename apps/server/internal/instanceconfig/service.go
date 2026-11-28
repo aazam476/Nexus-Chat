@@ -171,3 +171,16 @@ func (service *Service) LinkPreviewProxy(ctx context.Context) (bool, error) {
 func (service *Service) SetLinkPreviewProxy(ctx context.Context, enabled bool) error {
 	return service.Save(ctx, KeyLinkPreviewProxy, enabled)
 }
+
+// ReportsToAdmins reports whether every server's reports also go to the
+// instance admins; off by default, when only escalated ones do (ADR 0010).
+func (service *Service) ReportsToAdmins(ctx context.Context) (bool, error) {
+	enabled := false
+	_, err := service.Load(ctx, KeyReportsToAdmins, &enabled)
+	return enabled, err
+}
+
+// SetReportsToAdmins changes whether every report goes to the instance admins.
+func (service *Service) SetReportsToAdmins(ctx context.Context, enabled bool) error {
+	return service.Save(ctx, KeyReportsToAdmins, enabled)
+}

@@ -8,6 +8,7 @@ import {
   safetyNumber,
   verifyDevice,
   verifyDirective,
+  verifyReceipt,
   type NewIdentity,
   type PublishedIdentity,
 } from "./identity.js";
@@ -129,5 +130,26 @@ describe("membership directives", () => {
       await verifyDirective(instance.publicKey, new TextEncoder().encode('{"type":"add"}'), signature),
     ).toBe(false);
     expect(await verifyDirective(new Uint8Array(5), directive, signature)).toBe(false);
+  });
+});
+
+describe("report receipts", () => {
+  it("verify under their own label, so a directive is never a receipt", async () => {
+    await sodium.ready;
+    const instance = sodium.crypto_sign_keypair();
+    const receipt = new TextEncoder().encode('{"messageId":"m1"}');
+    const sign = (label: string): Uint8Array =>
+      sodium.crypto_sign_detached(
+        new Uint8Array([...new TextEncoder().encode(label), ...receipt]),
+        instance.privateKey,
+      );
+    const signature = sign("nexus-chat report receipt v1\n");
+
+    expect(await verifyReceipt(instance.publicKey, receipt, signature)).toBe(true);
+    expect(
+      await verifyReceipt(instance.publicKey, receipt, sign("nexus-chat membership directive v1\n")),
+    ).toBe(false);
+    expect(await verifyDirective(instance.publicKey, receipt, signature)).toBe(false);
+    expect(await verifyReceipt(instance.publicKey, new TextEncoder().encode("{}"), signature)).toBe(false);
   });
 });

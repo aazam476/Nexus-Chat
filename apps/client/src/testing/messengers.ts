@@ -5,7 +5,8 @@
 import type { Conversation } from "@nexus-chat/api-client";
 import type { ReactElement } from "react";
 
-import { startMessenger, type Messenger } from "../messaging/messenger";
+import { type Messenger } from "../messaging/messenger";
+import { startMessenger } from "../messaging/messengerStart";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "./fakeDelivery";
 import { fakeServer, type FakeServer } from "./fakeServer";

@@ -33,6 +33,8 @@ tags:
     description: Help with composing messages, such as the web app's optional link preview proxy (spec §4.5).
   - name: servers
     description: Servers, their channels, roles, permission overrides and invites (spec §4.4).
+  - name: reports
+    description: Reporting messages to moderators, with proof of who sent them (spec §4.7, ADR 0010).
 paths:
   /api/v1/auth/login:
     post:
@@ -409,6 +411,285 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "422":
           $ref: "#/components/responses/ValidationFailed"
+  /api/v1/reports:
+    post:
+      operationId: submitReport
+      summary: Report a message to moderators
+      description: |
+        Name the message by server and channel, or by conversation. The
+        evidence is the message as your device decrypted it with its
+        sender's signature, from the archive copy (ADR 0010); the instance
+        adds a signed receipt for the copy it stores. Reports about server
+        channels go to the server's moderators; reports about direct and
+        group messages go to the instance admins.
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewReport"
+      responses:
+        "201":
+          description: Filed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such message that you can read (`message_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: You already reported this message (`already_reported`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Your own message (`own_message`), evidence that is not about this message (`bad_evidence`), or a comment over 1000 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/reports:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listServerReports
+      summary: A server's reports (MANAGE_MESSAGES)
+      description: Newest first, at most 100. Check each one's evidence and receipt on your device.
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved]
+            default: open
+      responses:
+        "200":
+          description: The reports.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_MESSAGES (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server, or you are not in it (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/reports/{reportId}/resolve:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: resolveServerReport
+      summary: Close one of a server's reports (MANAGE_MESSAGES)
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportResolution"
+      responses:
+        "204":
+          description: Resolved.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_MESSAGES (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server or report (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already resolved (`already_handled`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A resolution over 1000 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/reports/{reportId}/escalate:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: escalateServerReport
+      summary: Pass one of a server's reports on to the instance admins (MANAGE_MESSAGES)
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Passed on.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: You lack MANAGE_MESSAGES (`missing_permission`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such server or report (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already resolved or passed on (`already_handled`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/reports:
+    get:
+      operationId: listAdminReports
+      summary: Reports for the instance admins
+      description: |
+        About direct and group messages, passed on by a server's moderators,
+        or every server's when the instance sends them all to the admins.
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved]
+            default: open
+      responses:
+        "200":
+          description: The reports, newest first, at most 100.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/reports/{reportId}/resolve:
+    parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: resolveAdminReport
+      summary: Close a report as an instance admin
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportResolution"
+      responses:
+        "204":
+          description: Resolved.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such report for the admins (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already resolved (`already_handled`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: A resolution over 1000 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/admin/previews:
     get:
       operationId: getPreviewSettings
@@ -2966,6 +3247,44 @@ paths:
                   $ref: "#/components/schemas/ReadState"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /api/v1/conversations/{conversationId}/archive/{messageId}:
+    parameters:
+      - name: conversationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getArchivedMessage
+      summary: One archive copy, to report its message
+      description: Reporting a message hands over its archive copy's contents (ADR 0010), so a member's device fetches it by ID.
+      tags: [encryption]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The archive copy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchivedMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such conversation you are in, or no such message in it (`not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/conversations/{conversationId}/archive:
     parameters:
       - name: conversationId
@@ -3130,6 +3449,49 @@ paths:
                 $ref: "#/components/schemas/Error"
         "404":
           description: No such channel you can see (`channel_not_found`), or no such message in it (`message_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/servers/{serverId}/channels/{channelId}/archive/{messageId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getChannelArchivedMessage
+      summary: One channel message's archive copy, to report it
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The archive copy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelArchivedMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No such channel you can see (`channel_not_found`), or no such message in it that you may read (`message_not_found`).
           content:
             application/json:
               schema:
@@ -5332,6 +5694,108 @@ components:
     ServerChannelKind:
       type: string
       enum: [category, text, voice]
+    NewReport:
+      type: object
+      required: [messageId, evidence]
+      properties:
+        serverId:
+          type: string
+          format: uuid
+        channelId:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        evidence:
+          type: string
+          format: byte
+        comment:
+          type: string
+          maxLength: 1000
+    CreatedReport:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+    ReportResolution:
+      type: object
+      properties:
+        resolution:
+          type: string
+          maxLength: 1000
+    Report:
+      type: object
+      required:
+        [
+          id,
+          messageId,
+          evidence,
+          receipt,
+          receiptSignature,
+          comment,
+          status,
+          escalated,
+          resolution,
+          createdAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        serverId:
+          type: string
+          format: uuid
+        channelId:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        reporterId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        evidence:
+          type: string
+          format: byte
+          description: The message and its sender's signature, as the reporter's device gave them.
+        receipt:
+          type: string
+          format: byte
+          description: The instance's receipt for the stored copy, as JSON.
+        receiptSignature:
+          type: string
+          format: byte
+          description: Ed25519, by the instance's signing key, over "nexus-chat report receipt v1\n" and the receipt.
+        comment:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved]
+        escalated:
+          type: boolean
+        resolution:
+          type: string
+        resolvedBy:
+          type: string
+          format: uuid
+        resolvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
     Sanction:
       type: object
       properties:

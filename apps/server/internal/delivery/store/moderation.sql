@@ -28,3 +28,8 @@ UPDATE channel_threads t SET reply_count = (
     SELECT count(*) FROM archived_messages a WHERE a.channel_id = t.channel_id AND a.thread_root_id = t.root_message_id
 )
 WHERE t.channel_id IN (SELECT c.id FROM server_channels c WHERE c.audience_id = ANY(@conversation_ids::uuid[]));
+
+-- name: GetArchivedCopy :one
+-- One archive copy, for a report about it.
+SELECT conversation_id, message_id, epoch, sender_id, sealed, created_at, channel_id, thread_root_id FROM archived_messages
+WHERE conversation_id = @conversation_id AND message_id = @message_id;

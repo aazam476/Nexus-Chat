@@ -1,7 +1,8 @@
 import sodium from "libsodium-wrappers-sumo";
 
 import type { Audience } from "../messaging/engine/channels";
-import { startMessenger, type Messenger, type MessengerSetup } from "../messaging/messenger";
+import { type Messenger, type MessengerSetup } from "../messaging/messenger";
+import { startMessenger } from "../messaging/messengerStart";
 import { createMemoryDatabase } from "../storage/localDatabase";
 import { FakeInstance } from "../testing/fakeDelivery";
 

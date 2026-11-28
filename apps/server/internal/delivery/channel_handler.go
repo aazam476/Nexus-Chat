@@ -148,3 +148,24 @@ func (handler *Handler) DeleteChannelMessage(ctx context.Context, request api.De
 	}
 	return api.DeleteChannelMessage204Response{}, nil
 }
+
+// GetChannelArchivedMessage answers GET /api/v1/servers/{serverId}/channels/{channelId}/archive/{messageId}.
+func (handler *Handler) GetChannelArchivedMessage(ctx context.Context, request api.GetChannelArchivedMessageRequestObject) (api.GetChannelArchivedMessageResponseObject, error) {
+	me, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	found, err := handler.service.ChannelCopy(ctx, ChannelRef{ServerID: request.ServerId, ChannelID: request.ChannelId, UserID: me}, request.MessageId)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return api.GetChannelArchivedMessage404JSONResponse(channelNotFound(err)), nil
+	case errors.Is(err, ErrNoMessage):
+		return api.GetChannelArchivedMessage404JSONResponse(apiresponse.Error("message_not_found", err)), nil
+	case err != nil:
+		return nil, err
+	}
+	return api.GetChannelArchivedMessage200JSONResponse{
+		MessageId: found.MessageID, MlsGroupId: found.MLSGroupID, Epoch: found.Epoch, SenderId: found.SenderID,
+		Sealed: found.Sealed, CreatedAt: found.CreatedAt, ThreadRootId: found.ThreadRootID,
+	}, nil
+}

@@ -166,22 +166,45 @@ export function safetyNumber(masterPublicKey: Uint8Array): string {
 }
 
 const directiveLabel = "nexus-chat membership directive v1\n";
+const receiptLabel = "nexus-chat report receipt v1\n";
+
+/** Checks an instance signature over `label` and `payload`. */
+async function signedByInstance(
+  instanceKey: Uint8Array,
+  label: string,
+  payload: Uint8Array,
+  signature: Uint8Array,
+): Promise<boolean> {
+  await sodium.ready;
+  const message = new Uint8Array([...new TextEncoder().encode(label), ...payload]);
+  try {
+    return sodium.crypto_sign_verify_detached(signature, message, instanceKey);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Checks a membership directive's signature against the instance's
  * published key (docs/e2ee-design.md §3.2): the signature covers the label
  * and the directive's exact bytes, as apps/server/internal/delivery signs it.
  */
-export async function verifyDirective(
+export function verifyDirective(
   instanceKey: Uint8Array,
   directive: Uint8Array,
   signature: Uint8Array,
 ): Promise<boolean> {
-  await sodium.ready;
-  const message = new Uint8Array([...new TextEncoder().encode(directiveLabel), ...directive]);
-  try {
-    return sodium.crypto_sign_verify_detached(signature, message, instanceKey);
-  } catch {
-    return false;
-  }
+  return signedByInstance(instanceKey, directiveLabel, directive, signature);
+}
+
+/**
+ * Checks the instance's receipt for a reported message (ADR 0010), as
+ * apps/server/internal/reports signs it.
+ */
+export function verifyReceipt(
+  instanceKey: Uint8Array,
+  receipt: Uint8Array,
+  signature: Uint8Array,
+): Promise<boolean> {
+  return signedByInstance(instanceKey, receiptLabel, receipt, signature);
 }
