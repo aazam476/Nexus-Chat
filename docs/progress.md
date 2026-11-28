@@ -550,6 +550,10 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   key backup, sealed under the backup key, and the desktop app indexes
   every conversation's whole history for the others. The release gate's
   browser test searches on a restored device.
+- Name search on the server (M6, `GET /api/v1/search`): the user's servers,
+  the channels they can see and the people they share a server with, by
+  name. The search screen asks the server only once the user chooses
+  "Also find servers, channels and people by name".
 - Visual checks of the server screens (the list, a server, its settings,
   and the channel, role and member settings) with demo, worst-case and
   right-to-left servers, in both themes and at every checked width.

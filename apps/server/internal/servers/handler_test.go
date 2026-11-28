@@ -24,6 +24,7 @@ func calls(ctx context.Context, handler *Handler, serverID uuid.UUID) []error {
 	errs := []error{}
 	add := func(_ any, err error) { errs = append(errs, err) }
 	add(handler.ListServers(ctx, api.ListServersRequestObject{}))
+	add(handler.SearchNames(ctx, api.SearchNamesRequestObject{Params: api.SearchNamesParams{Q: "book"}}))
 	add(handler.CreateServer(ctx, api.CreateServerRequestObject{Body: &api.NewServer{Name: "x"}}))
 	add(handler.GetServer(ctx, api.GetServerRequestObject{ServerId: serverID}))
 	add(handler.UpdateServer(ctx, api.UpdateServerRequestObject{ServerId: serverID, Body: &api.ServerSettings{Name: "x"}}))

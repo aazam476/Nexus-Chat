@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 
 import SearchScreen from "../../app/search";
@@ -91,6 +91,79 @@ describe("searching messages", () => {
     await fireEvent.press(screen.getByTestId("search-where-1"));
     await fireEvent.press(screen.getByTestId("search-attachments-1"));
     expect(await screen.findByText("No messages match.")).toBeOnTheScreen();
+  });
+});
+
+describe("finding names on the server", () => {
+  beforeEach(() => {
+    params({});
+  });
+
+  const found = {
+    servers: [{ id: serverId, name: "Book club" }],
+    channels: [
+      { id: general, serverId, serverName: "Book club", kind: "text", name: "general" },
+      { id: "voice-1", serverId, serverName: "Book club", kind: "voice", name: "General" },
+    ],
+    people: [{ id: "user-grace", username: "grace", displayName: "Grace Hopper" }],
+  };
+
+  it("asks the server only once the user says so, and opens what it finds", async () => {
+    const { ada } = await messengersInDm();
+    const server = serverWith([dm]);
+    server.answer("GET /api/v1/search", { status: 200, body: found });
+    server.answer("POST /api/v1/conversations/dms", { status: 200, body: dm });
+    await renderAs(<SearchScreen />, ada, server);
+    await type("search-query", "gen");
+    expect(await screen.findByText("No messages match.")).toBeOnTheScreen();
+    expect(server.requests.filter((request) => request.path === "/api/v1/search")).toEqual([]);
+
+    await fireEvent.press(screen.getByTestId("search-names-start"));
+    expect(await screen.findByText("Servers, channels and people")).toBeOnTheScreen();
+    expect(server.requests.find((request) => request.path === "/api/v1/search")?.search).toBe("?q=gen");
+    expect(screen.getByText("Voice channel in \u2068Book club\u2069")).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId(`search-channel-${general}`));
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: "/server/[id]/channel/[channelId]",
+      params: { id: serverId, channelId: general },
+    });
+    await fireEvent.press(screen.getByTestId("search-channel-voice-1"));
+    expect(router.push).toHaveBeenCalledWith({ pathname: "/server/[id]", params: { id: serverId } });
+    await fireEvent.press(screen.getByTestId(`search-server-${serverId}`));
+    await fireEvent.press(screen.getByTestId("search-person-user-grace"));
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith({ pathname: "/conversation/[id]", params: { id: "dm" } });
+    });
+
+    await type("search-query", "g");
+    expect(await screen.findByText(/^Your server searches names only/)).toBeOnTheScreen();
+  });
+
+  it("says when nothing matches or a person cannot be messaged", async () => {
+    const { ada } = await messengersInDm();
+    const server = serverWith([dm]);
+    server.answer("GET /api/v1/search", { status: 200, body: { ...found, servers: [], channels: [] } });
+    server.answer("POST /api/v1/conversations/dms", {
+      status: 403,
+      body: { code: "forbidden", message: "no" },
+    });
+    await renderAs(<SearchScreen />, ada, server);
+    await fireEvent.press(screen.getByTestId("search-names-start"));
+    await type("search-query", "grace");
+    await fireEvent.press(await screen.findByTestId("search-person-user-grace"));
+    expect(await screen.findByText(/^A direct message could not be opened/)).toBeOnTheScreen();
+
+    server.answer("GET /api/v1/search", { status: 200, body: { servers: [], channels: [], people: [] } });
+    await type("search-query", "zzz");
+    expect(await screen.findByText("No servers, channels or people have names like that.")).toBeOnTheScreen();
+  });
+
+  it("is not offered when searching one conversation", async () => {
+    const { ada } = await messengersInDm();
+    params({ in: "dm" });
+    await renderAs(<SearchScreen />, ada);
+    expect(screen.queryByTestId("search-names-start")).toBeNull();
   });
 });
 

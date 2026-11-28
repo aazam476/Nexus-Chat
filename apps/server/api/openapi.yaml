@@ -3289,6 +3289,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /api/v1/search:
+    get:
+      operationId: searchNames
+      summary: Search the names of your servers, channels and people
+      description: |
+        Matches the words anywhere in the names of the servers you are in,
+        the channels you can see in them, and the usernames and display
+        names of the people you share a server with, ignoring case. Message
+        content is end-to-end encrypted and is searched on your devices
+        instead.
+      tags: [servers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 2 to 100 characters.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Up to 20 of each, by name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NameSearchResults"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
   /api/v1/servers:
     get:
       operationId: listServers
@@ -4917,6 +4948,62 @@ components:
     ServerChannelKind:
       type: string
       enum: [category, text, voice]
+    NameSearchResults:
+      type: object
+      required: [servers, channels, people]
+      properties:
+        servers:
+          type: array
+          items:
+            $ref: "#/components/schemas/FoundServer"
+        channels:
+          type: array
+          items:
+            $ref: "#/components/schemas/FoundChannel"
+        people:
+          type: array
+          items:
+            $ref: "#/components/schemas/FoundPerson"
+    FoundServer:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        iconId:
+          type: string
+          format: uuid
+    FoundChannel:
+      type: object
+      required: [id, serverId, serverName, kind, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        serverId:
+          type: string
+          format: uuid
+        serverName:
+          type: string
+        kind:
+          type: string
+          enum: [text, voice]
+        name:
+          type: string
+    FoundPerson:
+      type: object
+      required: [id, username, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
     NewServer:
       type: object
       required: [name]

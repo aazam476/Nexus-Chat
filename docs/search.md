@@ -58,6 +58,21 @@ Search depends on the history-key backup (docs/e2ee-design.md §5): a device
 that cannot decrypt old messages cannot index them, but it can still use
 chunks another of the user's devices shared.
 
+## Names, on the server
+
+Names of servers, channels and people are not end-to-end encrypted, so the
+server searches them (`GET /api/v1/search`): the servers the user is in, the
+channels they can see in them (a channel hidden from them by its overrides is
+left out), and the usernames and display names of people they share a server
+with. Matching ignores case and finds the words anywhere in a name; `%`, `_`
+and `\` are taken literally. Queries are 2 to 100 characters, and up to 20 of
+each kind come back.
+
+The search screen sends the words to the server only after the user asks it
+to ("Also find servers, channels and people by name"), so a message search
+alone stays on the device. Searching from inside a conversation or channel
+does not offer it.
+
 ## Not built
 
 Searchable symmetric encryption and server-readable channels are not built;

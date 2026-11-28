@@ -638,6 +638,17 @@
       "failed": "Older messages could not be read. Check your connection and try again."
     },
     "aChannel": "A channel",
-    "aConversation": "A conversation"
+    "aConversation": "A conversation",
+    "names": {
+      "start": "Also find servers, channels and people by name (asks your server)",
+      "hint": "Your server searches names only, never messages. Type at least 2 characters.",
+      "title": "Servers, channels and people",
+      "server": "Server",
+      "textChannel": "Text channel in {{server}}",
+      "voiceChannel": "Voice channel in {{server}}",
+      "person": "@{{username}}",
+      "messageFailed": "A direct message could not be opened. Their privacy settings may not allow it.",
+      "none": "No servers, channels or people have names like that."
+    }
   }
 }

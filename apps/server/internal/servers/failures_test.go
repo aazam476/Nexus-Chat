@@ -39,6 +39,8 @@ func TestDatabaseFailuresAreReported(t *testing.T) {
 	require.Error(t, err)
 	_, err = f.service.CreateInvite(ctx, scope, InviteLimits{})
 	require.Error(t, err)
+	_, err = f.service.Find(ctx, ada, "book")
+	require.Error(t, err)
 	for _, call := range []error{
 		f.service.Update(ctx, scope, Settings{Name: "x"}),
 		f.service.Delete(ctx, scope),

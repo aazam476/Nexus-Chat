@@ -13,6 +13,32 @@ export type OverrideTargetKind = 'role' | 'member';
 
 export type ServerChannelKind = 'category' | 'text' | 'voice';
 
+export type NameSearchResults = {
+    servers: Array<FoundServer>;
+    channels: Array<FoundChannel>;
+    people: Array<FoundPerson>;
+};
+
+export type FoundServer = {
+    id: string;
+    name: string;
+    iconId?: string;
+};
+
+export type FoundChannel = {
+    id: string;
+    serverId: string;
+    serverName: string;
+    kind: 'text' | 'voice';
+    name: string;
+};
+
+export type FoundPerson = {
+    id: string;
+    username: string;
+    displayName: string;
+};
+
 export type NewServer = {
     name: string;
     description?: string;
@@ -4767,6 +4793,40 @@ export type GetReadinessResponses = {
 };
 
 export type GetReadinessResponse = GetReadinessResponses[keyof GetReadinessResponses];
+
+export type SearchNamesData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * 2 to 100 characters.
+         */
+        q: string;
+    };
+    url: '/api/v1/search';
+};
+
+export type SearchNamesErrors = {
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * One or more fields are invalid (`validation_failed`); `fields` lists them.
+     */
+    422: Error;
+};
+
+export type SearchNamesError = SearchNamesErrors[keyof SearchNamesErrors];
+
+export type SearchNamesResponses = {
+    /**
+     * Up to 20 of each, by name.
+     */
+    200: NameSearchResults;
+};
+
+export type SearchNamesResponse = SearchNamesResponses[keyof SearchNamesResponses];
 
 export type ListServersData = {
     body?: never;

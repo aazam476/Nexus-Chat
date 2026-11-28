@@ -37,6 +37,24 @@ func (e ConversationKind) Valid() bool {
 	}
 }
 
+// Defines values for FoundChannelKind.
+const (
+	FoundChannelKindText  FoundChannelKind = "text"
+	FoundChannelKindVoice FoundChannelKind = "voice"
+)
+
+// Valid indicates whether the value is a known member of the FoundChannelKind enum.
+func (e FoundChannelKind) Valid() bool {
+	switch e {
+	case FoundChannelKindText:
+		return true
+	case FoundChannelKindVoice:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthState.
 const (
 	HealthStateOk          HealthState = "ok"
@@ -732,6 +750,32 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
+// FoundChannel defines model for FoundChannel.
+type FoundChannel struct {
+	Id         openapi_types.UUID `json:"id"`
+	Kind       FoundChannelKind   `json:"kind"`
+	Name       string             `json:"name"`
+	ServerId   openapi_types.UUID `json:"serverId"`
+	ServerName string             `json:"serverName"`
+}
+
+// FoundChannelKind defines model for FoundChannel.Kind.
+type FoundChannelKind string
+
+// FoundPerson defines model for FoundPerson.
+type FoundPerson struct {
+	DisplayName string             `json:"displayName"`
+	Id          openapi_types.UUID `json:"id"`
+	Username    string             `json:"username"`
+}
+
+// FoundServer defines model for FoundServer.
+type FoundServer struct {
+	IconId *openapi_types.UUID `json:"iconId,omitempty"`
+	Id     openapi_types.UUID  `json:"id"`
+	Name   string              `json:"name"`
+}
+
 // FriendRequestTarget defines model for FriendRequestTarget.
 type FriendRequestTarget struct {
 	Username string `json:"username"`
@@ -973,6 +1017,13 @@ type MlsSend struct {
 
 	// Message An MLSMessage holding a PrivateMessage with application content.
 	Message []byte `json:"message"`
+}
+
+// NameSearchResults defines model for NameSearchResults.
+type NameSearchResults struct {
+	Channels []FoundChannel `json:"channels"`
+	People   []FoundPerson  `json:"people"`
+	Servers  []FoundServer  `json:"servers"`
 }
 
 // NewGroupConversation defines model for NewGroupConversation.
@@ -1610,6 +1661,12 @@ type GetLinkPreviewImageParams struct {
 	Url string `form:"url" json:"url"`
 }
 
+// SearchNamesParams defines parameters for SearchNames.
+type SearchNamesParams struct {
+	// Q 2 to 100 characters.
+	Q string `form:"q" json:"q"`
+}
+
 // OrderServerChannelsJSONBody defines parameters for OrderServerChannels.
 type OrderServerChannelsJSONBody = []ChannelPlacement
 
@@ -2082,6 +2139,9 @@ type ServerInterface interface {
 	// ListReadStates Read position and unread count of each of the caller's conversations
 	// (GET /api/v1/read-state)
 	ListReadStates(w http.ResponseWriter, r *http.Request)
+	// SearchNames Search the names of your servers, channels and people
+	// (GET /api/v1/search)
+	SearchNames(w http.ResponseWriter, r *http.Request, params SearchNamesParams)
 	// GetServerIcon A server's icon
 	// (GET /api/v1/server-icons/{iconId})
 	GetServerIcon(w http.ResponseWriter, r *http.Request, iconId openapi_types.UUID)
@@ -4187,6 +4247,39 @@ func (siw *ServerInterfaceWrapper) ListReadStates(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// SearchNames operation middleware
+func (siw *ServerInterfaceWrapper) SearchNames(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchNamesParams
+
+	// ------------- Required query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchNames(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetServerIcon operation middleware
 func (siw *ServerInterfaceWrapper) GetServerIcon(w http.ResponseWriter, r *http.Request) {
 
@@ -5881,6 +5974,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/setup", wrapper.CompleteSetup)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/healthz", wrapper.GetLiveness)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/readyz", wrapper.GetReadiness)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/search", wrapper.SearchNames)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/servers", wrapper.ListServers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers", wrapper.CreateServer)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/servers/{serverId}", wrapper.DeleteServer)
@@ -12044,6 +12138,56 @@ func (response ListReadStates401JSONResponse) VisitListReadStatesResponse(w http
 	return err
 }
 
+type SearchNamesRequestObject struct {
+	Params SearchNamesParams
+}
+
+type SearchNamesResponseObject interface {
+	VisitSearchNamesResponse(w http.ResponseWriter) error
+}
+
+type SearchNames200JSONResponse NameSearchResults
+
+func (response SearchNames200JSONResponse) VisitSearchNamesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchNames401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SearchNames401JSONResponse) VisitSearchNamesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchNames422JSONResponse struct{ ValidationFailedJSONResponse }
+
+func (response SearchNames422JSONResponse) VisitSearchNamesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetServerIconRequestObject struct {
 	IconId openapi_types.UUID `json:"iconId"`
 }
@@ -15793,6 +15937,9 @@ type StrictServerInterface interface {
 	// ListReadStates Read position and unread count of each of the caller's conversations
 	// (GET /api/v1/read-state)
 	ListReadStates(ctx context.Context, request ListReadStatesRequestObject) (ListReadStatesResponseObject, error)
+	// SearchNames Search the names of your servers, channels and people
+	// (GET /api/v1/search)
+	SearchNames(ctx context.Context, request SearchNamesRequestObject) (SearchNamesResponseObject, error)
 	// GetServerIcon A server's icon
 	// (GET /api/v1/server-icons/{iconId})
 	GetServerIcon(ctx context.Context, request GetServerIconRequestObject) (GetServerIconResponseObject, error)
@@ -18585,6 +18732,32 @@ func (sh *strictHandler) ListReadStates(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListReadStatesResponseObject); ok {
 		if err := validResponse.VisitListReadStatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchNames operation middleware
+func (sh *strictHandler) SearchNames(w http.ResponseWriter, r *http.Request, params SearchNamesParams) {
+	var request SearchNamesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchNames(ctx, request.(SearchNamesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchNames")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchNamesResponseObject); ok {
+		if err := validResponse.VisitSearchNamesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

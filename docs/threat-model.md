@@ -39,7 +39,10 @@ planned before 1.0, not before beta.
   server sees only that a small message referencing another message was sent.
 - Voice: who is in which call and when, mute/deafen state, and approximate
   media bitrate. Not the media itself.
-- Search: never what is searched for. Index sync between a user's devices
+- Search: never what is searched for in messages. Names of servers,
+  channels and people are searched on the server, so when the user asks
+  the search screen to find them too, the server sees those words.
+  Index sync between a user's devices
   (docs/search.md) shows which (conversation or channel, month) chunks the
   user's index has, their sizes, when they change, and which a device
   downloads.

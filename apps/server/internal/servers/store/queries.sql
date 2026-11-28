@@ -196,3 +196,27 @@ SELECT format FROM server_emoji WHERE id = $1;
 
 -- name: ServerEmojiIDs :many
 SELECT id FROM server_emoji WHERE server_id = $1;
+
+-- name: FindServers :many
+-- The user's servers whose name matches `pattern` (an ILIKE pattern).
+SELECT s.id, s.name, s.icon_id FROM servers s
+JOIN server_members m ON m.server_id = s.id AND m.user_id = sqlc.arg(user_id)
+WHERE s.name ILIKE sqlc.arg(pattern)::text ESCAPE '\'
+ORDER BY s.name, s.id LIMIT 20;
+
+-- name: FindChannels :many
+-- Text and voice channels in the user's servers whose name matches; who
+-- may see each is decided afterwards.
+SELECT c.id, c.server_id, c.kind, c.name, s.name AS server_name FROM server_channels c
+JOIN server_members m ON m.server_id = c.server_id AND m.user_id = sqlc.arg(user_id)
+JOIN servers s ON s.id = c.server_id
+WHERE c.kind <> 'category' AND c.name ILIKE sqlc.arg(pattern)::text ESCAPE '\'
+ORDER BY c.name, c.id LIMIT 100;
+
+-- name: FindPeople :many
+-- People who share a server with the user, by username or display name.
+SELECT DISTINCT u.id, u.username, u.display_name FROM users u
+JOIN server_members them ON them.user_id = u.id
+JOIN server_members me ON me.server_id = them.server_id AND me.user_id = sqlc.arg(user_id)
+WHERE u.id <> sqlc.arg(user_id) AND (u.username ILIKE sqlc.arg(pattern)::text ESCAPE '\' OR u.display_name ILIKE sqlc.arg(pattern)::text ESCAPE '\')
+ORDER BY u.display_name, u.id LIMIT 20;

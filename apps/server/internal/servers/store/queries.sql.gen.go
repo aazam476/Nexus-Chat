@@ -183,6 +183,134 @@ func (q *Queries) DeleteServerEmoji(ctx context.Context, arg DeleteServerEmojiPa
 	return id, err
 }
 
+const findChannels = `-- name: FindChannels :many
+SELECT c.id, c.server_id, c.kind, c.name, s.name AS server_name FROM server_channels c
+JOIN server_members m ON m.server_id = c.server_id AND m.user_id = $1
+JOIN servers s ON s.id = c.server_id
+WHERE c.kind <> 'category' AND c.name ILIKE $2::text ESCAPE '\'
+ORDER BY c.name, c.id LIMIT 100
+`
+
+type FindChannelsParams struct {
+	UserID  uuid.UUID
+	Pattern string
+}
+
+type FindChannelsRow struct {
+	ID         uuid.UUID
+	ServerID   uuid.UUID
+	Kind       string
+	Name       string
+	ServerName string
+}
+
+// Text and voice channels in the user's servers whose name matches; who
+// may see each is decided afterwards.
+func (q *Queries) FindChannels(ctx context.Context, arg FindChannelsParams) ([]FindChannelsRow, error) {
+	rows, err := q.db.Query(ctx, findChannels, arg.UserID, arg.Pattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindChannelsRow
+	for rows.Next() {
+		var i FindChannelsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ServerID,
+			&i.Kind,
+			&i.Name,
+			&i.ServerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findPeople = `-- name: FindPeople :many
+SELECT DISTINCT u.id, u.username, u.display_name FROM users u
+JOIN server_members them ON them.user_id = u.id
+JOIN server_members me ON me.server_id = them.server_id AND me.user_id = $1
+WHERE u.id <> $1 AND (u.username ILIKE $2::text ESCAPE '\' OR u.display_name ILIKE $2::text ESCAPE '\')
+ORDER BY u.display_name, u.id LIMIT 20
+`
+
+type FindPeopleParams struct {
+	UserID  uuid.UUID
+	Pattern string
+}
+
+type FindPeopleRow struct {
+	ID          uuid.UUID
+	Username    string
+	DisplayName string
+}
+
+// People who share a server with the user, by username or display name.
+func (q *Queries) FindPeople(ctx context.Context, arg FindPeopleParams) ([]FindPeopleRow, error) {
+	rows, err := q.db.Query(ctx, findPeople, arg.UserID, arg.Pattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindPeopleRow
+	for rows.Next() {
+		var i FindPeopleRow
+		if err := rows.Scan(&i.ID, &i.Username, &i.DisplayName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findServers = `-- name: FindServers :many
+SELECT s.id, s.name, s.icon_id FROM servers s
+JOIN server_members m ON m.server_id = s.id AND m.user_id = $1
+WHERE s.name ILIKE $2::text ESCAPE '\'
+ORDER BY s.name, s.id LIMIT 20
+`
+
+type FindServersParams struct {
+	UserID  uuid.UUID
+	Pattern string
+}
+
+type FindServersRow struct {
+	ID     uuid.UUID
+	Name   string
+	IconID *uuid.UUID
+}
+
+// The user's servers whose name matches `pattern` (an ILIKE pattern).
+func (q *Queries) FindServers(ctx context.Context, arg FindServersParams) ([]FindServersRow, error) {
+	rows, err := q.db.Query(ctx, findServers, arg.UserID, arg.Pattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindServersRow
+	for rows.Next() {
+		var i FindServersRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.IconID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getChannel = `-- name: GetChannel :one
 SELECT id, server_id, kind, name, topic, parent_id, position, created_at, audience_id FROM server_channels WHERE id = $1
 `
