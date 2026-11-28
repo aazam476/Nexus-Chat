@@ -12,9 +12,9 @@
     "visual": "playwright test --project visual"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.14.0",
+    "@axe-core/playwright": "4.14.1",
     "@nexus-chat/fixtures": "workspace:*",
-    "@playwright/test": "1.65.0",
-    "@types/node": "26.6.6"
+    "@playwright/test": "1.65.1",
+    "@types/node": "26.6.10"
   }
 }

@@ -17,19 +17,19 @@
     "licenses": "scripts/check-licenses.sh js ."
   },
   "devDependencies": {
-    "@eslint-react/eslint-plugin": "5.28.8",
+    "@eslint-react/eslint-plugin": "5.30.6",
     "@eslint/js": "10.0.1",
-    "eslint": "10.14.0",
+    "eslint": "10.15.0",
     "eslint-plugin-i18next": "6.1.5",
-    "eslint-plugin-jsdoc": "65.4.5",
+    "eslint-plugin-jsdoc": "65.5.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-native-a11y": "3.5.1",
     "eslint-plugin-tsdoc": "0.5.4",
     "globals": "17.14.0",
     "license-checker-rseidelsohn": "5.0.1",
-    "prettier": "3.9.10",
-    "turbo": "2.11.10",
+    "prettier": "3.10.1",
+    "turbo": "2.11.13",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.72.1"
+    "typescript-eslint": "8.74.0"
   }
 }
