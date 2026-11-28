@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/nexus-chat-push-relay ./cmd/nexus-chat-push-relay
 
 # The relay keeps no files, so it runs unprivileged from the start.
-FROM gcr.io/distroless/static-debian13@sha256:448810357cc8e67b7208988abdba0f5ec3d3aebee0a5b13eb624979792cffc0f
+FROM gcr.io/distroless/static-debian13@sha256:4c2cd1dee442c9a99924a378c7c126fac8fef14771579ef567c3f2bdd7a5122a
 COPY --from=build /out/nexus-chat-push-relay /nexus-chat-push-relay
 USER 65532:65532
 EXPOSE 8090
