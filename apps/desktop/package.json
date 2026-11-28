@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "@types/jest": "30.0.0",
-    "@types/node": "26.6.6",
-    "electron": "45.2.3",
+    "@types/node": "26.6.10",
+    "electron": "45.5.0",
     "jest": "30.5.2",
     "ts-jest": "29.4.15"
   }
