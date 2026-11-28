@@ -62,7 +62,7 @@ func (q *Queries) GetAvatarFormat(ctx context.Context, avatarID uuid.UUID) (stri
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE email = lower($1)
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason FROM users WHERE email = lower($1)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -85,12 +85,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE id = $1
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -113,12 +115,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }
 
 const getUserByLogin = `-- name: GetUserByLogin :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE username = lower($1) OR email = lower($1)
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason FROM users WHERE username = lower($1) OR email = lower($1)
 `
 
 // Finds an account by username or email; both are stored in lower case.
@@ -142,12 +146,14 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (User, error
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at FROM users WHERE username = $1
+SELECT id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason FROM users WHERE username = $1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -170,6 +176,8 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }
@@ -242,7 +250,7 @@ func (q *Queries) ResetFailedLogins(ctx context.Context, id uuid.UUID) error {
 }
 
 const setAvatar = `-- name: SetAvatar :one
-UPDATE users SET avatar_id = $2, avatar_format = $3 WHERE id = $1 RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at
+UPDATE users SET avatar_id = $2, avatar_format = $3 WHERE id = $1 RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason
 `
 
 type SetAvatarParams struct {
@@ -271,6 +279,8 @@ func (q *Queries) SetAvatar(ctx context.Context, arg SetAvatarParams) (User, err
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }
@@ -298,7 +308,7 @@ const setStatus = `-- name: SetStatus :one
 UPDATE users
 SET status = $2, custom_status_text = $3, custom_status_expires_at = $4
 WHERE id = $1
-RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at
+RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason
 `
 
 type SetStatusParams struct {
@@ -333,6 +343,8 @@ func (q *Queries) SetStatus(ctx context.Context, arg SetStatusParams) (User, err
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }
@@ -352,7 +364,7 @@ func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHash
 }
 
 const updateProfile = `-- name: UpdateProfile :one
-UPDATE users SET display_name = $2, bio = $3 WHERE id = $1 RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at
+UPDATE users SET display_name = $2, bio = $3 WHERE id = $1 RETURNING id, username, display_name, email, email_verified_at, password_hash, is_instance_admin, created_at, failed_login_count, login_blocked_until, bio, avatar_id, avatar_format, status, custom_status_text, custom_status_expires_at, suspended_at, suspension_reason
 `
 
 type UpdateProfileParams struct {
@@ -381,6 +393,8 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (U
 		&i.Status,
 		&i.CustomStatusText,
 		&i.CustomStatusExpiresAt,
+		&i.SuspendedAt,
+		&i.SuspensionReason,
 	)
 	return i, err
 }

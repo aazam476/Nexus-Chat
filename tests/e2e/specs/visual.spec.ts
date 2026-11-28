@@ -128,8 +128,54 @@ const serverScreens = (
       name: "server-members",
       open: serverSettings("manage-members", (data) => data.messaging.contacts.at(-1)?.displayName ?? ""),
     },
+    {
+      name: "server-member",
+      open: async (page, dataset) => {
+        await serverSettings("manage-members", (data) => data.messaging.contacts.at(-1)?.displayName ?? "")(
+          page,
+          dataset,
+        );
+        await page
+          .getByTestId(/^member-0195/)
+          .filter({ visible: true })
+          .last()
+          .click();
+        await expect(shown(page, "member-ban")).toBeVisible();
+      },
+    },
+    {
+      name: "server-reports",
+      open: serverSettings(
+        "manage-reports",
+        () => "This report could not be verified: the server's receipt is missing or altered.",
+      ),
+    },
+    {
+      name: "server-bans",
+      open: serverSettings("manage-bans", (data) => data.messaging.contacts.at(-1)?.displayName ?? ""),
+    },
+    { name: "server-audit-log", open: serverSettings("manage-audit-log", (data) => data.user.displayName) },
   ] satisfies Screen[]
 ).map((screen): Screen => ({ ...screen, instance: { messaging: true, servers: true } }));
+
+/** Opens one of the Admin panel's own pages, waiting for `ready` to show. */
+function adminPage(testID: string, ready: (dataset: Dataset) => string): Screen["open"] {
+  return async (page, dataset) => {
+    await logIn(page);
+    await page.getByTestId("go-admin").click();
+    await shown(page, testID).click();
+    await expect(page.getByText(ready(dataset)).filter({ visible: true }).first()).toBeVisible();
+  };
+}
+
+const adminScreens: Screen[] = [
+  {
+    name: "admin-users",
+    open: adminPage("admin-users", (data) => data.messaging.contacts.at(-1)?.displayName ?? ""),
+  },
+  { name: "admin-servers", open: adminPage("admin-servers", (data) => data.servers.name) },
+  { name: "admin-reports", open: adminPage("admin-reports", () => "Resolve") },
+];
 
 const screens: Screen[] = [
   {
@@ -198,8 +244,11 @@ const screens: Screen[] = [
       await page.getByTestId("go-admin").click();
       await expect(page.getByTestId("smtp-host")).toBeVisible();
       await expect(page.getByTestId("upload-limit")).toBeVisible();
+      await expect(page.getByTestId("stats-users")).toBeVisible();
+      await expect(page.getByTestId("federation-save")).toBeVisible();
     },
   },
+  ...adminScreens,
   ...serverScreens,
 ];
 

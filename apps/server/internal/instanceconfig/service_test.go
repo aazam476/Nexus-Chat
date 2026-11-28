@@ -3,6 +3,7 @@ package instanceconfig
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -187,4 +188,38 @@ func TestReportsToAdmins(t *testing.T) {
 	enabled, err = service.ReportsToAdmins(t.Context())
 	require.NoError(t, err)
 	assert.True(t, enabled)
+}
+
+func TestRegistrationModes(t *testing.T) {
+	service := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "")
+	require.NoError(t, service.SetRegistrationMode(t.Context(), RegistrationClosed))
+	mode, err := service.RegistrationMode(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, RegistrationClosed, mode)
+	require.ErrorIs(t, service.SetRegistrationMode(t.Context(), "everyone"), ErrInvalidRegistrationMode)
+}
+
+func TestFederationPolicy(t *testing.T) {
+	service := NewService(&fakeSettingsStore{values: map[string][]byte{}}, clock.Fixed{}, "")
+	policy, err := service.Federation(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, FederationPolicy{Mode: FederationOpen, Allowed: []string{}, Blocked: []string{}}, policy, "open by default")
+
+	require.NoError(t, service.SetFederation(t.Context(), FederationPolicy{
+		Mode: FederationAllowlist, Allowed: []string{" Chat.Example.com. ", "b.example", "chat.example.com"}, Blocked: []string{"spam.example"},
+	}))
+	policy, err = service.Federation(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, FederationPolicy{Mode: FederationAllowlist, Allowed: []string{"b.example", "chat.example.com"}, Blocked: []string{"spam.example"}}, policy)
+
+	for _, bad := range []FederationPolicy{
+		{Mode: "some"},
+		{Mode: FederationOpen, Blocked: []string{"localhost"}},
+		{Mode: FederationOpen, Allowed: []string{"https://chat.example.com"}},
+		{Mode: FederationOpen, Blocked: []string{"-x.example"}},
+		{Mode: FederationOpen, Blocked: make([]string, MaximumFederationDomains+1)},
+		{Mode: FederationOpen, Blocked: []string{strings.Repeat("a", 250) + ".example"}},
+	} {
+		require.ErrorIs(t, service.SetFederation(t.Context(), bad), ErrInvalidFederation)
+	}
 }

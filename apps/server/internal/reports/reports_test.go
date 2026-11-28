@@ -35,7 +35,7 @@ func TestAReportCarriesTheInstancesReceipt(t *testing.T) {
 	require.NoError(t, json.Unmarshal(report.Receipt, &receipt))
 	assert.Equal(t, f.channelMessage, receipt.MessageID)
 	assert.Equal(t, f.sam, receipt.SenderID)
-	assert.Equal(t, "@sam@chat.example.com", receipt.Sender)
+	assert.Equal(t, "sam", receipt.SenderUsername)
 	assert.Equal(t, &f.channelID, receipt.ChannelID)
 	assert.Equal(t, int64(3), receipt.Epoch)
 	assert.Equal(t, archiveHash([]byte("sealed")), receipt.ArchiveHash)
@@ -92,9 +92,6 @@ func TestReportsAreRefusedWhenTheyDoNotFit(t *testing.T) {
 	_, err = f.service.Submit(ctx, f.grace, f.dmReport())
 	require.ErrorIs(t, err, ErrNotFound, "the sender's account is gone")
 
-	f.settings.domainErr = errors.New("settings are down")
-	_, err = f.service.Submit(ctx, f.ada, f.channelReport(""))
-	require.ErrorIs(t, err, f.settings.domainErr)
 	f.copies.byMessage[f.channelMessage] = withSender(f.copies.byMessage[f.channelMessage], uuid.New())
 	_, err = f.service.Submit(ctx, f.ada, f.channelReport(""))
 	require.Error(t, err, "a sender with no account")

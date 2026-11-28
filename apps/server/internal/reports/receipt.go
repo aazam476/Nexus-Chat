@@ -22,10 +22,10 @@ type Receipt struct {
 	ChannelID      *uuid.UUID `json:"channelId,omitempty"`
 	MessageID      uuid.UUID  `json:"messageId"`
 	SenderID       uuid.UUID  `json:"senderId"`
-	// Sender is the sender's address, @name@domain, which their device
-	// credential names.
-	Sender string `json:"sender"`
-	Epoch  int64  `json:"epoch"`
+	// SenderUsername is the sender's username on this instance, which
+	// their device credential names as @username@domain.
+	SenderUsername string `json:"senderUsername"`
+	Epoch          int64  `json:"epoch"`
 	// ArchiveHash is the SHA-256 of the archive copy as stored.
 	ArchiveHash []byte    `json:"archiveHash"`
 	SentAt      time.Time `json:"sentAt"`

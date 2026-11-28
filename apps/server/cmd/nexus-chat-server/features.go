@@ -123,6 +123,7 @@ func (app *application) addSocialFeatures(features *httpserver.Features, configu
 	}))
 	features.Delivery = delivery.NewHandler(deliveryService)
 	features.Reports = app.newReports(deliveryService, serverService, configuration)
+	features.InstanceAdmin = app.newInstanceAdmin(serverService, configuration)
 }
 
 // newServers makes the servers service. Icon changes are limited per

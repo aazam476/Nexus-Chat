@@ -30,6 +30,7 @@ import {
   makeServer,
   openChannel,
 } from "../src/servers.js";
+import { kickMember, reportMessage, resolveReport, setSuspended } from "../src/moderation.js";
 import { accounts, settings } from "../src/settings.js";
 
 test.describe.configure({ mode: "serial" });
@@ -189,6 +190,18 @@ async function manageTogether(ruth: Page, sami: Page): Promise<void> {
   await shown(ruth, "thread-back").click();
 }
 
+/** Sami reports Ruth's message; Ruth's device verifies it, she resolves it, then kicks Sami. */
+async function moderateTogether(ruth: Page, sami: Page): Promise<void> {
+  await reportMessage(sami, "Before you came", "Testing reports");
+  await shown(ruth, "channel-back").click();
+  await resolveReport(ruth, accounts.ruth.username, "Looked fine");
+  await kickMember(
+    ruth,
+    { name: accounts.sami.displayName, username: accounts.sami.username },
+    "End of the test",
+  );
+}
+
 test("a server's channel carries messages, with history for those who join later", async ({ browser }) => {
   test.setTimeout(180_000);
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
@@ -221,6 +234,7 @@ test("a server's channel carries messages, with history for those who join later
 
   await shown(ruth, "channel-back").click();
   await manageTogether(ruth, sami);
+  await moderateTogether(ruth, sami);
   await Promise.all(contexts.map((context) => context.close()));
 });
 
@@ -264,4 +278,28 @@ test("a wrong password is explained", async ({ page }) => {
 
   await expect(page.getByText("The username or password is wrong.")).toBeVisible();
   await expectAccessible(page);
+});
+
+test("an admin suspends an account, which then cannot sign in, and reinstates it", async ({ browser }) => {
+  const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
+  const [admin, member] = await Promise.all(contexts.map((context) => context.newPage()));
+  if (admin === undefined || member === undefined) {
+    throw new Error("could not open the devices");
+  }
+  await admin.goto("/");
+  await logIn(admin, accounts.admin);
+  await admin.getByTestId("go-admin").click();
+  await expect(admin.getByTestId("stats-users")).toBeVisible();
+  await setSuspended(admin, accounts.member.username, true);
+
+  await member.goto("/");
+  await field(member, "Username or email").fill(accounts.member.username);
+  await field(member, "Password").fill(accounts.member.password);
+  await member.getByTestId("login-submit").click();
+  await expect(member.getByText("This account is suspended. Contact the instance's admin.")).toBeVisible();
+
+  await setSuspended(admin, accounts.member.username, false);
+  await member.getByTestId("login-submit").click();
+  await expectHome(member, accounts.member);
+  await Promise.all(contexts.map((context) => context.close()));
 });

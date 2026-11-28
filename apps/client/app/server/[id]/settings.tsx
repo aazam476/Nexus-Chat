@@ -33,6 +33,24 @@ const sections = [
     testID: "manage-emoji",
   },
   {
+    permission: "MANAGE_MESSAGES",
+    label: "servers.manage.reports",
+    pathname: "/server/[id]/reports",
+    testID: "manage-reports",
+  },
+  {
+    permission: "BAN_MEMBERS",
+    label: "servers.manage.bans",
+    pathname: "/server/[id]/bans",
+    testID: "manage-bans",
+  },
+  {
+    permission: "VIEW_AUDIT_LOG",
+    label: "servers.manage.auditLog",
+    pathname: "/server/[id]/audit-log",
+    testID: "manage-audit-log",
+  },
+  {
     permission: "VIEW_CHANNEL",
     label: "servers.manage.members",
     pathname: "/server/[id]/members",

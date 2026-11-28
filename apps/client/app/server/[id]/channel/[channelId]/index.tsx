@@ -13,6 +13,7 @@ import { ChannelContexts } from "../../../../../src/screens/servers/ChannelConte
 import { ChannelHeader } from "../../../../../src/screens/servers/ChannelHeader";
 import { useChannel } from "../../../../../src/screens/servers/useChannel";
 import { useChannelView } from "../../../../../src/screens/servers/useChannelView";
+import { useChannelModeration } from "../../../../../src/screens/servers/useMessageModeration";
 
 /**
  * A server text channel: its messages and the composer, end-to-end
@@ -29,6 +30,7 @@ export default function ChannelScreen(): ReactNode {
   // Attachments travel with the audience's group, like a group DM's.
   const attachments = useAttachments(open.audience?.audienceId ?? "");
   const { people, send } = open;
+  const others = useChannelModeration(id, open.channel);
   const firstUnreadId = useReadTracking(channelId, view, { self: people.self, source: useChannelReads(id) });
   const footer = open.mayWrite ? (
     <ConversationFooter
@@ -53,6 +55,7 @@ export default function ChannelScreen(): ReactNode {
           send={send}
           firstUnreadId={firstUnreadId}
           thread={thread}
+          others={others}
         />
       </ConversationLayout>
     </ChannelContexts>

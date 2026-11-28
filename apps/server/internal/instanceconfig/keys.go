@@ -24,4 +24,7 @@ const (
 	// KeyReportsToAdmins sends every server's reports to the instance admins
 	// too, not only those its moderators pass on (JSON boolean).
 	KeyReportsToAdmins = "reports.to_admins"
+	// KeyFederation is which instances this one federates with (JSON
+	// FederationPolicy); open to everyone but the blocked by default.
+	KeyFederation = "federation.policy"
 )

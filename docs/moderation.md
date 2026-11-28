@@ -91,3 +91,27 @@ The log can be filtered by who acted, by action (or every action of a kind:
 Entries hold no message content and only the start of invite codes, so
 reading the log never lets anyone read messages or join with an invite.
 Entries are deleted after 90 days, checked every hour.
+
+## The instance admin panel
+
+Instance admins manage the whole instance (`/api/v1/admin/...`):
+
+- **Accounts.** Search by username, display name or email. **Suspending**
+  an account ends its sessions (its devices disconnect at their next
+  heartbeat) and refuses every way of signing in, with `account_suspended`,
+  until an admin reinstates it. The refusal comes only after the first
+  factor is right, so a wrong password learns nothing. Admins can make
+  other accounts admins or stop them being one. Nobody can do either to
+  their own account, and the instance always keeps one admin who is not
+  suspended.
+- **Servers.** Search by name, with each server's owner and size, and
+  delete one with everything in it; its members are told.
+- **Registration.** Open, by invite only, or closed (registration
+  invites are managed as before).
+- **Federation.** Every instance but the blocked ones, only the allowed
+  ones, or none, with up to 1,000 domains on each list. The policy is
+  stored now and applied when federation arrives (M10).
+- **Reports.** Whether every server's reports also come to the admins.
+- **Numbers.** Accounts (and suspended ones), accounts active in the last
+  30 days, servers, direct and group conversations, messages in the last
+  day, open reports, and stored attachments.

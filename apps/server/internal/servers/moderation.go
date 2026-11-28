@@ -107,7 +107,7 @@ func (service *Service) Kick(ctx context.Context, scope Scope, sanction Sanction
 	if err := service.remove(ctx, scope.ServerID, sanction.UserID); err != nil {
 		return err
 	}
-	return service.record(ctx, scope, event(ActionMemberKick, TargetKindMember, sanction.UserID, map[string]any{"reason": sanction.Reason}))
+	return service.recordOnMember(ctx, scope, event(ActionMemberKick, TargetKindMember, sanction.UserID, map[string]any{"reason": sanction.Reason}))
 }
 
 // remove takes userID out of the server and tells everyone.
@@ -149,7 +149,7 @@ func (service *Service) Ban(ctx context.Context, scope Scope, ban BanRequest) er
 		}
 	}
 	details := map[string]any{"reason": ban.Reason, "deletedMessages": purged, "deleteSeconds": int64(ban.DeleteMessages / time.Second)}
-	return service.record(ctx, scope, event(ActionMemberBan, TargetKindMember, ban.UserID, details))
+	return service.recordOnMember(ctx, scope, event(ActionMemberBan, TargetKindMember, ban.UserID, details))
 }
 
 // purge deletes what a banned user sent to the server's channels recently.
@@ -180,7 +180,7 @@ func (service *Service) Unban(ctx context.Context, scope Scope, userID uuid.UUID
 	if removed == 0 {
 		return ErrNotBanned
 	}
-	return service.record(ctx, scope, event(ActionMemberUnban, TargetKindMember, userID, nil))
+	return service.recordOnMember(ctx, scope, event(ActionMemberUnban, TargetKindMember, userID, map[string]any{}))
 }
 
 // Bans lists who is banned, most recent first (BAN_MEMBERS).
@@ -231,7 +231,7 @@ func (service *Service) Timeout(ctx context.Context, scope Scope, userID uuid.UU
 		return err
 	}
 	service.notifier.ServerChanged(ctx, []uuid.UUID{userID}, scope.ServerID)
-	return service.record(ctx, scope, event(ActionMemberTimeout, TargetKindMember, userID, details))
+	return service.recordOnMember(ctx, scope, event(ActionMemberTimeout, TargetKindMember, userID, details))
 }
 
 // MessageDeleted records a moderator's deletion of a channel message (it
@@ -265,4 +265,15 @@ func (service *Service) ReportHandled(ctx context.Context, handled reports.Handl
 		action = ActionReportEscalate
 	}
 	return service.record(ctx, Scope{ServerID: handled.ServerID, UserID: handled.ActorID}, event(action, TargetKindReport, handled.ReportID, nil))
+}
+
+// recordOnMember records an action on a member with their username, so the
+// log still names them once they have left.
+func (service *Service) recordOnMember(ctx context.Context, scope Scope, happened auditEvent) error {
+	username, err := service.store.UsernameOf(ctx, uuid.MustParse(happened.targetID))
+	if err != nil {
+		return err
+	}
+	happened.details["username"] = username
+	return service.record(ctx, scope, happened)
 }

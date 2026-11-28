@@ -54,6 +54,7 @@ const completionErrors = {
   invalid_invite: "register.invalidInvite",
   email_required: "login.providerNoEmail",
   email_in_use: "login.providerEmailInUse",
+  account_suspended: "login.suspended",
 };
 
 /** Finishes the sign-in begun as `flowId` with what the provider returned. */

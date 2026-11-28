@@ -94,7 +94,8 @@ interface Receipt {
   conversationId?: string;
   channelId?: string;
   messageId?: string;
-  sender?: string;
+  /** The sender's username on this instance. */
+  senderUsername?: string;
   epoch?: number;
   sentAt?: string;
 }
@@ -131,6 +132,18 @@ async function signedReceipt(context: EngineContext, report: ReportToCheck): Pro
   }
 }
 
+/**
+ * The address the receipt's sender has on this instance: their username at
+ * the domain this device's own address has, as every device of the
+ * instance names its users.
+ */
+function addressOf(context: EngineContext, receipt: Receipt): string | undefined {
+  const domain = /^@[^@/]+@([^@/]+)\//.exec(context.device.address)?.[1];
+  return receipt.senderUsername === undefined || domain === undefined
+    ? undefined
+    : `@${receipt.senderUsername}@${domain}`;
+}
+
 /** Checks a report on a moderator's device; nothing it says is taken on trust. */
 export async function checkReport(context: EngineContext, report: ReportToCheck): Promise<ReportVerdict> {
   const receipt = await signedReceipt(context, report);
@@ -152,7 +165,7 @@ export async function checkReport(context: EngineContext, report: ReportToCheck)
   const sender = device === undefined ? undefined : userOf(device);
   if (
     sender === undefined ||
-    sender !== receipt.sender ||
+    sender !== addressOf(context, receipt) ||
     !(await context.check(evidence.sender, evidence.signaturePublicKey))
   ) {
     return { verified: false, problem: "sender" };

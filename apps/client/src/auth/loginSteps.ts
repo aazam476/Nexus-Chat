@@ -23,6 +23,7 @@ const passwordErrors = {
   invalid_credentials: "login.invalidCredentials",
   rate_limited: "login.rateLimited",
   login_delayed: "login.delayed",
+  account_suspended: "login.suspended",
 };
 
 /** Checks the password; may ask for a second factor. */

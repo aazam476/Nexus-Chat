@@ -562,6 +562,26 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   position is kept per channel; the channel list shows unread counts, the
   channel screen marks what it shows as read and jumps to the first unread
   message, and `read_update` tells the user's other devices.
+- Moderation (M7, [moderation.md](moderation.md)): the audit log; kick,
+  ban (deleting up to 7 days of messages) and timeout; moderators deleting
+  messages, which devices drop on a directive the instance signed; and
+  verifiable reports (ADR 0010), which moderators' devices check before
+  showing them as verified. Tests show forged, reworded, misattributed and
+  mismatched reports are rejected.
+- The instance admin panel: suspending and reinstating accounts (every
+  sign-in path refuses a suspended account), who else is an admin,
+  deleting servers, sign-up mode, the federation allow and block lists
+  (stored for M10), where reports go, the instance's numbers, and the
+  reports for the admins.
+- Screens for all of it: moderating a member, a server's reports, bans
+  and audit log, reporting a message and deleting someone's message for
+  everyone, and the admin panel's accounts, servers and reports pages,
+  with worst-case visual checks. The release gate's browser test reports
+  a message, verifies and resolves it, kicks the reporter and reads the
+  kick in the audit log, and an admin suspends an account that then
+  cannot sign in. The new screens add no motion of their own; the
+  animation passes found nothing to add or remove on lists and forms
+  used this rarely.
 
 ## Known issues
 

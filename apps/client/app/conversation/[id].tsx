@@ -14,6 +14,7 @@ import { ConversationHeader } from "../../src/screens/conversation/ConversationH
 import { MentionNamesContext } from "../../src/screens/conversation/MentionNames";
 import { MessageList } from "../../src/screens/conversation/MessageList";
 import { useComposer } from "../../src/screens/conversation/useComposer";
+import { conversationModeration } from "../../src/screens/servers/useMessageModeration";
 
 /** One conversation: its messages and the composer, end-to-end encrypted. */
 export default function ConversationScreen(): ReactNode {
@@ -21,7 +22,6 @@ export default function ConversationScreen(): ReactNode {
   const messenger = messengerOf(useMessaging());
   const open = useConversation(id);
   const view = useTimeline(id);
-  const timeline = view?.items;
   const firstUnreadId = useReadTracking(id, view, { self: open.self, source: useConversationReads() });
   const composer = useComposer();
   const attachments = useAttachments(id);
@@ -39,17 +39,18 @@ export default function ConversationScreen(): ReactNode {
             <ConversationFooter
               typingIn={{ conversationId: id }}
               open={open}
-              timeline={timeline}
+              timeline={view?.items}
               compose={{ composer, send, attachments }}
             />
           }
         >
           <MessageList
-            timeline={timeline}
+            timeline={view?.items}
             people={{ self: open.self, nameOf: open.nameOf }}
             composer={composer}
             send={send}
             firstUnreadId={firstUnreadId}
+            others={conversationModeration(id)}
           />
         </ConversationLayout>
       </MentionNamesContext>

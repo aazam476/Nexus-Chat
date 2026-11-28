@@ -8,6 +8,7 @@ import type { Dataset } from "@nexus-chat/fixtures";
 import type { Page, Route } from "@playwright/test";
 
 import { FakeMessaging } from "./fakeMessaging.js";
+import { answerModeration } from "./fakeModeration.js";
 import { answerServers, emojiPicture } from "./fakeServers.js";
 
 /** What the fake instance should be doing. */
@@ -103,6 +104,7 @@ function answerRequests(dataset: Dataset, options: FakeInstanceOptions): (route:
     }
     const [status, body] = messaging?.answer(request.method(), path, jsonBody(request.postData())) ??
       (options.servers === true ? answerServers(dataset, request.method(), path) : undefined) ??
+      answerModeration(dataset, request.method(), path) ??
       table[key] ?? [404, { code: "not_found", message: key }];
     await route.fulfill(
       status === 204 ? { status } : { status, contentType: "application/json", body: JSON.stringify(body) },

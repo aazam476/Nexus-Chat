@@ -13,6 +13,67 @@ export type OverrideTargetKind = 'role' | 'member';
 
 export type ServerChannelKind = 'category' | 'text' | 'voice';
 
+export type AdminUser = {
+    id: string;
+    username: string;
+    displayName: string;
+    email: string;
+    isAdmin: boolean;
+    createdAt: string;
+    suspendedAt?: string;
+    suspensionReason: string;
+};
+
+export type Suspension = {
+    reason?: string;
+};
+
+export type AdminServer = {
+    id: string;
+    name: string;
+    ownerId: string;
+    ownerUsername?: string;
+    members: number;
+    createdAt: string;
+};
+
+export type RegistrationSettings = {
+    mode: 'open' | 'invite_only' | 'closed';
+};
+
+export type FederationPolicy = {
+    /**
+     * Every instance but the blocked ones, only the allowed ones, or none.
+     */
+    mode: 'open' | 'allowlist' | 'closed';
+    allowed: Array<string>;
+    blocked: Array<string>;
+};
+
+export type ModerationSettings = {
+    /**
+     * Every server's reports also go to the instance admins, not only those moderators pass on.
+     */
+    reportsToAdmins: boolean;
+};
+
+export type InstanceStats = {
+    users: number;
+    suspendedUsers: number;
+    /**
+     * Accounts with a session used in the last 30 days.
+     */
+    activeUsers: number;
+    servers: number;
+    conversations: number;
+    /**
+     * Messages sent in the last 24 hours.
+     */
+    recentMessages: number;
+    openReports: number;
+    attachmentBytes: number;
+};
+
 export type NewReport = {
     serverId?: string;
     channelId?: string;
@@ -1306,6 +1367,10 @@ export type LoginErrors = {
      */
     401: Error;
     /**
+     * An instance admin suspended the account (`account_suspended`).
+     */
+    403: Error;
+    /**
      * Too many attempts from this address (`rate_limited`) or for this account (`login_delayed`).
      */
     429: Error;
@@ -1998,6 +2063,552 @@ export type ResolveAdminReportResponses = {
 
 export type ResolveAdminReportResponse = ResolveAdminReportResponses[keyof ResolveAdminReportResponses];
 
+export type ListAdminUsersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Part of a username, display name or email.
+         */
+        q?: string;
+        /**
+         * The last username of the previous page.
+         */
+        after?: string;
+    };
+    url: '/api/v1/admin/users';
+};
+
+export type ListAdminUsersErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * A search over 100 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type ListAdminUsersError = ListAdminUsersErrors[keyof ListAdminUsersErrors];
+
+export type ListAdminUsersResponses = {
+    /**
+     * Up to 50, by username.
+     */
+    200: Array<AdminUser>;
+};
+
+export type ListAdminUsersResponse = ListAdminUsersResponses[keyof ListAdminUsersResponses];
+
+export type ReinstateUserData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/users/{userId}/suspension';
+};
+
+export type ReinstateUserErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+     */
+    404: Error;
+    /**
+     * Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type ReinstateUserError = ReinstateUserErrors[keyof ReinstateUserErrors];
+
+export type ReinstateUserResponses = {
+    /**
+     * Reinstated.
+     */
+    204: void;
+};
+
+export type ReinstateUserResponse = ReinstateUserResponses[keyof ReinstateUserResponses];
+
+export type SuspendUserData = {
+    body: Suspension;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/users/{userId}/suspension';
+};
+
+export type SuspendUserErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+     */
+    404: Error;
+    /**
+     * Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type SuspendUserError = SuspendUserErrors[keyof SuspendUserErrors];
+
+export type SuspendUserResponses = {
+    /**
+     * Suspended; suspending again replaces the reason.
+     */
+    204: void;
+};
+
+export type SuspendUserResponse = SuspendUserResponses[keyof SuspendUserResponses];
+
+export type RevokeInstanceAdminData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/users/{userId}/admin';
+};
+
+export type RevokeInstanceAdminErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+     */
+    404: Error;
+    /**
+     * Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type RevokeInstanceAdminError = RevokeInstanceAdminErrors[keyof RevokeInstanceAdminErrors];
+
+export type RevokeInstanceAdminResponses = {
+    /**
+     * It is not an admin.
+     */
+    204: void;
+};
+
+export type RevokeInstanceAdminResponse = RevokeInstanceAdminResponses[keyof RevokeInstanceAdminResponses];
+
+export type GrantInstanceAdminData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/users/{userId}/admin';
+};
+
+export type GrantInstanceAdminErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+     */
+    404: Error;
+    /**
+     * Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type GrantInstanceAdminError = GrantInstanceAdminErrors[keyof GrantInstanceAdminErrors];
+
+export type GrantInstanceAdminResponses = {
+    /**
+     * It is an admin.
+     */
+    204: void;
+};
+
+export type GrantInstanceAdminResponse = GrantInstanceAdminResponses[keyof GrantInstanceAdminResponses];
+
+export type ListAdminServersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Part of a server's name.
+         */
+        q?: string;
+        /**
+         * The last name of the previous page.
+         */
+        afterName?: string;
+        /**
+         * The last ID of the previous page.
+         */
+        afterId?: string;
+    };
+    url: '/api/v1/admin/servers';
+};
+
+export type ListAdminServersErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * A search over 100 characters (`invalid`).
+     */
+    422: Error;
+};
+
+export type ListAdminServersError = ListAdminServersErrors[keyof ListAdminServersErrors];
+
+export type ListAdminServersResponses = {
+    /**
+     * Up to 50, by name.
+     */
+    200: Array<AdminServer>;
+};
+
+export type ListAdminServersResponse = ListAdminServersResponses[keyof ListAdminServersResponses];
+
+export type DeleteAdminServerData = {
+    body?: never;
+    path: {
+        serverId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/servers/{serverId}';
+};
+
+export type DeleteAdminServerErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * No such server (`server_not_found`).
+     */
+    404: Error;
+};
+
+export type DeleteAdminServerError = DeleteAdminServerErrors[keyof DeleteAdminServerErrors];
+
+export type DeleteAdminServerResponses = {
+    /**
+     * Deleted; its members are told.
+     */
+    204: void;
+};
+
+export type DeleteAdminServerResponse = DeleteAdminServerResponses[keyof DeleteAdminServerResponses];
+
+export type GetRegistrationSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/registration';
+};
+
+export type GetRegistrationSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetRegistrationSettingsError = GetRegistrationSettingsErrors[keyof GetRegistrationSettingsErrors];
+
+export type GetRegistrationSettingsResponses = {
+    /**
+     * The registration mode.
+     */
+    200: RegistrationSettings;
+};
+
+export type GetRegistrationSettingsResponse = GetRegistrationSettingsResponses[keyof GetRegistrationSettingsResponses];
+
+export type UpdateRegistrationSettingsData = {
+    body: RegistrationSettings;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/registration';
+};
+
+export type UpdateRegistrationSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * An unknown mode (`invalid`).
+     */
+    422: Error;
+};
+
+export type UpdateRegistrationSettingsError = UpdateRegistrationSettingsErrors[keyof UpdateRegistrationSettingsErrors];
+
+export type UpdateRegistrationSettingsResponses = {
+    /**
+     * Changed.
+     */
+    204: void;
+};
+
+export type UpdateRegistrationSettingsResponse = UpdateRegistrationSettingsResponses[keyof UpdateRegistrationSettingsResponses];
+
+export type GetFederationSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/federation';
+};
+
+export type GetFederationSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetFederationSettingsError = GetFederationSettingsErrors[keyof GetFederationSettingsErrors];
+
+export type GetFederationSettingsResponses = {
+    /**
+     * The policy.
+     */
+    200: FederationPolicy;
+};
+
+export type GetFederationSettingsResponse = GetFederationSettingsResponses[keyof GetFederationSettingsResponses];
+
+export type UpdateFederationSettingsData = {
+    body: FederationPolicy;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/federation';
+};
+
+export type UpdateFederationSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+    /**
+     * An unknown mode, more than 1000 domains in a list, or something that is not a domain (`invalid`).
+     */
+    422: Error;
+};
+
+export type UpdateFederationSettingsError = UpdateFederationSettingsErrors[keyof UpdateFederationSettingsErrors];
+
+export type UpdateFederationSettingsResponses = {
+    /**
+     * Changed; domains are kept lowercase and sorted.
+     */
+    204: void;
+};
+
+export type UpdateFederationSettingsResponse = UpdateFederationSettingsResponses[keyof UpdateFederationSettingsResponses];
+
+export type GetModerationSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/moderation';
+};
+
+export type GetModerationSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetModerationSettingsError = GetModerationSettingsErrors[keyof GetModerationSettingsErrors];
+
+export type GetModerationSettingsResponses = {
+    /**
+     * The settings.
+     */
+    200: ModerationSettings;
+};
+
+export type GetModerationSettingsResponse = GetModerationSettingsResponses[keyof GetModerationSettingsResponses];
+
+export type UpdateModerationSettingsData = {
+    body: ModerationSettings;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/moderation';
+};
+
+export type UpdateModerationSettingsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type UpdateModerationSettingsError = UpdateModerationSettingsErrors[keyof UpdateModerationSettingsErrors];
+
+export type UpdateModerationSettingsResponses = {
+    /**
+     * Changed.
+     */
+    204: void;
+};
+
+export type UpdateModerationSettingsResponse = UpdateModerationSettingsResponses[keyof UpdateModerationSettingsResponses];
+
+export type GetInstanceStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/stats';
+};
+
+export type GetInstanceStatsErrors = {
+    /**
+     * The request body is not valid JSON or has the wrong shape (`bad_request`).
+     */
+    400: Error;
+    /**
+     * The request has no valid session token (`unauthorized`).
+     */
+    401: Error;
+    /**
+     * Only instance admins may do this (`forbidden`).
+     */
+    403: Error;
+};
+
+export type GetInstanceStatsError = GetInstanceStatsErrors[keyof GetInstanceStatsErrors];
+
+export type GetInstanceStatsResponses = {
+    /**
+     * Counts as of now.
+     */
+    200: InstanceStats;
+};
+
+export type GetInstanceStatsResponse = GetInstanceStatsResponses[keyof GetInstanceStatsResponses];
+
 export type GetPreviewSettingsData = {
     body?: never;
     path?: never;
@@ -2185,6 +2796,10 @@ export type CompleteLoginMfaErrors = {
      * The code is wrong or the challenge expired (`invalid_second_factor`). Log in with the password again.
      */
     401: Error;
+    /**
+     * An instance admin suspended the account (`account_suspended`).
+     */
+    403: Error;
     /**
      * Too many attempts; try again later (`rate_limited`).
      */
@@ -2449,6 +3064,10 @@ export type FinishSecurityKeyLoginErrors = {
      * The key could not be verified or the request expired (`invalid_second_factor`).
      */
     401: Error;
+    /**
+     * An instance admin suspended the account (`account_suspended`).
+     */
+    403: Error;
 };
 
 export type FinishSecurityKeyLoginError = FinishSecurityKeyLoginErrors[keyof FinishSecurityKeyLoginErrors];
@@ -2507,6 +3126,10 @@ export type FinishPasskeyLoginErrors = {
      * The passkey could not be verified or the request expired (`invalid_passkey`).
      */
     401: Error;
+    /**
+     * An instance admin suspended the account (`account_suspended`).
+     */
+    403: Error;
 };
 
 export type FinishPasskeyLoginError = FinishPasskeyLoginErrors[keyof FinishPasskeyLoginErrors];
@@ -2755,7 +3378,8 @@ export type CompleteProviderSignInErrors = {
      * No account can be used or created: `no_account` (sign-up is off
      * for this provider), `registration_closed`, `invite_required`,
      * `invalid_invite`, or `email_required` (the provider shared no
-     * email address).
+     * email address); or an instance admin suspended the account
+     * (`account_suspended`).
      *
      */
     403: Error;

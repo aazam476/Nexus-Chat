@@ -43,7 +43,8 @@
     "providerFailed": "Signing in with the provider did not work. Try again.",
     "providerNoAccount": "No account is linked to this login. Log in another way and link the provider in settings.",
     "providerNoEmail": "The provider did not share your email address, which an account needs.",
-    "providerEmailInUse": "An account already uses this email. Log in to it and link the provider in settings."
+    "providerEmailInUse": "An account already uses this email. Log in to it and link the provider in settings.",
+    "suspended": "This account is suspended. Contact the instance's admin."
   },
   "mfa": {
     "title": "Two-step verification",
@@ -194,6 +195,84 @@
       "save": "Save limit",
       "saved": "The new limit applies to the next upload.",
       "invalid": "Enter a whole number of MB from 1 to 4096."
+    },
+    "stats": {
+      "title": "Numbers",
+      "users_one": "{{count}} account ({{suspended}} suspended)",
+      "users_other": "{{count}} accounts ({{suspended}} suspended)",
+      "active_one": "{{count}} active in the last 30 days",
+      "active_other": "{{count}} active in the last 30 days",
+      "servers_one": "{{count}} server",
+      "servers_other": "{{count}} servers",
+      "conversations_one": "{{count}} direct or group conversation",
+      "conversations_other": "{{count}} direct and group conversations",
+      "messages_one": "{{count}} message in the last day",
+      "messages_other": "{{count}} messages in the last day",
+      "reports_one": "{{count}} open report",
+      "reports_other": "{{count}} open reports",
+      "storage": "{{size}} of attachments stored"
+    },
+    "registration": {
+      "title": "Sign-up",
+      "who": "Who may make an account",
+      "open": "Anyone",
+      "invite_only": "Only people with an invite",
+      "closed": "Nobody"
+    },
+    "reports": {
+      "title": "Reports",
+      "intro": "Reports about direct and group messages always come to the admins. Server moderators can pass theirs on.",
+      "which": "Which server reports come here",
+      "passedOn": "Only those moderators pass on",
+      "every": "Every one",
+      "open": "Open reports"
+    },
+    "federation": {
+      "title": "Federation",
+      "intro": "Which other instances this one will talk to once federation arrives. Blocked instances are refused in every mode.",
+      "mode": "Talk to",
+      "open": "Every instance except the blocked ones",
+      "allowlist": "Only the allowed instances",
+      "closed": "No other instances",
+      "allowed": "Allowed instances",
+      "blocked": "Blocked instances",
+      "listHint": "Domains such as chat.example.com, one per line; at most 1,000.",
+      "save": "Save federation",
+      "saved": "Saved.",
+      "invalid": "Check the lists: each line must be a domain such as chat.example.com."
+    },
+    "sections": {
+      "users": "Accounts",
+      "servers": "Servers",
+      "reports": "Reports for the admins"
+    },
+    "toPanel": "Back to the Admin panel",
+    "users": {
+      "title": "Accounts",
+      "intro": "Suspending an account signs it out everywhere and stops it signing in until you reinstate it.",
+      "search": "Search by username, name or email",
+      "none": "No accounts match.",
+      "who": "@{{username}} · {{email}}",
+      "admin": "Instance admin",
+      "suspended": "Suspended: {{reason}}",
+      "noReason": "no reason given",
+      "reason": "Reason for suspending",
+      "suspend": "Suspend",
+      "reinstate": "Reinstate",
+      "makeAdmin": "Make an instance admin",
+      "revokeAdmin": "Stop being an instance admin"
+    },
+    "servers": {
+      "title": "Servers",
+      "intro": "Every server on this instance. Deleting one removes it and everything in it for everyone.",
+      "search": "Search by name",
+      "none": "No servers match.",
+      "about_one": "{{count}} member · owned by @{{owner}}",
+      "about_other": "{{count}} members · owned by @{{owner}}",
+      "delete": "Delete",
+      "deleteNamed": "Delete {{name}}",
+      "deleteConfirm": "Delete {{name}} and everything in it, for everyone?",
+      "deleteYes": "Delete the server"
     }
   },
   "recovery": {
@@ -288,7 +367,10 @@
     "moreEmoji": "More emoji",
     "fewerEmoji": "Fewer emoji",
     "sendOriginal": "Send original quality",
-    "videoOriginal": "Videos are sent in original quality."
+    "videoOriginal": "Videos are sent in original quality.",
+    "report": "Report",
+    "remove": "Delete for everyone",
+    "removeConfirm": "Press again to delete for everyone"
   },
   "friends": {
     "title": "Friends",
@@ -413,7 +495,18 @@
       "emoji_name_taken": "This server already has an emoji with that name.",
       "emoji_limit": "This server has 100 emoji, the most it can have. Remove one first.",
       "emoji_not_found": "This emoji is gone.",
-      "rate_limited": "That was a lot of changes at once. Wait a minute and try again."
+      "rate_limited": "That was a lot of changes at once. Wait a minute and try again.",
+      "not_banned": "That person is not banned.",
+      "banned": "You are banned from this server.",
+      "invalid_sanction": "A reason is at most 512 characters.",
+      "invalid_timeout": "A timeout lasts from a minute to 28 days.",
+      "message_not_found": "That message is gone.",
+      "already_handled": "Someone already handled this report.",
+      "not_found": "This is gone.",
+      "self": "You can't do this to your own account.",
+      "last_admin": "The instance needs at least one admin who isn't suspended.",
+      "user_not_found": "This account is gone.",
+      "not_suspended": "This account isn't suspended."
     },
     "invites": {
       "title": "Invite people",
@@ -460,7 +553,10 @@
       "delete": "Delete server",
       "deleteConfirm": "Delete {{name}} and all its channels for everyone? This cannot be undone.",
       "deleteYes": "Delete for everyone",
-      "keep": "Keep it"
+      "keep": "Keep it",
+      "reports": "Reports",
+      "bans": "Bans",
+      "auditLog": "Audit log"
     },
     "emojiAdmin": {
       "title": "Emoji",
@@ -649,6 +745,133 @@
       "person": "@{{username}}",
       "messageFailed": "A direct message could not be opened. Their privacy settings may not allow it.",
       "none": "No servers, channels or people have names like that."
+    }
+  },
+  "moderation": {
+    "title": "Moderation",
+    "timedOutUntil": "Timed out until {{time}}",
+    "timeoutFor": "Time out for",
+    "length": {
+      "60": "A minute",
+      "3600": "An hour",
+      "86400": "A day",
+      "604800": "A week"
+    },
+    "timeout": "Time out",
+    "endTimeout": "End the timeout",
+    "reason": "Reason",
+    "reasonHint": "Optional. It goes in the audit log, up to 512 characters.",
+    "kick": "Kick",
+    "kickConfirm": "Kick {{name}}? They can join again with an invite.",
+    "kickYes": "Kick them",
+    "ban": "Ban",
+    "banConfirm": "Ban {{name}}? They can't join again until someone lifts the ban.",
+    "banYes": "Ban them",
+    "cancel": "Cancel",
+    "deleteMessages": "Delete their messages from",
+    "purge": {
+      "0": "None",
+      "3600": "The last hour",
+      "86400": "The last day",
+      "604800": "The last 7 days"
+    },
+    "bans": {
+      "title": "Bans",
+      "none": "Nobody is banned.",
+      "since": "@{{username}}, banned on {{date}}",
+      "reason": "Reason: {{reason}}",
+      "lift": "Lift the ban",
+      "liftFor": "Lift the ban on {{name}}"
+    },
+    "audit": {
+      "title": "Audit log",
+      "intro": "Every change to this server's settings and every moderation action of the last 90 days, newest first.",
+      "show": "Show",
+      "kinds": {
+        "all": "Everything",
+        "server": "Server settings",
+        "channel": "Channels",
+        "role": "Roles",
+        "member": "Members",
+        "invite": "Invites",
+        "emoji": "Emoji",
+        "message": "Deleted messages",
+        "report": "Reports"
+      },
+      "none": "Nothing here yet.",
+      "older": "Show older",
+      "someone": "Someone",
+      "other": "{{actor}}: {{action}} {{target}}",
+      "actions": {
+        "server_update": "{{actor}} changed the server's settings",
+        "server_icon": "{{actor}} changed the server's icon",
+        "channel_create": "{{actor}} created the channel {{target}}",
+        "channel_update": "{{actor}} changed the channel {{target}}",
+        "channel_delete": "{{actor}} deleted the channel {{target}}",
+        "channel_order": "{{actor}} rearranged the channels",
+        "channel_override_set": "{{actor}} changed who may do what in a channel",
+        "channel_override_clear": "{{actor}} removed a channel's permission change",
+        "role_create": "{{actor}} created the role {{target}}",
+        "role_update": "{{actor}} changed the role {{target}}",
+        "role_delete": "{{actor}} deleted the role {{target}}",
+        "role_order": "{{actor}} rearranged the roles",
+        "member_role_give": "{{actor}} gave someone the role {{target}}",
+        "member_role_take": "{{actor}} took the role {{target}} from someone",
+        "member_kick": "{{actor}} kicked {{target}}",
+        "member_ban": "{{actor}} banned {{target}}",
+        "member_unban": "{{actor}} lifted the ban on {{target}}",
+        "member_timeout": "{{actor}} changed the timeout of {{target}}",
+        "invite_create": "{{actor}} made an invite",
+        "invite_revoke": "{{actor}} revoked an invite",
+        "emoji_add": "{{actor}} added the emoji :{{target}}:",
+        "emoji_remove": "{{actor}} removed the emoji :{{target}}:",
+        "message_delete": "{{actor}} deleted a message",
+        "report_resolve": "{{actor}} resolved a report",
+        "report_escalate": "{{actor}} passed a report on to the instance admins"
+      }
+    },
+    "reports": {
+      "title": "Reports",
+      "intro": "Messages people reported here. This device checks each one: that the sender really wrote it, and the server's receipt for it.",
+      "show": "Show",
+      "status": {
+        "open": "Open",
+        "resolved": "Resolved"
+      },
+      "none": "No reports here.",
+      "checking": "Checking the report…",
+      "verified": "Verified: sent by {{sender}} at {{time}}",
+      "problem": {
+        "receipt": "This report could not be verified: the server's receipt is missing or altered.",
+        "evidence": "This report could not be verified: it does not hold a message.",
+        "mismatch": "This report could not be verified: what it holds is about a different message.",
+        "signature": "This report could not be verified: the sender did not write these words.",
+        "sender": "This report could not be verified: the message was not sent by the person it names."
+      },
+      "comment": "The reporter said: {{comment}}",
+      "filed": "Reported {{time}}",
+      "resolution": "Resolved: {{resolution}}",
+      "note": "What was done",
+      "noteHint": "Optional, up to 1,000 characters.",
+      "resolve": "Resolve",
+      "escalate": "Pass on to the instance admins"
+    }
+  },
+  "report": {
+    "title": "Report a message",
+    "back": "Back",
+    "introChannel": "The server's moderators will see this message, who sent it, and your comment. Your device proves the sender wrote it; nothing else from the channel is shared.",
+    "introConversation": "The instance's admins will see this message, who sent it, and your comment. Your device proves the sender wrote it; nothing else from the conversation is shared.",
+    "comment": "What's wrong with it?",
+    "commentHint": "Optional, up to 1,000 characters.",
+    "send": "Send report",
+    "sent": "Report sent. Thank you.",
+    "errors": {
+      "already_reported": "You already reported this message.",
+      "own_message": "You can't report your own message.",
+      "message_not_found": "This message is gone.",
+      "no_evidence": "This device can't open this message's stored copy, so it can't prove who sent it.",
+      "failed": "The report could not be sent. Try again."
     }
   }
 }

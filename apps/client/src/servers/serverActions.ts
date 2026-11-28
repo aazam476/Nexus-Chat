@@ -91,6 +91,17 @@ const known = new Set([
   "emoji_limit",
   "emoji_not_found",
   "rate_limited",
+  "not_banned",
+  "banned",
+  "invalid_sanction",
+  "invalid_timeout",
+  "message_not_found",
+  "already_handled",
+  "not_found",
+  "self",
+  "last_admin",
+  "user_not_found",
+  "not_suspended",
 ]);
 
 /** What to tell the user about a server action's error code. */

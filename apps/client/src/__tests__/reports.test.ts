@@ -25,7 +25,7 @@ function receiptFor(
       conversationId: audienceId,
       channelId: general,
       messageId,
-      sender,
+      senderUsername: sender,
       epoch: 1,
       sentAt: "2026-11-20T12:00:00Z",
       ...extra,
@@ -65,7 +65,7 @@ describe("reports", () => {
     const report: ReportToCheck = {
       messageId: id,
       evidence: evidence ?? new Uint8Array(),
-      ...receiptFor(id, "@grace@chat.example.com", key, {
+      ...receiptFor(id, "grace", key, {
         epoch: Number(decodeEvidence(evidence ?? new Uint8Array())?.epoch),
       }),
     };
@@ -98,7 +98,7 @@ describe("reports", () => {
     const check = (
       messageId: string,
       evidence: Uint8Array,
-      receipt = receiptFor(messageId, "@grace@chat.example.com", key, epoch),
+      receipt = receiptFor(messageId, "grace", key, epoch),
     ) => ada.checkReport({ messageId, evidence, ...receipt });
 
     // Words the sender never wrote, in place of theirs.
@@ -114,24 +114,18 @@ describe("reports", () => {
     // Evidence about one message, with the receipt for another.
     expect(await check(mine, encodeEvidence(real))).toEqual({ verified: false, problem: "mismatch" });
     expect(
-      await check(
-        theirs,
-        encodeEvidence(real),
-        receiptFor(theirs, "@grace@chat.example.com", key, { epoch: 99 }),
-      ),
+      await check(theirs, encodeEvidence(real), receiptFor(theirs, "grace", key, { epoch: 99 })),
     ).toEqual({
       verified: false,
       problem: "mismatch",
     });
     // A receipt the instance never signed, or one changed after signing.
     const forger = await signingInstance(new FakeInstance());
-    expect(
-      await check(theirs, encodeEvidence(real), receiptFor(theirs, "@grace@chat.example.com", forger, epoch)),
-    ).toEqual({
+    expect(await check(theirs, encodeEvidence(real), receiptFor(theirs, "grace", forger, epoch))).toEqual({
       verified: false,
       problem: "receipt",
     });
-    const changed = receiptFor(theirs, "@grace@chat.example.com", key, epoch);
+    const changed = receiptFor(theirs, "grace", key, epoch);
     changed.receipt = utf8(new TextDecoder().decode(changed.receipt).replace("grace", "ada"));
     expect(await check(theirs, encodeEvidence(real), changed)).toEqual({
       verified: false,
@@ -139,9 +133,7 @@ describe("reports", () => {
     });
     expect(await check(theirs, new Uint8Array([1, 2, 3]))).toEqual({ verified: false, problem: "evidence" });
     // The receipt says another user sent it.
-    expect(
-      await check(theirs, encodeEvidence(real), receiptFor(theirs, "@ada@chat.example.com", key, epoch)),
-    ).toEqual({
+    expect(await check(theirs, encodeEvidence(real), receiptFor(theirs, "ada", key, epoch))).toEqual({
       verified: false,
       problem: "sender",
     });

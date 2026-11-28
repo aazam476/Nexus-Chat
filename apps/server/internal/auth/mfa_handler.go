@@ -35,6 +35,8 @@ func (handler *Handler) CompleteLoginMfa(ctx context.Context, request api.Comple
 	switch {
 	case errors.Is(err, login.ErrInvalidSecondFactor):
 		return api.CompleteLoginMfa401JSONResponse(apiresponse.Error("invalid_second_factor", err)), nil
+	case errors.Is(err, login.ErrSuspended):
+		return api.CompleteLoginMfa403JSONResponse(apiresponse.Error("account_suspended", err)), nil
 	case errors.Is(err, login.ErrRateLimited):
 		return api.CompleteLoginMfa429JSONResponse{RateLimitedJSONResponse: api.RateLimitedJSONResponse(apiresponse.Error("rate_limited", err))}, nil
 	case err != nil:

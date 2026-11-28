@@ -35,3 +35,6 @@ WHERE b.server_id = @server_id ORDER BY b.created_at DESC, b.user_id;
 
 -- name: SetTimeout :execrows
 UPDATE server_members SET timed_out_until = sqlc.narg(until) WHERE server_id = @server_id AND user_id = @user_id;
+
+-- name: UsernameOf :one
+SELECT username FROM users WHERE id = @id;

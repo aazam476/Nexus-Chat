@@ -196,23 +196,41 @@ func (service *Service) Delete(ctx context.Context, scope Scope) error {
 	if !a.owner() {
 		return ErrForbidden
 	}
-	members, err := service.store.ServerMemberIDs(ctx, scope.ServerID)
+	return service.erase(ctx, a.server)
+}
+
+// DeleteAsAdmin removes a server for an instance admin, who need not be in
+// it; callers check that they are one.
+func (service *Service) DeleteAsAdmin(ctx context.Context, serverID uuid.UUID) error {
+	server, err := service.store.GetServer(ctx, serverID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
 	if err != nil {
 		return err
 	}
-	emoji, err := service.store.ServerEmojiIDs(ctx, scope.ServerID)
+	return service.erase(ctx, server)
+}
+
+// erase deletes a server, its pictures, and tells its members.
+func (service *Service) erase(ctx context.Context, server store.Server) error {
+	members, err := service.store.ServerMemberIDs(ctx, server.ID)
 	if err != nil {
 		return err
 	}
-	if err := service.store.DeleteServer(ctx, scope.ServerID); err != nil {
+	emoji, err := service.store.ServerEmojiIDs(ctx, server.ID)
+	if err != nil {
+		return err
+	}
+	if err := service.store.DeleteServer(ctx, server.ID); err != nil {
 		return err
 	}
 	// The pictures are public; once the server is gone nothing may serve them.
-	service.deleteIcon(ctx, a.server.IconID)
+	service.deleteIcon(ctx, server.IconID)
 	for _, id := range emoji {
 		service.deleteFile(ctx, emojiKey(id))
 	}
-	service.notifier.ServerChanged(ctx, members, scope.ServerID)
+	service.notifier.ServerChanged(ctx, members, server.ID)
 	return nil
 }
 

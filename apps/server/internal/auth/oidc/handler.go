@@ -169,7 +169,7 @@ func clientKey(ctx context.Context) string {
 // completeCodes maps sign-in refusals to their API codes.
 var completeCodes = map[error]string{ //nolint:gochecknoglobals // constant lookup table
 	ErrNoAccount: "no_account", ErrRegistrationClosed: "registration_closed", ErrInviteRequired: "invite_required",
-	ErrInvalidInvite: "invalid_invite", ErrEmailRequired: "email_required",
+	ErrInvalidInvite: "invalid_invite", ErrEmailRequired: "email_required", login.ErrSuspended: "account_suspended",
 }
 
 // CompleteProviderSignIn answers POST /api/v1/auth/oidc/complete.

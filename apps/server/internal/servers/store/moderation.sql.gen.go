@@ -236,3 +236,14 @@ func (q *Queries) SetTimeout(ctx context.Context, arg SetTimeoutParams) (int64, 
 	}
 	return result.RowsAffected(), nil
 }
+
+const usernameOf = `-- name: UsernameOf :one
+SELECT username FROM users WHERE id = $1
+`
+
+func (q *Queries) UsernameOf(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, usernameOf, id)
+	var username string
+	err := row.Scan(&username)
+	return username, err
+}

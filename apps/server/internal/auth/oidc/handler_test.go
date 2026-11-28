@@ -184,6 +184,7 @@ func TestCompleteSignInHandlerMapsErrors(t *testing.T) {
 		{"email in use", func(f *handlerFixture) { f.accounts.err = registrationstore.ErrEmailTaken }, "", api.CompleteProviderSignIn409JSONResponse{Code: "email_in_use", Message: ErrEmailInUse.Error()}},
 		{"identity in use", func(f *handlerFixture) { f.accounts.err = duplicate(store.IdentityKey) }, "", api.CompleteProviderSignIn409JSONResponse{Code: "identity_in_use", Message: ErrIdentityInUse.Error()}},
 		{"rate limited", func(f *handlerFixture) { f.limiter.denied = true }, "", api.CompleteProviderSignIn429JSONResponse{RateLimitedJSONResponse: api.RateLimitedJSONResponse{Code: "rate_limited", Message: ErrRateLimited.Error()}}},
+		{"suspended", func(f *handlerFixture) { f.logins.err = login.ErrSuspended }, "", api.CompleteProviderSignIn403JSONResponse{Code: "account_suspended", Message: login.ErrSuspended.Error()}},
 		{"second factor", func(f *handlerFixture) {
 			f.logins.result = login.Result{MFAChallenge: "challenge", MFAMethods: []string{"totp", "backup_code"}}
 		}, "", api.CompleteProviderSignIn202JSONResponse{ChallengeToken: "challenge", Methods: []api.MfaMethod{"totp", "backup_code"}}},

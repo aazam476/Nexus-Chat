@@ -73,6 +73,27 @@ func (e ConversationKind) Valid() bool {
 	}
 }
 
+// Defines values for FederationPolicyMode.
+const (
+	FederationPolicyModeAllowlist FederationPolicyMode = "allowlist"
+	FederationPolicyModeClosed    FederationPolicyMode = "closed"
+	FederationPolicyModeOpen      FederationPolicyMode = "open"
+)
+
+// Valid indicates whether the value is a known member of the FederationPolicyMode enum.
+func (e FederationPolicyMode) Valid() bool {
+	switch e {
+	case FederationPolicyModeAllowlist:
+		return true
+	case FederationPolicyModeClosed:
+		return true
+	case FederationPolicyModeOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FoundChannelKind.
 const (
 	FoundChannelKindText  FoundChannelKind = "text"
@@ -352,6 +373,27 @@ func (e RegistrationMode) Valid() bool {
 	}
 }
 
+// Defines values for RegistrationSettingsMode.
+const (
+	RegistrationSettingsModeClosed     RegistrationSettingsMode = "closed"
+	RegistrationSettingsModeInviteOnly RegistrationSettingsMode = "invite_only"
+	RegistrationSettingsModeOpen       RegistrationSettingsMode = "open"
+)
+
+// Valid indicates whether the value is a known member of the RegistrationSettingsMode enum.
+func (e RegistrationSettingsMode) Valid() bool {
+	switch e {
+	case RegistrationSettingsModeClosed:
+		return true
+	case RegistrationSettingsModeInviteOnly:
+		return true
+	case RegistrationSettingsModeOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Relationship.
 const (
 	RelationshipBlocked  Relationship = "blocked"
@@ -536,6 +578,28 @@ func (e ListServerReportsParamsStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AdminServer defines model for AdminServer.
+type AdminServer struct {
+	CreatedAt     time.Time          `json:"createdAt"`
+	Id            openapi_types.UUID `json:"id"`
+	Members       int64              `json:"members"`
+	Name          string             `json:"name"`
+	OwnerId       openapi_types.UUID `json:"ownerId"`
+	OwnerUsername *string            `json:"ownerUsername,omitempty"`
+}
+
+// AdminUser defines model for AdminUser.
+type AdminUser struct {
+	CreatedAt        time.Time          `json:"createdAt"`
+	DisplayName      string             `json:"displayName"`
+	Email            string             `json:"email"`
+	Id               openapi_types.UUID `json:"id"`
+	IsAdmin          bool               `json:"isAdmin"`
+	SuspendedAt      *time.Time         `json:"suspendedAt,omitempty"`
+	SuspensionReason string             `json:"suspensionReason"`
+	Username         string             `json:"username"`
 }
 
 // ArchiveCopy defines model for ArchiveCopy.
@@ -863,6 +927,18 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// FederationPolicy defines model for FederationPolicy.
+type FederationPolicy struct {
+	Allowed []string `json:"allowed"`
+	Blocked []string `json:"blocked"`
+
+	// Mode Every instance but the blocked ones, only the allowed ones, or none.
+	Mode FederationPolicyMode `json:"mode"`
+}
+
+// FederationPolicyMode Every instance but the blocked ones, only the allowed ones, or none.
+type FederationPolicyMode string
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	// Field Path of the field in the request, for example `admin.email`.
@@ -971,6 +1047,21 @@ type InstanceLimits struct {
 
 	// GroupDmMaxMembers The largest group DM, counting its creator (GROUP_DM_MAX_MEMBERS).
 	GroupDmMaxMembers int `json:"groupDmMaxMembers"`
+}
+
+// InstanceStats defines model for InstanceStats.
+type InstanceStats struct {
+	// ActiveUsers Accounts with a session used in the last 30 days.
+	ActiveUsers     int64 `json:"activeUsers"`
+	AttachmentBytes int64 `json:"attachmentBytes"`
+	Conversations   int64 `json:"conversations"`
+	OpenReports     int64 `json:"openReports"`
+
+	// RecentMessages Messages sent in the last 24 hours.
+	RecentMessages int64 `json:"recentMessages"`
+	Servers        int64 `json:"servers"`
+	SuspendedUsers int64 `json:"suspendedUsers"`
+	Users          int64 `json:"users"`
 }
 
 // Invite defines model for Invite.
@@ -1139,6 +1230,12 @@ type MlsSend struct {
 	Message []byte `json:"message"`
 }
 
+// ModerationSettings defines model for ModerationSettings.
+type ModerationSettings struct {
+	// ReportsToAdmins Every server's reports also go to the instance admins, not only those moderators pass on.
+	ReportsToAdmins bool `json:"reportsToAdmins"`
+}
+
 // NameSearchResults defines model for NameSearchResults.
 type NameSearchResults struct {
 	Channels []FoundChannel `json:"channels"`
@@ -1301,6 +1398,14 @@ type RegisterRequest struct {
 
 // RegistrationMode Who may create accounts.
 type RegistrationMode string
+
+// RegistrationSettings defines model for RegistrationSettings.
+type RegistrationSettings struct {
+	Mode RegistrationSettingsMode `json:"mode"`
+}
+
+// RegistrationSettingsMode defines model for RegistrationSettings.Mode.
+type RegistrationSettingsMode string
 
 // Relationship How you stand towards another user. `blocked` means you blocked
 // them; a user you are blocked by shows as `none`.
@@ -1607,6 +1712,11 @@ type StoredAttachment struct {
 	Size int64              `json:"size"`
 }
 
+// Suspension defines model for Suspension.
+type Suspension struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
 // TimeoutSpec defines model for TimeoutSpec.
 type TimeoutSpec struct {
 	Seconds int `json:"seconds"`
@@ -1823,6 +1933,27 @@ type ListAdminReportsParams struct {
 // ListAdminReportsParamsStatus defines parameters for ListAdminReports.
 type ListAdminReportsParamsStatus string
 
+// ListAdminServersParams defines parameters for ListAdminServers.
+type ListAdminServersParams struct {
+	// Q Part of a server's name.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// AfterName The last name of the previous page.
+	AfterName *string `form:"afterName,omitempty" json:"afterName,omitempty"`
+
+	// AfterId The last ID of the previous page.
+	AfterId *string `form:"afterId,omitempty" json:"afterId,omitempty"`
+}
+
+// ListAdminUsersParams defines parameters for ListAdminUsers.
+type ListAdminUsersParams struct {
+	// Q Part of a username, display name or email.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// After The last username of the previous page.
+	After *string `form:"after,omitempty" json:"after,omitempty"`
+}
+
 // ProviderCallbackParams defines parameters for ProviderCallback.
 type ProviderCallbackParams struct {
 	State *string `form:"state,omitempty" json:"state,omitempty"`
@@ -1912,8 +2043,14 @@ type SetAvatarParams struct {
 	CropSize *int `form:"cropSize,omitempty" json:"cropSize,omitempty"`
 }
 
+// UpdateFederationSettingsJSONRequestBody defines body for UpdateFederationSettings for application/json ContentType.
+type UpdateFederationSettingsJSONRequestBody = FederationPolicy
+
 // CreateInviteJSONRequestBody defines body for CreateInvite for application/json ContentType.
 type CreateInviteJSONRequestBody = CreateInviteRequest
+
+// UpdateModerationSettingsJSONRequestBody defines body for UpdateModerationSettings for application/json ContentType.
+type UpdateModerationSettingsJSONRequestBody = ModerationSettings
 
 // CreateOidcProviderJSONRequestBody defines body for CreateOidcProvider for application/json ContentType.
 type CreateOidcProviderJSONRequestBody = CreateOidcProviderRequest
@@ -1923,6 +2060,9 @@ type UpdateOidcProviderJSONRequestBody = UpdateOidcProviderRequest
 
 // UpdatePreviewSettingsJSONRequestBody defines body for UpdatePreviewSettings for application/json ContentType.
 type UpdatePreviewSettingsJSONRequestBody = PreviewSettings
+
+// UpdateRegistrationSettingsJSONRequestBody defines body for UpdateRegistrationSettings for application/json ContentType.
+type UpdateRegistrationSettingsJSONRequestBody = RegistrationSettings
 
 // ResolveAdminReportJSONRequestBody defines body for ResolveAdminReport for application/json ContentType.
 type ResolveAdminReportJSONRequestBody = ReportResolution
@@ -1935,6 +2075,9 @@ type InstallTlsCertificateJSONRequestBody = InstallTlsCertificateRequest
 
 // UpdateUploadSettingsJSONRequestBody defines body for UpdateUploadSettings for application/json ContentType.
 type UpdateUploadSettingsJSONRequestBody = UploadSettings
+
+// SuspendUserJSONRequestBody defines body for SuspendUser for application/json ContentType.
+type SuspendUserJSONRequestBody = Suspension
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
@@ -2091,6 +2234,12 @@ type SetStatusJSONRequestBody = SetStatusRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetFederationSettings Which instances this one federates with
+	// (GET /api/v1/admin/federation)
+	GetFederationSettings(w http.ResponseWriter, r *http.Request)
+	// UpdateFederationSettings Change which instances this one federates with
+	// (PUT /api/v1/admin/federation)
+	UpdateFederationSettings(w http.ResponseWriter, r *http.Request)
 	// ListInvites List instance invites
 	// (GET /api/v1/admin/invites)
 	ListInvites(w http.ResponseWriter, r *http.Request)
@@ -2100,6 +2249,12 @@ type ServerInterface interface {
 	// DeleteInvite Revoke an instance invite
 	// (DELETE /api/v1/admin/invites/{inviteId})
 	DeleteInvite(w http.ResponseWriter, r *http.Request, inviteId openapi_types.UUID)
+	// GetModerationSettings Where reports go
+	// (GET /api/v1/admin/moderation)
+	GetModerationSettings(w http.ResponseWriter, r *http.Request)
+	// UpdateModerationSettings Change where reports go
+	// (PUT /api/v1/admin/moderation)
+	UpdateModerationSettings(w http.ResponseWriter, r *http.Request)
 	// ListOidcProviders List sign-in providers
 	// (GET /api/v1/admin/oidc-providers)
 	ListOidcProviders(w http.ResponseWriter, r *http.Request)
@@ -2118,12 +2273,24 @@ type ServerInterface interface {
 	// UpdatePreviewSettings Turn the link preview proxy on or off
 	// (PUT /api/v1/admin/previews)
 	UpdatePreviewSettings(w http.ResponseWriter, r *http.Request)
+	// GetRegistrationSettings Who may sign up
+	// (GET /api/v1/admin/registration)
+	GetRegistrationSettings(w http.ResponseWriter, r *http.Request)
+	// UpdateRegistrationSettings Change who may sign up
+	// (PUT /api/v1/admin/registration)
+	UpdateRegistrationSettings(w http.ResponseWriter, r *http.Request)
 	// ListAdminReports Reports for the instance admins
 	// (GET /api/v1/admin/reports)
 	ListAdminReports(w http.ResponseWriter, r *http.Request, params ListAdminReportsParams)
 	// ResolveAdminReport Close a report as an instance admin
 	// (POST /api/v1/admin/reports/{reportId}/resolve)
 	ResolveAdminReport(w http.ResponseWriter, r *http.Request, reportId openapi_types.UUID)
+	// ListAdminServers Servers on the instance
+	// (GET /api/v1/admin/servers)
+	ListAdminServers(w http.ResponseWriter, r *http.Request, params ListAdminServersParams)
+	// DeleteAdminServer Delete a server and everything in it
+	// (DELETE /api/v1/admin/servers/{serverId})
+	DeleteAdminServer(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(w http.ResponseWriter, r *http.Request)
@@ -2133,6 +2300,9 @@ type ServerInterface interface {
 	// SendTestEmail Send a test email
 	// (POST /api/v1/admin/smtp/test)
 	SendTestEmail(w http.ResponseWriter, r *http.Request)
+	// GetInstanceStats The instance's numbers
+	// (GET /api/v1/admin/stats)
+	GetInstanceStats(w http.ResponseWriter, r *http.Request)
 	// RemoveTlsCertificate Remove the HTTPS certificate
 	// (DELETE /api/v1/admin/tls)
 	RemoveTlsCertificate(w http.ResponseWriter, r *http.Request)
@@ -2148,6 +2318,21 @@ type ServerInterface interface {
 	// UpdateUploadSettings Change the upload limits
 	// (PUT /api/v1/admin/uploads)
 	UpdateUploadSettings(w http.ResponseWriter, r *http.Request)
+	// ListAdminUsers Accounts on the instance
+	// (GET /api/v1/admin/users)
+	ListAdminUsers(w http.ResponseWriter, r *http.Request, params ListAdminUsersParams)
+	// RevokeInstanceAdmin Stop an account being an instance admin
+	// (DELETE /api/v1/admin/users/{userId}/admin)
+	RevokeInstanceAdmin(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// GrantInstanceAdmin Make an account an instance admin
+	// (PUT /api/v1/admin/users/{userId}/admin)
+	GrantInstanceAdmin(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// ReinstateUser Let a suspended account sign in again
+	// (DELETE /api/v1/admin/users/{userId}/suspension)
+	ReinstateUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
+	// SuspendUser Suspend an account
+	// (PUT /api/v1/admin/users/{userId}/suspension)
+	SuspendUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -2579,6 +2764,34 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// GetFederationSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetFederationSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFederationSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateFederationSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFederationSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFederationSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListInvites operation middleware
 func (siw *ServerInterfaceWrapper) ListInvites(w http.ResponseWriter, r *http.Request) {
 
@@ -2624,6 +2837,34 @@ func (siw *ServerInterfaceWrapper) DeleteInvite(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteInvite(w, r, inviteId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetModerationSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetModerationSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetModerationSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateModerationSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateModerationSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateModerationSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2741,6 +2982,34 @@ func (siw *ServerInterfaceWrapper) UpdatePreviewSettings(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetRegistrationSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetRegistrationSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRegistrationSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRegistrationSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRegistrationSettings(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRegistrationSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAdminReports operation middleware
 func (siw *ServerInterfaceWrapper) ListAdminReports(w http.ResponseWriter, r *http.Request) {
 
@@ -2800,6 +3069,91 @@ func (siw *ServerInterfaceWrapper) ResolveAdminReport(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ListAdminServers operation middleware
+func (siw *ServerInterfaceWrapper) ListAdminServers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAdminServersParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "afterName" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "afterName", r.URL.Query(), &params.AfterName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "afterName"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "afterName", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "afterId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "afterId", r.URL.Query(), &params.AfterId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "afterId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "afterId", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAdminServers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminServer operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminServer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "serverId" -------------
+	var serverId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "serverId", r.PathValue("serverId"), &serverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serverId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminServer(w, r, serverId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSmtpSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetSmtpSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -2833,6 +3187,20 @@ func (siw *ServerInterfaceWrapper) SendTestEmail(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendTestEmail(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInstanceStats operation middleware
+func (siw *ServerInterfaceWrapper) GetInstanceStats(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInstanceStats(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2903,6 +3271,156 @@ func (siw *ServerInterfaceWrapper) UpdateUploadSettings(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateUploadSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAdminUsers operation middleware
+func (siw *ServerInterfaceWrapper) ListAdminUsers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAdminUsersParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "after" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "after", r.URL.Query(), &params.After, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "after"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "after", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAdminUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeInstanceAdmin operation middleware
+func (siw *ServerInterfaceWrapper) RevokeInstanceAdmin(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeInstanceAdmin(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GrantInstanceAdmin operation middleware
+func (siw *ServerInterfaceWrapper) GrantInstanceAdmin(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GrantInstanceAdmin(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReinstateUser operation middleware
+func (siw *ServerInterfaceWrapper) ReinstateUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReinstateUser(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SuspendUser operation middleware
+func (siw *ServerInterfaceWrapper) SuspendUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", r.PathValue("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SuspendUser(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -6774,6 +7292,20 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/servers/{serverId}/reports/{reportId}/escalate", wrapper.EscalateServerReport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/reports", wrapper.ListAdminReports)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/admin/reports/{reportId}/resolve", wrapper.ResolveAdminReport)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/users", wrapper.ListAdminUsers)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/users/{userId}/suspension", wrapper.ReinstateUser)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/users/{userId}/suspension", wrapper.SuspendUser)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/users/{userId}/admin", wrapper.RevokeInstanceAdmin)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/users/{userId}/admin", wrapper.GrantInstanceAdmin)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/servers", wrapper.ListAdminServers)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/admin/servers/{serverId}", wrapper.DeleteAdminServer)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/registration", wrapper.GetRegistrationSettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/registration", wrapper.UpdateRegistrationSettings)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/federation", wrapper.GetFederationSettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/federation", wrapper.UpdateFederationSettings)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/moderation", wrapper.GetModerationSettings)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/moderation", wrapper.UpdateModerationSettings)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/stats", wrapper.GetInstanceStats)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/previews", wrapper.GetPreviewSettings)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/admin/previews", wrapper.UpdatePreviewSettings)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/admin/smtp", wrapper.GetSmtpSettings)
@@ -6936,6 +7468,141 @@ type UnauthorizedJSONResponse Error
 type ValidationFailedJSONResponse Error
 
 type WebAuthnUnavailableJSONResponse Error
+
+type GetFederationSettingsRequestObject struct {
+}
+
+type GetFederationSettingsResponseObject interface {
+	VisitGetFederationSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetFederationSettings200JSONResponse FederationPolicy
+
+func (response GetFederationSettings200JSONResponse) VisitGetFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetFederationSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetFederationSettings400JSONResponse) VisitGetFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetFederationSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetFederationSettings401JSONResponse) VisitGetFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetFederationSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetFederationSettings403JSONResponse) VisitGetFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateFederationSettingsRequestObject struct {
+	Body *UpdateFederationSettingsJSONRequestBody
+}
+
+type UpdateFederationSettingsResponseObject interface {
+	VisitUpdateFederationSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateFederationSettings204Response struct {
+}
+
+func (response UpdateFederationSettings204Response) VisitUpdateFederationSettingsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateFederationSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateFederationSettings400JSONResponse) VisitUpdateFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateFederationSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateFederationSettings401JSONResponse) VisitUpdateFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateFederationSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateFederationSettings403JSONResponse) VisitUpdateFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateFederationSettings422JSONResponse Error
+
+func (response UpdateFederationSettings422JSONResponse) VisitUpdateFederationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListInvitesRequestObject struct {
 }
@@ -7118,6 +7785,127 @@ func (response DeleteInvite404JSONResponse) VisitDeleteInviteResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModerationSettingsRequestObject struct {
+}
+
+type GetModerationSettingsResponseObject interface {
+	VisitGetModerationSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetModerationSettings200JSONResponse ModerationSettings
+
+func (response GetModerationSettings200JSONResponse) VisitGetModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModerationSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetModerationSettings400JSONResponse) VisitGetModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModerationSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetModerationSettings401JSONResponse) VisitGetModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModerationSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetModerationSettings403JSONResponse) VisitGetModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateModerationSettingsRequestObject struct {
+	Body *UpdateModerationSettingsJSONRequestBody
+}
+
+type UpdateModerationSettingsResponseObject interface {
+	VisitUpdateModerationSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateModerationSettings204Response struct {
+}
+
+func (response UpdateModerationSettings204Response) VisitUpdateModerationSettingsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateModerationSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateModerationSettings400JSONResponse) VisitUpdateModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateModerationSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateModerationSettings401JSONResponse) VisitUpdateModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateModerationSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateModerationSettings403JSONResponse) VisitUpdateModerationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7527,6 +8315,141 @@ func (response UpdatePreviewSettings403JSONResponse) VisitUpdatePreviewSettingsR
 	return err
 }
 
+type GetRegistrationSettingsRequestObject struct {
+}
+
+type GetRegistrationSettingsResponseObject interface {
+	VisitGetRegistrationSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetRegistrationSettings200JSONResponse RegistrationSettings
+
+func (response GetRegistrationSettings200JSONResponse) VisitGetRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRegistrationSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetRegistrationSettings400JSONResponse) VisitGetRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRegistrationSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetRegistrationSettings401JSONResponse) VisitGetRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRegistrationSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetRegistrationSettings403JSONResponse) VisitGetRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRegistrationSettingsRequestObject struct {
+	Body *UpdateRegistrationSettingsJSONRequestBody
+}
+
+type UpdateRegistrationSettingsResponseObject interface {
+	VisitUpdateRegistrationSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateRegistrationSettings204Response struct {
+}
+
+func (response UpdateRegistrationSettings204Response) VisitUpdateRegistrationSettingsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UpdateRegistrationSettings400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateRegistrationSettings400JSONResponse) VisitUpdateRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRegistrationSettings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateRegistrationSettings401JSONResponse) VisitUpdateRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRegistrationSettings403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateRegistrationSettings403JSONResponse) VisitUpdateRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRegistrationSettings422JSONResponse Error
+
+func (response UpdateRegistrationSettings422JSONResponse) VisitUpdateRegistrationSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListAdminReportsRequestObject struct {
 	Params ListAdminReportsParams
 }
@@ -7688,6 +8611,156 @@ func (response ResolveAdminReport422JSONResponse) VisitResolveAdminReportRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminServersRequestObject struct {
+	Params ListAdminServersParams
+}
+
+type ListAdminServersResponseObject interface {
+	VisitListAdminServersResponse(w http.ResponseWriter) error
+}
+
+type ListAdminServers200JSONResponse []AdminServer
+
+func (response ListAdminServers200JSONResponse) VisitListAdminServersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminServers400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListAdminServers400JSONResponse) VisitListAdminServersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminServers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListAdminServers401JSONResponse) VisitListAdminServersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminServers403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListAdminServers403JSONResponse) VisitListAdminServersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminServers422JSONResponse Error
+
+func (response ListAdminServers422JSONResponse) VisitListAdminServersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminServerRequestObject struct {
+	ServerId openapi_types.UUID `json:"serverId"`
+}
+
+type DeleteAdminServerResponseObject interface {
+	VisitDeleteAdminServerResponse(w http.ResponseWriter) error
+}
+
+type DeleteAdminServer204Response struct {
+}
+
+func (response DeleteAdminServer204Response) VisitDeleteAdminServerResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAdminServer400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteAdminServer400JSONResponse) VisitDeleteAdminServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminServer401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteAdminServer401JSONResponse) VisitDeleteAdminServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminServer403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteAdminServer403JSONResponse) VisitDeleteAdminServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAdminServer404JSONResponse Error
+
+func (response DeleteAdminServer404JSONResponse) VisitDeleteAdminServerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -7900,6 +8973,69 @@ func (response SendTestEmail502JSONResponse) VisitSendTestEmailResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInstanceStatsRequestObject struct {
+}
+
+type GetInstanceStatsResponseObject interface {
+	VisitGetInstanceStatsResponse(w http.ResponseWriter) error
+}
+
+type GetInstanceStats200JSONResponse InstanceStats
+
+func (response GetInstanceStats200JSONResponse) VisitGetInstanceStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInstanceStats400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetInstanceStats400JSONResponse) VisitGetInstanceStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInstanceStats401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetInstanceStats401JSONResponse) VisitGetInstanceStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInstanceStats403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetInstanceStats403JSONResponse) VisitGetInstanceStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -8201,6 +9337,429 @@ func (response UpdateUploadSettings422JSONResponse) VisitUpdateUploadSettingsRes
 	return err
 }
 
+type ListAdminUsersRequestObject struct {
+	Params ListAdminUsersParams
+}
+
+type ListAdminUsersResponseObject interface {
+	VisitListAdminUsersResponse(w http.ResponseWriter) error
+}
+
+type ListAdminUsers200JSONResponse []AdminUser
+
+func (response ListAdminUsers200JSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminUsers400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListAdminUsers400JSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListAdminUsers401JSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminUsers403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListAdminUsers403JSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAdminUsers422JSONResponse Error
+
+func (response ListAdminUsers422JSONResponse) VisitListAdminUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeInstanceAdminRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type RevokeInstanceAdminResponseObject interface {
+	VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error
+}
+
+type RevokeInstanceAdmin204Response struct {
+}
+
+func (response RevokeInstanceAdmin204Response) VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RevokeInstanceAdmin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RevokeInstanceAdmin400JSONResponse) VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeInstanceAdmin401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RevokeInstanceAdmin401JSONResponse) VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeInstanceAdmin403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RevokeInstanceAdmin403JSONResponse) VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeInstanceAdmin404JSONResponse Error
+
+func (response RevokeInstanceAdmin404JSONResponse) VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RevokeInstanceAdmin422JSONResponse Error
+
+func (response RevokeInstanceAdmin422JSONResponse) VisitRevokeInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrantInstanceAdminRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type GrantInstanceAdminResponseObject interface {
+	VisitGrantInstanceAdminResponse(w http.ResponseWriter) error
+}
+
+type GrantInstanceAdmin204Response struct {
+}
+
+func (response GrantInstanceAdmin204Response) VisitGrantInstanceAdminResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type GrantInstanceAdmin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GrantInstanceAdmin400JSONResponse) VisitGrantInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrantInstanceAdmin401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GrantInstanceAdmin401JSONResponse) VisitGrantInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrantInstanceAdmin403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrantInstanceAdmin403JSONResponse) VisitGrantInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrantInstanceAdmin404JSONResponse Error
+
+func (response GrantInstanceAdmin404JSONResponse) VisitGrantInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrantInstanceAdmin422JSONResponse Error
+
+func (response GrantInstanceAdmin422JSONResponse) VisitGrantInstanceAdminResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReinstateUserRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+type ReinstateUserResponseObject interface {
+	VisitReinstateUserResponse(w http.ResponseWriter) error
+}
+
+type ReinstateUser204Response struct {
+}
+
+func (response ReinstateUser204Response) VisitReinstateUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ReinstateUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReinstateUser400JSONResponse) VisitReinstateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReinstateUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReinstateUser401JSONResponse) VisitReinstateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReinstateUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReinstateUser403JSONResponse) VisitReinstateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReinstateUser404JSONResponse Error
+
+func (response ReinstateUser404JSONResponse) VisitReinstateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReinstateUser422JSONResponse Error
+
+func (response ReinstateUser422JSONResponse) VisitReinstateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuspendUserRequestObject struct {
+	UserId openapi_types.UUID `json:"userId"`
+	Body   *SuspendUserJSONRequestBody
+}
+
+type SuspendUserResponseObject interface {
+	VisitSuspendUserResponse(w http.ResponseWriter) error
+}
+
+type SuspendUser204Response struct {
+}
+
+func (response SuspendUser204Response) VisitSuspendUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SuspendUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SuspendUser400JSONResponse) VisitSuspendUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuspendUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SuspendUser401JSONResponse) VisitSuspendUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuspendUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SuspendUser403JSONResponse) VisitSuspendUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuspendUser404JSONResponse Error
+
+func (response SuspendUser404JSONResponse) VisitSuspendUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuspendUser422JSONResponse Error
+
+func (response SuspendUser422JSONResponse) VisitSuspendUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type LoginRequestObject struct {
 	Body *LoginJSONRequestBody
 }
@@ -8261,6 +9820,20 @@ func (response Login401JSONResponse) VisitLoginResponse(w http.ResponseWriter) e
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login403JSONResponse Error
+
+func (response Login403JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -8335,6 +9908,20 @@ func (response CompleteLoginMfa401JSONResponse) VisitCompleteLoginMfaResponse(w 
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteLoginMfa403JSONResponse Error
+
+func (response CompleteLoginMfa403JSONResponse) VisitCompleteLoginMfaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -8479,6 +10066,20 @@ func (response FinishSecurityKeyLogin401JSONResponse) VisitFinishSecurityKeyLogi
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishSecurityKeyLogin403JSONResponse Error
+
+func (response FinishSecurityKeyLogin403JSONResponse) VisitFinishSecurityKeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -9434,6 +11035,20 @@ func (response FinishPasskeyLogin401JSONResponse) VisitFinishPasskeyLoginRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FinishPasskeyLogin403JSONResponse Error
+
+func (response FinishPasskeyLogin403JSONResponse) VisitFinishPasskeyLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -17867,6 +19482,12 @@ func (response GetReadiness503JSONResponse) VisitGetReadinessResponse(w http.Res
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetFederationSettings Which instances this one federates with
+	// (GET /api/v1/admin/federation)
+	GetFederationSettings(ctx context.Context, request GetFederationSettingsRequestObject) (GetFederationSettingsResponseObject, error)
+	// UpdateFederationSettings Change which instances this one federates with
+	// (PUT /api/v1/admin/federation)
+	UpdateFederationSettings(ctx context.Context, request UpdateFederationSettingsRequestObject) (UpdateFederationSettingsResponseObject, error)
 	// ListInvites List instance invites
 	// (GET /api/v1/admin/invites)
 	ListInvites(ctx context.Context, request ListInvitesRequestObject) (ListInvitesResponseObject, error)
@@ -17876,6 +19497,12 @@ type StrictServerInterface interface {
 	// DeleteInvite Revoke an instance invite
 	// (DELETE /api/v1/admin/invites/{inviteId})
 	DeleteInvite(ctx context.Context, request DeleteInviteRequestObject) (DeleteInviteResponseObject, error)
+	// GetModerationSettings Where reports go
+	// (GET /api/v1/admin/moderation)
+	GetModerationSettings(ctx context.Context, request GetModerationSettingsRequestObject) (GetModerationSettingsResponseObject, error)
+	// UpdateModerationSettings Change where reports go
+	// (PUT /api/v1/admin/moderation)
+	UpdateModerationSettings(ctx context.Context, request UpdateModerationSettingsRequestObject) (UpdateModerationSettingsResponseObject, error)
 	// ListOidcProviders List sign-in providers
 	// (GET /api/v1/admin/oidc-providers)
 	ListOidcProviders(ctx context.Context, request ListOidcProvidersRequestObject) (ListOidcProvidersResponseObject, error)
@@ -17894,12 +19521,24 @@ type StrictServerInterface interface {
 	// UpdatePreviewSettings Turn the link preview proxy on or off
 	// (PUT /api/v1/admin/previews)
 	UpdatePreviewSettings(ctx context.Context, request UpdatePreviewSettingsRequestObject) (UpdatePreviewSettingsResponseObject, error)
+	// GetRegistrationSettings Who may sign up
+	// (GET /api/v1/admin/registration)
+	GetRegistrationSettings(ctx context.Context, request GetRegistrationSettingsRequestObject) (GetRegistrationSettingsResponseObject, error)
+	// UpdateRegistrationSettings Change who may sign up
+	// (PUT /api/v1/admin/registration)
+	UpdateRegistrationSettings(ctx context.Context, request UpdateRegistrationSettingsRequestObject) (UpdateRegistrationSettingsResponseObject, error)
 	// ListAdminReports Reports for the instance admins
 	// (GET /api/v1/admin/reports)
 	ListAdminReports(ctx context.Context, request ListAdminReportsRequestObject) (ListAdminReportsResponseObject, error)
 	// ResolveAdminReport Close a report as an instance admin
 	// (POST /api/v1/admin/reports/{reportId}/resolve)
 	ResolveAdminReport(ctx context.Context, request ResolveAdminReportRequestObject) (ResolveAdminReportResponseObject, error)
+	// ListAdminServers Servers on the instance
+	// (GET /api/v1/admin/servers)
+	ListAdminServers(ctx context.Context, request ListAdminServersRequestObject) (ListAdminServersResponseObject, error)
+	// DeleteAdminServer Delete a server and everything in it
+	// (DELETE /api/v1/admin/servers/{serverId})
+	DeleteAdminServer(ctx context.Context, request DeleteAdminServerRequestObject) (DeleteAdminServerResponseObject, error)
 	// GetSmtpSettings Mail server settings
 	// (GET /api/v1/admin/smtp)
 	GetSmtpSettings(ctx context.Context, request GetSmtpSettingsRequestObject) (GetSmtpSettingsResponseObject, error)
@@ -17909,6 +19548,9 @@ type StrictServerInterface interface {
 	// SendTestEmail Send a test email
 	// (POST /api/v1/admin/smtp/test)
 	SendTestEmail(ctx context.Context, request SendTestEmailRequestObject) (SendTestEmailResponseObject, error)
+	// GetInstanceStats The instance's numbers
+	// (GET /api/v1/admin/stats)
+	GetInstanceStats(ctx context.Context, request GetInstanceStatsRequestObject) (GetInstanceStatsResponseObject, error)
 	// RemoveTlsCertificate Remove the HTTPS certificate
 	// (DELETE /api/v1/admin/tls)
 	RemoveTlsCertificate(ctx context.Context, request RemoveTlsCertificateRequestObject) (RemoveTlsCertificateResponseObject, error)
@@ -17924,6 +19566,21 @@ type StrictServerInterface interface {
 	// UpdateUploadSettings Change the upload limits
 	// (PUT /api/v1/admin/uploads)
 	UpdateUploadSettings(ctx context.Context, request UpdateUploadSettingsRequestObject) (UpdateUploadSettingsResponseObject, error)
+	// ListAdminUsers Accounts on the instance
+	// (GET /api/v1/admin/users)
+	ListAdminUsers(ctx context.Context, request ListAdminUsersRequestObject) (ListAdminUsersResponseObject, error)
+	// RevokeInstanceAdmin Stop an account being an instance admin
+	// (DELETE /api/v1/admin/users/{userId}/admin)
+	RevokeInstanceAdmin(ctx context.Context, request RevokeInstanceAdminRequestObject) (RevokeInstanceAdminResponseObject, error)
+	// GrantInstanceAdmin Make an account an instance admin
+	// (PUT /api/v1/admin/users/{userId}/admin)
+	GrantInstanceAdmin(ctx context.Context, request GrantInstanceAdminRequestObject) (GrantInstanceAdminResponseObject, error)
+	// ReinstateUser Let a suspended account sign in again
+	// (DELETE /api/v1/admin/users/{userId}/suspension)
+	ReinstateUser(ctx context.Context, request ReinstateUserRequestObject) (ReinstateUserResponseObject, error)
+	// SuspendUser Suspend an account
+	// (PUT /api/v1/admin/users/{userId}/suspension)
+	SuspendUser(ctx context.Context, request SuspendUserRequestObject) (SuspendUserResponseObject, error)
 	// Login Log in with a password
 	// (POST /api/v1/auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -18385,6 +20042,61 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// GetFederationSettings operation middleware
+func (sh *strictHandler) GetFederationSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetFederationSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFederationSettings(ctx, request.(GetFederationSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFederationSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFederationSettingsResponseObject); ok {
+		if err := validResponse.VisitGetFederationSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateFederationSettings operation middleware
+func (sh *strictHandler) UpdateFederationSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateFederationSettingsRequestObject
+
+	var body UpdateFederationSettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateFederationSettings(ctx, request.(UpdateFederationSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateFederationSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateFederationSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateFederationSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListInvites operation middleware
 func (sh *strictHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
 	var request ListInvitesRequestObject
@@ -18459,6 +20171,61 @@ func (sh *strictHandler) DeleteInvite(w http.ResponseWriter, r *http.Request, in
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteInviteResponseObject); ok {
 		if err := validResponse.VisitDeleteInviteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetModerationSettings operation middleware
+func (sh *strictHandler) GetModerationSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetModerationSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModerationSettings(ctx, request.(GetModerationSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModerationSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetModerationSettingsResponseObject); ok {
+		if err := validResponse.VisitGetModerationSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateModerationSettings operation middleware
+func (sh *strictHandler) UpdateModerationSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateModerationSettingsRequestObject
+
+	var body UpdateModerationSettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateModerationSettings(ctx, request.(UpdateModerationSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateModerationSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateModerationSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateModerationSettingsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18635,6 +20402,61 @@ func (sh *strictHandler) UpdatePreviewSettings(w http.ResponseWriter, r *http.Re
 	}
 }
 
+// GetRegistrationSettings operation middleware
+func (sh *strictHandler) GetRegistrationSettings(w http.ResponseWriter, r *http.Request) {
+	var request GetRegistrationSettingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRegistrationSettings(ctx, request.(GetRegistrationSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRegistrationSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetRegistrationSettingsResponseObject); ok {
+		if err := validResponse.VisitGetRegistrationSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateRegistrationSettings operation middleware
+func (sh *strictHandler) UpdateRegistrationSettings(w http.ResponseWriter, r *http.Request) {
+	var request UpdateRegistrationSettingsRequestObject
+
+	var body UpdateRegistrationSettingsJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateRegistrationSettings(ctx, request.(UpdateRegistrationSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateRegistrationSettings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateRegistrationSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateRegistrationSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListAdminReports operation middleware
 func (sh *strictHandler) ListAdminReports(w http.ResponseWriter, r *http.Request, params ListAdminReportsParams) {
 	var request ListAdminReportsRequestObject
@@ -18687,6 +20509,58 @@ func (sh *strictHandler) ResolveAdminReport(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ResolveAdminReportResponseObject); ok {
 		if err := validResponse.VisitResolveAdminReportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAdminServers operation middleware
+func (sh *strictHandler) ListAdminServers(w http.ResponseWriter, r *http.Request, params ListAdminServersParams) {
+	var request ListAdminServersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAdminServers(ctx, request.(ListAdminServersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAdminServers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAdminServersResponseObject); ok {
+		if err := validResponse.VisitListAdminServersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAdminServer operation middleware
+func (sh *strictHandler) DeleteAdminServer(w http.ResponseWriter, r *http.Request, serverId openapi_types.UUID) {
+	var request DeleteAdminServerRequestObject
+
+	request.ServerId = serverId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAdminServer(ctx, request.(DeleteAdminServerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAdminServer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAdminServerResponseObject); ok {
+		if err := validResponse.VisitDeleteAdminServerResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18766,6 +20640,30 @@ func (sh *strictHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SendTestEmailResponseObject); ok {
 		if err := validResponse.VisitSendTestEmailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInstanceStats operation middleware
+func (sh *strictHandler) GetInstanceStats(w http.ResponseWriter, r *http.Request) {
+	var request GetInstanceStatsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInstanceStats(ctx, request.(GetInstanceStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInstanceStats")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetInstanceStatsResponseObject); ok {
+		if err := validResponse.VisitGetInstanceStatsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -18900,6 +20798,143 @@ func (sh *strictHandler) UpdateUploadSettings(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateUploadSettingsResponseObject); ok {
 		if err := validResponse.VisitUpdateUploadSettingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAdminUsers operation middleware
+func (sh *strictHandler) ListAdminUsers(w http.ResponseWriter, r *http.Request, params ListAdminUsersParams) {
+	var request ListAdminUsersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAdminUsers(ctx, request.(ListAdminUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAdminUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAdminUsersResponseObject); ok {
+		if err := validResponse.VisitListAdminUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevokeInstanceAdmin operation middleware
+func (sh *strictHandler) RevokeInstanceAdmin(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request RevokeInstanceAdminRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeInstanceAdmin(ctx, request.(RevokeInstanceAdminRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeInstanceAdmin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeInstanceAdminResponseObject); ok {
+		if err := validResponse.VisitRevokeInstanceAdminResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GrantInstanceAdmin operation middleware
+func (sh *strictHandler) GrantInstanceAdmin(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request GrantInstanceAdminRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GrantInstanceAdmin(ctx, request.(GrantInstanceAdminRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GrantInstanceAdmin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GrantInstanceAdminResponseObject); ok {
+		if err := validResponse.VisitGrantInstanceAdminResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReinstateUser operation middleware
+func (sh *strictHandler) ReinstateUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request ReinstateUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReinstateUser(ctx, request.(ReinstateUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReinstateUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReinstateUserResponseObject); ok {
+		if err := validResponse.VisitReinstateUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SuspendUser operation middleware
+func (sh *strictHandler) SuspendUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request SuspendUserRequestObject
+
+	request.UserId = userId
+
+	var body SuspendUserJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SuspendUser(ctx, request.(SuspendUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SuspendUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SuspendUserResponseObject); ok {
+		if err := validResponse.VisitSuspendUserResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

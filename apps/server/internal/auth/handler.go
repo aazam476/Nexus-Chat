@@ -73,6 +73,8 @@ func (handler *Handler) Login(ctx context.Context, request api.LoginRequestObjec
 	switch {
 	case errors.Is(err, login.ErrInvalidCredentials):
 		return api.Login401JSONResponse(apiresponse.Error("invalid_credentials", err)), nil
+	case errors.Is(err, login.ErrSuspended):
+		return api.Login403JSONResponse(apiresponse.Error("account_suspended", err)), nil
 	case errors.Is(err, login.ErrRateLimited):
 		return tooManyAttempts("rate_limited", err, rateLimitRetrySeconds), nil
 	case errors.As(err, &delayed):

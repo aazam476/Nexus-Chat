@@ -83,6 +83,9 @@ func (handler *Handler) FinishSecurityKeyLogin(ctx context.Context, request api.
 		return nil, err
 	}
 	result, err := handler.dependencies.Logins.StartSession(ctx, userID, session.Device{Name: apiresponse.DeviceName(request.Body.DeviceName)})
+	if errors.Is(err, login.ErrSuspended) {
+		return api.FinishSecurityKeyLogin403JSONResponse(apiresponse.Error("account_suspended", err)), nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +117,9 @@ func (handler *Handler) FinishPasskeyLogin(ctx context.Context, request api.Fini
 		return nil, err
 	}
 	result, err := handler.dependencies.Logins.StartSession(ctx, userID, session.Device{Name: apiresponse.DeviceName(request.Body.DeviceName)})
+	if errors.Is(err, login.ErrSuspended) {
+		return api.FinishPasskeyLogin403JSONResponse(apiresponse.Error("account_suspended", err)), nil
+	}
 	if err != nil {
 		return nil, err
 	}

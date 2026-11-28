@@ -86,7 +86,7 @@ export async function becomeFriends(
 }
 
 /** Opens the actions of the visible message that says `text`. */
-async function messageActions(page: Page, text: string): Promise<void> {
+export async function messageActions(page: Page, text: string): Promise<void> {
   await page
     .getByLabel(/^Actions for the message from/)
     .filter({ visible: true, hasText: text })

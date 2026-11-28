@@ -63,6 +63,7 @@ func TestKickingTakesAMemberOut(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
 	assert.Equal(t, "spam", entries[0].Details["reason"])
+	assert.Equal(t, "sam", entries[0].Details["username"], "named even once they are gone")
 	assert.Equal(t, m.sam.String(), entries[0].TargetID)
 
 	// Someone at or above the moderator's highest role is out of reach.
@@ -203,4 +204,17 @@ func TestModeratorsHandleReports(t *testing.T) {
 	m.f.pool.Close()
 	_, err = m.f.service.MayHandleReports(ctx, m.details.Server.ID, m.grace)
 	require.Error(t, err)
+}
+
+func TestInstanceAdminsDeleteServers(t *testing.T) {
+	f := newFixture(t)
+	ada, grace := f.user(t, "ada"), f.user(t, "grace")
+	details := f.server(t, ada, grace)
+	require.ErrorIs(t, f.service.DeleteAsAdmin(t.Context(), uuid.New()), ErrNotFound)
+	require.NoError(t, f.service.DeleteAsAdmin(t.Context(), details.Server.ID))
+	_, err := f.service.Details(t.Context(), Scope{details.Server.ID, ada})
+	require.ErrorIs(t, err, ErrNotFound)
+	assert.Contains(t, f.events.changed, grace, "its members are told")
+	f.pool.Close()
+	require.Error(t, f.service.DeleteAsAdmin(t.Context(), details.Server.ID))
 }

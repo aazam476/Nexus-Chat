@@ -367,6 +367,8 @@ type User struct {
 	Status                string
 	CustomStatusText      *string
 	CustomStatusExpiresAt *time.Time
+	SuspendedAt           *time.Time
+	SuspensionReason      string
 }
 
 type UserIdentity struct {

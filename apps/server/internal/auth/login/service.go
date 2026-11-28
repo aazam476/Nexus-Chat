@@ -31,7 +31,10 @@ const dummyHash = "$argon2id$v=19$m=65536,t=3,p=1$QwMRQhvEnkmyFLkAD38mOA$4Lg4v6d
 // Errors returned by Login.
 var (
 	ErrInvalidCredentials = errors.New("the username or password is not correct")
-	ErrRateLimited        = errors.New("too many login attempts from this address; wait a minute")
+	// ErrSuspended means an instance admin suspended the account. It is
+	// only said once the first factor is right.
+	ErrSuspended   = errors.New("this account is suspended; contact the instance's admin")
+	ErrRateLimited = errors.New("too many login attempts from this address; wait a minute")
 )
 
 // DelayedError means the account is temporarily locked after repeated
@@ -144,6 +147,9 @@ func (service *Service) ContinueLogin(ctx context.Context, userID uuid.UUID, dev
 // afterFirstFactor starts the session, or returns an MFA challenge when
 // the account has a second factor.
 func (service *Service) afterFirstFactor(ctx context.Context, user accountsstore.User, device session.Device) (Result, error) {
+	if user.SuspendedAt != nil {
+		return Result{}, ErrSuspended
+	}
 	needsSecondFactor, err := service.dependencies.SecondFactors.HasSecondFactor(ctx, user.ID)
 	if err != nil {
 		return Result{}, err
@@ -186,6 +192,9 @@ func (service *Service) authenticate(ctx context.Context, request Request) (acco
 }
 
 func (service *Service) startSession(ctx context.Context, user accountsstore.User, device session.Device) (Result, error) {
+	if user.SuspendedAt != nil {
+		return Result{}, ErrSuspended
+	}
 	token, created, err := service.dependencies.Sessions.Create(ctx, user.ID, device)
 	if err != nil {
 		return Result{}, err

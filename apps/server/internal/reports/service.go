@@ -62,11 +62,9 @@ type Handled struct {
 	Escalated bool
 }
 
-// Settings says whether every report also goes to the instance admins,
-// and the instance's domain, which senders' addresses end in.
+// Settings says whether every report also goes to the instance admins.
 type Settings interface {
 	ReportsToAdmins(ctx context.Context) (bool, error)
-	Domain(ctx context.Context) (string, error)
 }
 
 // Dependencies are what the service needs. Key is the instance's key, the
@@ -126,12 +124,12 @@ func (service *Service) Submit(ctx context.Context, reporterID uuid.UUID, report
 	if err := checkEvidence(report.Evidence, evidenceAbout{place: place, message: found.MessageID, epoch: found.Epoch}); err != nil {
 		return uuid.Nil, err
 	}
-	sender, err := service.address(ctx, *found.SenderID)
+	sender, err := service.dependencies.Users.GetUserByID(ctx, *found.SenderID)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("loading the sender: %w", err)
 	}
 	signed, err := SignReceipt(service.dependencies.Key, Receipt{
-		ConversationID: found.ConversationID, ChannelID: found.ChannelID, MessageID: found.MessageID, SenderID: *found.SenderID, Sender: sender,
+		ConversationID: found.ConversationID, ChannelID: found.ChannelID, MessageID: found.MessageID, SenderID: *found.SenderID, SenderUsername: sender.Username,
 		Epoch: found.Epoch, ArchiveHash: archiveHash(found.Sealed), SentAt: found.CreatedAt, IssuedAt: service.dependencies.Clock.Now(),
 	})
 	if err != nil {
@@ -307,17 +305,4 @@ func (service *Service) report(ctx context.Context, reportID uuid.UUID) (Report,
 		return Report{}, ErrNotFound
 	}
 	return report, err
-}
-
-// address is a user's @name@domain on this instance.
-func (service *Service) address(ctx context.Context, userID uuid.UUID) (string, error) {
-	user, err := service.dependencies.Users.GetUserByID(ctx, userID)
-	if err != nil {
-		return "", fmt.Errorf("loading the sender: %w", err)
-	}
-	domain, err := service.dependencies.Settings.Domain(ctx)
-	if err != nil {
-		return "", err
-	}
-	return "@" + user.Username + "@" + domain, nil
 }

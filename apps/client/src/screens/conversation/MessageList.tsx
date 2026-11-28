@@ -19,6 +19,8 @@ export interface MessageListProps {
   firstUnreadId?: string | undefined;
   /** In a channel: opens the thread on a message, given whether it can be replied in there. */
   thread?: { open: (item: TimelineItem) => void; mayReply: (item: TimelineItem) => boolean };
+  /** What can be done about others' messages: reporting them, and for moderators deleting them. */
+  others?: { report: (item: TimelineItem) => void; removeForEveryone?: (item: TimelineItem) => void };
 }
 
 /** What pressing a message and its actions does. */
@@ -30,6 +32,7 @@ function handlersFor(
     composer: Composer;
     send: (payload: Payload) => Promise<unknown>;
     thread: MessageListProps["thread"];
+    others: MessageListProps["others"];
   },
 ): MessageItemProps["on"] {
   const { select, composer, send, thread } = state;
@@ -59,6 +62,7 @@ function handlersFor(
       sendQuietly({ kind: "reaction", target: item.id, emoji, added });
     },
     ...threadHandlers(item, thread, then),
+    ...othersHandlers(item, state.others, then),
   };
 }
 
@@ -76,6 +80,30 @@ function threadHandlers(
       thread.open(item);
     }),
     mayStartThread: thread.mayReply(item),
+  };
+}
+
+/** Reporting the message and, for moderators, deleting it for everyone. */
+function othersHandlers(
+  item: TimelineItem,
+  others: MessageListProps["others"],
+  then: (action: () => void) => () => void,
+): Pick<MessageItemProps["on"], "report" | "removeForEveryone"> {
+  if (others === undefined) {
+    return {};
+  }
+  const remove = others.removeForEveryone;
+  return {
+    report: then(() => {
+      others.report(item);
+    }),
+    ...(remove === undefined
+      ? {}
+      : {
+          removeForEveryone: then(() => {
+            remove(item);
+          }),
+        }),
   };
 }
 
@@ -102,6 +130,7 @@ function renderer(state: {
         composer: props.composer,
         send: props.send,
         thread: props.thread,
+        others: props.others,
       })}
     />
   );

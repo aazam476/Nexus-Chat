@@ -79,15 +79,10 @@ func (fake *moderation) ReportHandled(_ context.Context, handled Handled) error 
 type settings struct {
 	everything bool
 	err        error
-	domainErr  error
 }
 
 func (fake *settings) ReportsToAdmins(context.Context) (bool, error) {
 	return fake.everything, fake.err
-}
-
-func (fake *settings) Domain(context.Context) (string, error) {
-	return "chat.example.com", fake.domainErr
 }
 
 // fixture is a server with a channel in its audience, and a DM, with a

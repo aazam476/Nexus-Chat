@@ -76,6 +76,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403":
+          description: An instance admin suspended the account (`account_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "429":
           description: Too many attempts from this address (`rate_limited`) or for this account (`login_delayed`).
           headers:
@@ -690,6 +696,411 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api/v1/admin/users:
+    get:
+      operationId: listAdminUsers
+      summary: Accounts on the instance
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Part of a username, display name or email.
+          schema:
+            type: string
+            maxLength: 100
+        - name: after
+          in: query
+          required: false
+          description: The last username of the previous page.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Up to 50, by username.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: A search over 100 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/users/{userId}/suspension:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: suspendUser
+      summary: Suspend an account
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      description: It cannot sign in, and its sessions end; its devices disconnect at their next heartbeat.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Suspension"
+      responses:
+        "204":
+          description: Suspended; suspending again replaces the reason.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: reinstateUser
+      summary: Let a suspended account sign in again
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Reinstated.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/users/{userId}/admin:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: grantInstanceAdmin
+      summary: Make an account an instance admin
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: It is an admin.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: revokeInstanceAdmin
+      summary: Stop an account being an instance admin
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: It is not an admin.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such account (`user_not_found`), or it is not suspended (`not_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Your own account (`self`), the last active admin (`last_admin`), or a reason over 512 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/servers:
+    get:
+      operationId: listAdminServers
+      summary: Servers on the instance
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Part of a server's name.
+          schema:
+            type: string
+            maxLength: 100
+        - name: afterName
+          in: query
+          required: false
+          description: The last name of the previous page.
+          schema:
+            type: string
+        - name: afterId
+          in: query
+          required: false
+          description: The last ID of the previous page.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Up to 50, by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminServer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: A search over 100 characters (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/servers/{serverId}:
+    parameters:
+      - name: serverId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteAdminServer
+      summary: Delete a server and everything in it
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted; its members are told.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: No such server (`server_not_found`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/registration:
+    get:
+      operationId: getRegistrationSettings
+      summary: Who may sign up
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The registration mode.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateRegistrationSettings
+      summary: Change who may sign up
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationSettings"
+      responses:
+        "204":
+          description: Changed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: An unknown mode (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/federation:
+    get:
+      operationId: getFederationSettings
+      summary: Which instances this one federates with
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FederationPolicy"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateFederationSettings
+      summary: Change which instances this one federates with
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FederationPolicy"
+      responses:
+        "204":
+          description: Changed; domains are kept lowercase and sorted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: An unknown mode, more than 1000 domains in a list, or something that is not a domain (`invalid`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/admin/moderation:
+    get:
+      operationId: getModerationSettings
+      summary: Where reports go
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateModerationSettings
+      summary: Change where reports go
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerationSettings"
+      responses:
+        "204":
+          description: Changed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/stats:
+    get:
+      operationId: getInstanceStats
+      summary: The instance's numbers
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Counts as of now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceStats"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/v1/admin/previews:
     get:
       operationId: getPreviewSettings
@@ -839,6 +1250,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           description: The code is wrong or the challenge expired (`invalid_second_factor`). Log in with the password again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: An instance admin suspended the account (`account_suspended`).
           content:
             application/json:
               schema:
@@ -1074,6 +1491,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403":
+          description: An instance admin suspended the account (`account_suspended`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/auth/passkey/begin:
     post:
       operationId: beginPasskeyLogin
@@ -1113,6 +1536,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           description: The passkey could not be verified or the request expired (`invalid_passkey`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: An instance admin suspended the account (`account_suspended`).
           content:
             application/json:
               schema:
@@ -1355,7 +1784,8 @@ paths:
             No account can be used or created: `no_account` (sign-up is off
             for this provider), `registration_closed`, `invite_required`,
             `invalid_invite`, or `email_required` (the provider shared no
-            email address).
+            email address); or an instance admin suspended the account
+            (`account_suspended`).
           content:
             application/json:
               schema:
@@ -5694,6 +6124,125 @@ components:
     ServerChannelKind:
       type: string
       enum: [category, text, voice]
+    AdminUser:
+      type: object
+      required: [id, username, displayName, email, isAdmin, createdAt, suspensionReason]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        suspendedAt:
+          type: string
+          format: date-time
+        suspensionReason:
+          type: string
+    Suspension:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 512
+    AdminServer:
+      type: object
+      required: [id, name, ownerId, members, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        ownerUsername:
+          type: string
+        members:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    RegistrationSettings:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [open, invite_only, closed]
+    FederationPolicy:
+      type: object
+      required: [mode, allowed, blocked]
+      properties:
+        mode:
+          type: string
+          enum: [open, allowlist, closed]
+          description: Every instance but the blocked ones, only the allowed ones, or none.
+        allowed:
+          type: array
+          items:
+            type: string
+        blocked:
+          type: array
+          items:
+            type: string
+    ModerationSettings:
+      type: object
+      required: [reportsToAdmins]
+      properties:
+        reportsToAdmins:
+          type: boolean
+          description: Every server's reports also go to the instance admins, not only those moderators pass on.
+    InstanceStats:
+      type: object
+      required:
+        [
+          users,
+          suspendedUsers,
+          activeUsers,
+          servers,
+          conversations,
+          recentMessages,
+          openReports,
+          attachmentBytes,
+        ]
+      properties:
+        users:
+          type: integer
+          format: int64
+        suspendedUsers:
+          type: integer
+          format: int64
+        activeUsers:
+          type: integer
+          format: int64
+          description: Accounts with a session used in the last 30 days.
+        servers:
+          type: integer
+          format: int64
+        conversations:
+          type: integer
+          format: int64
+        recentMessages:
+          type: integer
+          format: int64
+          description: Messages sent in the last 24 hours.
+        openReports:
+          type: integer
+          format: int64
+        attachmentBytes:
+          type: integer
+          format: int64
     NewReport:
       type: object
       required: [messageId, evidence]

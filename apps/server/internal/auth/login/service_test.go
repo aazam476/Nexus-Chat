@@ -282,3 +282,23 @@ func TestSessionFailureIsPassedOn(t *testing.T) {
 
 	assert.ErrorIs(t, err, failure)
 }
+
+func TestSuspendedAccountsCannotSignIn(t *testing.T) {
+	setup := newFixture(nil)
+	suspended := now.Add(-time.Hour)
+	setup.accounts.user.SuspendedAt = &suspended
+
+	_, err := setup.service.Login(t.Context(), attempt("alice", "wrong"))
+	require.ErrorIs(t, err, ErrInvalidCredentials, "a wrong password does not learn of the suspension")
+	_, err = setup.service.Login(t.Context(), attempt("alice", "right password"))
+	require.ErrorIs(t, err, ErrSuspended)
+	_, err = setup.service.ContinueLogin(t.Context(), setup.accounts.user.ID, session.Device{Name: "Laptop"})
+	require.ErrorIs(t, err, ErrSuspended, "nor through a sign-in provider")
+	_, err = setup.service.StartSession(t.Context(), setup.accounts.user.ID, session.Device{Name: "Laptop"})
+	require.ErrorIs(t, err, ErrSuspended, "nor with a passkey")
+
+	setup.accounts.user.SuspendedAt = nil
+	result, err := setup.service.StartSession(t.Context(), setup.accounts.user.ID, session.Device{Name: "Laptop"})
+	require.NoError(t, err, "once reinstated")
+	assert.Equal(t, "nxs_token", result.Token)
+}

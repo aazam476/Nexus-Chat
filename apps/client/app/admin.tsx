@@ -7,6 +7,10 @@ import { HttpsWarning } from "../src/components/HttpsWarning";
 import { useConnection } from "../src/connection/ConnectionContext";
 import { CertificateSection } from "../src/screens/admin/CertificateSection";
 import { SmtpSection } from "../src/screens/admin/SmtpSection";
+import { AdminLinks } from "../src/screens/admin/AdminLinks";
+import { FederationSection } from "../src/screens/admin/FederationSection";
+import { RegistrationSection, ReportsSettingSection } from "../src/screens/admin/PolicySections";
+import { StatsSection } from "../src/screens/admin/StatsSection";
 import { UploadSection } from "../src/screens/admin/UploadSection";
 
 /**
@@ -41,6 +45,11 @@ export default function Admin(): ReactNode {
           testID="admin-back"
         />
       </Stack>
+      <StatsSection />
+      <AdminLinks />
+      <RegistrationSection />
+      <ReportsSettingSection />
+      <FederationSection />
       <CertificateSection />
       <SmtpSection />
       <UploadSection />

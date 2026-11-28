@@ -1,5 +1,5 @@
 import { spacing, Text, useTheme } from "@nexus-chat/ui";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -31,6 +31,10 @@ export interface MessageItemProps {
     openThread?: () => void;
     /** Whether "Reply in thread" is offered: the user may reply there. */
     mayStartThread?: boolean;
+    /** Reporting someone else's message to moderators. */
+    report?: () => void;
+    /** For moderators: deleting someone else's message for everyone. */
+    removeForEveryone?: () => void;
   };
 }
 
@@ -93,7 +97,34 @@ function Actions({
       {own ? (
         <ActionButton label={t("conversation.delete")} onPress={on.delete} testID="message-delete" />
       ) : null}
+      {own ? null : <OthersActions on={on} />}
     </View>
+  );
+}
+
+/** On someone else's message: reporting it, and for moderators deleting it, after a second press. */
+function OthersActions({ on }: { on: MessageItemProps["on"] }): ReactNode {
+  const { t } = useTranslation();
+  const [confirming, setConfirming] = useState(false);
+  const remove = on.removeForEveryone;
+  return (
+    <>
+      {on.report === undefined ? null : (
+        <ActionButton label={t("conversation.report")} onPress={on.report} testID="message-report" />
+      )}
+      {remove === undefined ? null : (
+        <ActionButton
+          label={t(confirming ? "conversation.removeConfirm" : "conversation.remove")}
+          onPress={() => {
+            if (confirming) {
+              remove();
+            }
+            setConfirming(!confirming);
+          }}
+          testID={confirming ? "message-remove-confirm" : "message-remove"}
+        />
+      )}
+    </>
   );
 }
 

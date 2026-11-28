@@ -1,3 +1,4 @@
+import type { ServerMember } from "@nexus-chat/api-client";
 import { Heading, Link, Screen, Stack, Text } from "@nexus-chat/ui";
 import { router, useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
@@ -6,11 +7,26 @@ import { useTranslation } from "react-i18next";
 import { HttpsWarning } from "../../../../src/components/HttpsWarning";
 import { MemberAvatar } from "../../../../src/screens/servers/admin/MemberAvatar";
 import { isolate } from "../../../../src/i18n/bidi";
+import { MemberModeration } from "../../../../src/screens/servers/admin/MemberModeration";
 import { MemberRoles } from "../../../../src/screens/servers/admin/MemberRoles";
 import { useServerRunner } from "../../../../src/screens/servers/useServerRunner";
 import { useServer } from "../../../../src/servers/useServers";
 
-/** One member: who they are, since when, and their roles. */
+/** Who the member is and since when. */
+function MemberHeader({ member }: { member: ServerMember }): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <Stack gap="sm">
+      <MemberAvatar user={member.user} size={96} />
+      <Heading>{isolate(member.user.displayName)}</Heading>
+      <Text tone="muted">
+        {t("servers.memberAdmin.joined", { date: new Date(member.joinedAt).toLocaleDateString() })}
+      </Text>
+    </Stack>
+  );
+}
+
+/** One member: who they are, since when, their roles, and moderating them. */
 export default function Member(): ReactNode {
   const { t } = useTranslation();
   const { id, userId } = useLocalSearchParams<{ id: string; userId: string }>();
@@ -27,21 +43,23 @@ export default function Member(): ReactNode {
         }}
         testID="member-back"
       />
-      {member === undefined ? null : (
-        <Stack gap="sm">
-          <MemberAvatar user={member.user} size={96} />
-          <Heading>{isolate(member.user.displayName)}</Heading>
-          <Text tone="muted">
-            {t("servers.memberAdmin.joined", { date: new Date(member.joinedAt).toLocaleDateString() })}
-          </Text>
-        </Stack>
-      )}
+      {member === undefined ? null : <MemberHeader member={member} />}
       {runner.error === undefined ? null : (
         <Text tone="danger" live>
           {runner.error}
         </Text>
       )}
       {server && member ? <MemberRoles details={server.details} member={member} runner={runner} /> : null}
+      {server && member ? (
+        <MemberModeration
+          details={server.details}
+          member={member}
+          runner={runner}
+          onRemoved={() => {
+            router.back();
+          }}
+        />
+      ) : null}
     </Screen>
   );
 }
