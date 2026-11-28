@@ -10,6 +10,8 @@ import { openDatabase } from "../storage/database";
 import { createMessagingApi } from "./engine/serverApi";
 import type { Messenger } from "./messenger";
 import { useMessagingState, type Messaging, type MessagingEnvironment } from "./useMessagingState";
+import { useConversations } from "./useConversations";
+import { useIndexSync } from "../search/useIndexSync";
 
 /** Messaging; tests provide a value directly. */
 export const MessagingContext = createContext<Messaging | undefined>(undefined);
@@ -43,7 +45,23 @@ export function MessagingProvider({ environment = platform, children }: Messagin
       messenger.sync(conversationId).catch(() => undefined);
     }
   });
-  return <MessagingContext value={messaging}>{children}</MessagingContext>;
+  return (
+    <MessagingContext value={messaging}>
+      <IndexKeeper />
+      {children}
+    </MessagingContext>
+  );
+}
+
+/** Keeps the search index shared with the user's other devices while messaging runs. */
+function IndexKeeper(): ReactNode {
+  const messenger = messengerOf(useMessaging());
+  const { conversations } = useConversations();
+  useIndexSync(
+    messenger,
+    (conversations ?? []).map((conversation) => conversation.id),
+  );
+  return null;
 }
 
 /** The messenger, once it is ready (or showing the new recovery phrase). */

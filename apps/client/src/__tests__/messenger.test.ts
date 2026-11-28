@@ -109,11 +109,13 @@ describe("the messenger", () => {
     await grace.messenger.sync("dm");
     await grace.messenger.send("dm", { kind: "text", text: "four" });
     // A copy nobody can open, and one under an epoch with no key, are skipped.
+    // They are the newest, so they come first.
+    const later = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
     instance.archives
       .get("dm")
       ?.push(
-        { messageId: "x", epoch: 1, sealed: new Uint8Array(40), createdAt: "2026-11-12T00:00:00.000Z" },
-        { messageId: "y", epoch: 99, sealed: new Uint8Array(40), createdAt: "2026-11-12T00:00:01.000Z" },
+        { messageId: "x", epoch: 1, sealed: new Uint8Array(40), createdAt: later(60) },
+        { messageId: "y", epoch: 99, sealed: new Uint8Array(40), createdAt: later(61) },
       );
 
     const phoneSetup = await setupFor(instance, adaUser, "ada-phone");

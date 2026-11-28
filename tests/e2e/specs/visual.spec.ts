@@ -64,6 +64,19 @@ async function openConversations(page: Page): Promise<void> {
   await expect(shown(page, `conversation-${dmId}`)).toBeVisible();
 }
 
+/** Opens the DM and sends the dataset's messages in it, a minute apart so they keep their order. */
+async function openConversation(page: Page, dataset: Dataset): Promise<void> {
+  await openConversations(page);
+  await shown(page, `conversation-${dmId}`).click();
+  for (const [index, text] of dataset.messaging.messages.entries()) {
+    await page.clock.setFixedTime(Date.parse(fixedNow) + (index + 1) * 60_000);
+    await sendMessage(page, text);
+  }
+  await expect(page.getByTestId(/^message-[0-9a-f-]{36}$/).filter({ visible: true })).toHaveCount(
+    dataset.messaging.messages.length,
+  );
+}
+
 /** Sets encryption up, then opens the servers list. */
 async function openServers(page: Page): Promise<void> {
   await logIn(page);
@@ -163,17 +176,19 @@ const screens: Screen[] = [
   {
     name: "conversation",
     instance: { messaging: true },
+    open: openConversation,
+  },
+  {
+    name: "search",
+    instance: { messaging: true },
     open: async (page, dataset) => {
-      await openConversations(page);
-      await shown(page, `conversation-${dmId}`).click();
-      for (const [index, text] of dataset.messaging.messages.entries()) {
-        // A minute apart, so the messages keep their order.
-        await page.clock.setFixedTime(Date.parse(fixedNow) + (index + 1) * 60_000);
-        await sendMessage(page, text);
-      }
-      await expect(page.getByTestId(/^message-[0-9a-f-]{36}$/).filter({ visible: true })).toHaveCount(
-        dataset.messaging.messages.length,
-      );
+      await openConversation(page, dataset);
+      await shown(page, "search-here").click();
+      const word = (dataset.messaging.messages[0] ?? "").split(/[\s,.:?!]+/)[0] ?? "";
+      await shown(page, "search-query").fill(word);
+      await expect(page.getByText(/^\d+ messages?$/).filter({ visible: true })).toBeVisible({
+        timeout: 15_000,
+      });
     },
   },
   {

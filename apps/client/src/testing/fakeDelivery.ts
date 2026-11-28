@@ -39,6 +39,18 @@ export class FakeInstance {
   messages = new Map<string, DeliveredMessage[]>();
   /** Archive copies per conversation, oldest first. */
   archives = new Map<string, StoredArchive[]>();
+  /** The last time a message was stamped with. */
+  private lastStamp = 0;
+
+  /**
+   * When a message arrives, as the server stamps it: now, but always after
+   * the previous message, so times follow IDs.
+   */
+  private timeOf(_id: number): string {
+    this.lastStamp = Math.max(Date.now(), this.lastStamp + 1);
+    return new Date(this.lastStamp).toISOString();
+  }
+
   /** Each server channel's audience conversation; `moveChannel` changes it. */
   channels = new Map<string, string>();
   /** Archive copies per channel, oldest first. */
@@ -64,7 +76,7 @@ export class FakeInstance {
   /** Stores a message as the delivery service would. */
   deliver(conversationId: string, message: Omit<DeliveredMessage, "id" | "createdAt">): number {
     const id = this.nextId++;
-    this.messages.get(conversationId)?.push({ ...message, id, createdAt: new Date(id * 1000).toISOString() });
+    this.messages.get(conversationId)?.push({ ...message, id, createdAt: this.timeOf(id) });
     return id;
   }
 
@@ -129,7 +141,7 @@ export class FakeInstance {
       ...sent.archive,
       epoch: group.epoch,
       senderId: userId,
-      createdAt: new Date(id * 1000).toISOString(),
+      createdAt: this.timeOf(id),
     });
     this.archives.set(conversationId, copies);
     return { accepted: true, id };
@@ -165,7 +177,7 @@ export class FakeInstance {
         groupId: group.groupId,
         epoch: group.epoch,
         senderId: userId,
-        createdAt: new Date(id * 1000).toISOString(),
+        createdAt: this.timeOf(id),
         ...(sent.threadRootId === undefined ? {} : { threadRootId: sent.threadRootId }),
       });
       this.channelArchives.set(channel.channelId, copies);

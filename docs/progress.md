@@ -537,6 +537,19 @@ recommended options; M2 uses Argon2id, which is the spec's baseline.
   deliveries arrive. In CI it runs on the standard 4-vCPU runner, with
   PostgreSQL and k6 on the same machine; locally that measured a p95 of
   about 28 ms with every delivery arriving.
+- Message search on the device (M6, docs/search.md): an index in the
+  device's encrypted database, in chunks by conversation or channel and
+  month, kept in step with arriving messages, edits and deletions. Words
+  match by their start, in any script (accents folded; Chinese, Japanese
+  and Korean in pairs of characters), with filters for sender, place,
+  attachments and how recent. The search screen opens from Home or from a
+  conversation's or channel's "Search here". It covers the last 90 days;
+  "Search older messages here" indexes the rest, resuming after
+  interruptions and, on phones, waiting for Wi-Fi and charging unless the
+  user goes ahead. The user's devices share their index chunks through the
+  key backup, sealed under the backup key, and the desktop app indexes
+  every conversation's whole history for the others. The release gate's
+  browser test searches on a restored device.
 - Visual checks of the server screens (the list, a server, its settings,
   and the channel, role and member settings) with demo, worst-case and
   right-to-left servers, in both themes and at every checked width.

@@ -5,7 +5,7 @@
  * channel carries messages to someone who joins it by invite; voice join
  * comes with milestone M9.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 import { expectAccessible } from "../src/accessibility.js";
 import {
@@ -18,6 +18,7 @@ import {
   signUpForMessaging,
 } from "../src/messaging.js";
 import { expectHome, field, fillAccount, logIn } from "../src/screens.js";
+import { searchHere } from "../src/search.js";
 import {
   addChannel,
   addEmoji,
@@ -91,6 +92,27 @@ async function replyAndReact(lin: Page, omar: Page): Promise<void> {
   await expectAccessible(lin);
 }
 
+/** Lin's tablet restores with the phrase, reads the conversation and searches it there. */
+async function readOnTablet(browser: Browser, linPhrase: string): Promise<BrowserContext> {
+  const tabletContext = await browser.newContext();
+  const tablet = await tabletContext.newPage();
+  await tablet.goto("/");
+  await logIn(tablet, accounts.lin);
+  await restoreWithPhrase(tablet, linPhrase);
+  await shown(tablet, "open-messages").click();
+  await tablet
+    .getByTestId(/^conversation-/)
+    .filter({ visible: true })
+    .first()
+    .click();
+  await expect(tablet.getByText("Hi Lin, it works", { exact: true }).filter({ visible: true })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await searchHere(tablet, "work", "Hi Lin, it works");
+  return tabletContext;
+}
+
 test("two people message each other, end to end encrypted", async ({ browser }) => {
   test.setTimeout(180_000);
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
@@ -120,21 +142,8 @@ test("two people message each other, end to end encrypted", async ({ browser }) 
 
   await replyAndReact(lin, omar);
 
-  // A second device restores with the phrase and reads the conversation.
-  const tabletContext = await browser.newContext();
-  const tablet = await tabletContext.newPage();
-  await tablet.goto("/");
-  await logIn(tablet, accounts.lin);
-  await restoreWithPhrase(tablet, linPhrase);
-  await shown(tablet, "open-messages").click();
-  await tablet
-    .getByTestId(/^conversation-/)
-    .filter({ visible: true })
-    .first()
-    .click();
-  await expect(tablet.getByText("Hi Lin, it works", { exact: true }).filter({ visible: true })).toBeVisible({
-    timeout: 30_000,
-  });
+  // A second device restores with the phrase, reads the conversation and searches it.
+  const tabletContext = await readOnTablet(browser, linPhrase);
   await Promise.all([...contexts, tabletContext].map((context) => context.close()));
 });
 

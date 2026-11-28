@@ -185,3 +185,16 @@ export function readThreadHistory(
     context.api.threadArchive(channel, rootId, before),
   );
 }
+
+/** Reads a channel's archive the first time this device is in it. */
+export async function readChannelHistoryOnce(
+  context: EngineContext,
+  audience: Audience,
+  channelId: string,
+): Promise<void> {
+  const read = "history-read";
+  if ((await context.database.get(read, channelId)) === undefined) {
+    await readChannelHistory(context, audience, channelId);
+    await context.database.put(read, channelId, utf8("1"));
+  }
+}

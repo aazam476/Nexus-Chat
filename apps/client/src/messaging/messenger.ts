@@ -14,7 +14,20 @@ import type { LocalDatabase } from "../storage/localDatabase";
 import type { MessagingApi } from "./engine/api";
 import { utf8 } from "./engine/bytes";
 import { syncAudience, type Audience } from "./engine/channels";
-import { joinAudience, readChannelHistory, readThreadHistory, sendToChannel } from "./engine/channelSend";
+import { searchMessages, type SearchFilters, type SearchHit } from "../search/query";
+import { backfill, type BackfillProgress } from "./engine/backfill";
+import { fetchIndex, shareIndex } from "./engine/indexSync";
+
+/** The queue index sharing runs in, apart from every conversation's. */
+const searchQueue = "search-index";
+import {
+  joinAudience,
+  readChannelHistory,
+  readChannelHistoryOnce,
+  readThreadHistory,
+  sendToChannel,
+} from "./engine/channelSend";
+import { rememberAudience, storedAudience } from "./engine/audienceMemory";
 import type { EngineContext } from "./engine/context";
 import { refillKeyPackages, setUpDevice } from "./engine/device";
 import { readMissedHistory } from "./engine/archive";
@@ -47,9 +60,6 @@ export type MessengerStart =
   { status: "ready"; messenger: Messenger; recoveryPhrase?: string } | { status: "needs-restore" };
 
 type Listener = (conversationId: string) => void;
-
-/** Where the messenger keeps what it knows about audiences and their history. */
-const stored = { audiences: "audiences", historyRead: "history-read" } as const;
 
 /** Messaging for one signed-in device. */
 export class Messenger {
@@ -109,7 +119,8 @@ export class Messenger {
 
   /** Applies what is new in the conversation, or in the server audience's group. */
   async sync(conversationId: string): Promise<void> {
-    const audience = this.audiences.get(conversationId) ?? (await this.storedAudience(conversationId));
+    const audience =
+      this.audiences.get(conversationId) ?? (await storedAudience(this.context.database, conversationId));
     if (audience !== undefined) {
       return this.syncChannels(audience);
     }
@@ -125,14 +136,13 @@ export class Messenger {
   openAudience(audience: Audience, members: Person[]): Promise<void> {
     this.learn(members);
     this.audiences.set(audience.audienceId, audience);
-    const remembered = utf8(JSON.stringify({ serverId: audience.serverId, channelIds: audience.channelIds }));
     return this.run(
       audience.audienceId,
       async () => {
-        await this.context.database.put(stored.audiences, audience.audienceId, remembered);
+        await rememberAudience(this.context.database, audience);
         await joinAudience(this.context, audience);
         for (const channelId of audience.channelIds) {
-          await this.readHistoryOnce(audience, channelId);
+          await readChannelHistoryOnce(this.context, audience, channelId);
         }
       },
       audience.channelIds,
@@ -177,31 +187,6 @@ export class Messenger {
     );
   }
 
-  /** Reads a channel's archive the first time this device is in it. */
-  private async readHistoryOnce(audience: Audience, channelId: string): Promise<void> {
-    if ((await this.context.database.get(stored.historyRead, channelId)) === undefined) {
-      await readChannelHistory(this.context, audience, channelId);
-      await this.context.database.put(stored.historyRead, channelId, utf8("1"));
-    }
-  }
-
-  /**
-   * An audience this device joined before the app last started. Until the
-   * server screens load it again, nobody new is sent its history: who may
-   * read it is not known yet, and another member's device will.
-   */
-  private async storedAudience(audienceId: string): Promise<Audience | undefined> {
-    const remembered = await this.context.database.get(stored.audiences, audienceId);
-    if (remembered === undefined) {
-      return undefined;
-    }
-    const { serverId, channelIds } = JSON.parse(new TextDecoder().decode(remembered)) as {
-      serverId: string;
-      channelIds: string[];
-    };
-    return { serverId, audienceId, channelIds, mayReadHistory: () => false };
-  }
-
   /** Sends a payload and returns its message ID. */
   send(conversationId: string, payload: Payload): Promise<string> {
     return this.run(conversationId, () => sendPayload(this.context, conversationId, payload));
@@ -210,6 +195,35 @@ export class Messenger {
   /** Every message this device holds for the conversation or channel. */
   messages(conversationId: string): Promise<DecryptedMessage[]> {
     return loadMessages(this.context, conversationId);
+  }
+
+  /** The server audiences this device keeps. */
+  audienceList(): Audience[] {
+    return [...this.audiences.values()];
+  }
+
+  /**
+   * Indexes a conversation's or channel's whole history for search, a
+   * page at a time, for as long as `goodTime` says to go on.
+   * Call it again to resume.
+   */
+  searchOlder(id: string, goodTime: () => Promise<boolean>): Promise<BackfillProgress> {
+    const audience = this.audienceList().find((candidate) => candidate.channelIds.includes(id));
+    const source = audience === undefined ? { conversationId: id } : { channelId: id, audience };
+    return this.run(audience?.audienceId ?? id, () => backfill(this.context, source, goodTime), [id]);
+  }
+
+  /** Adds the index chunks the user's other devices shared, then shares this device's changes. */
+  syncSearchIndex(): Promise<{ fetched: number; shared: number }> {
+    return this.run(searchQueue, async () => ({
+      fetched: await fetchIndex(this.context),
+      shared: await shareIndex(this.context),
+    }));
+  }
+
+  /** Searches the messages indexed on this device (spec §4.6). */
+  search(query: string, filters?: SearchFilters): Promise<SearchHit[]> {
+    return searchMessages(this.context.database, query, filters);
   }
 
   /**

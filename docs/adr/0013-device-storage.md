@@ -32,6 +32,11 @@ search needs SQLite FTS5.
 
 ## Consequences
 
+- M6 did not use FTS5 after all: the search index is a store of chunks (by
+  conversation and month) in this encrypted record store, the same on every
+  platform, because the chunks are also what index sync shares between a
+  user's devices. See docs/search.md.
+
 - Web storage cannot defend against code running in the page (XSS, or a
   malicious instance serving modified code); this is listed in the threat
   model.

@@ -102,6 +102,7 @@
     "presence": "Others see you as: {{status}}",
     "presenceOffline": "Offline",
     "logout": "Log out",
+    "search": "Search messages",
     "admin": "Admin panel",
     "customStatus": "Custom status",
     "noCustomStatus": "No custom status. Add one so others know what you are up to.",
@@ -597,5 +598,46 @@
     "noReplies": "No replies yet. Start the thread below.",
     "readOnly": "You can read this thread but not reply in it.",
     "loading": "Loading the thread…"
+  },
+  "search": {
+    "title": "Search messages",
+    "intro": "Search runs on this device, over the messages it has decrypted from the last 90 days. The server never sees what you search for.",
+    "back": "Back",
+    "open": "Search messages",
+    "openHere": "Search here",
+    "query": "Words",
+    "from": "From",
+    "fromHint": "A username, or name@instance; empty for anyone",
+    "where": "Where",
+    "here": "Only here",
+    "everywhere": "Everywhere",
+    "attachments": "Attachments",
+    "anyMessage": "Any message",
+    "withAttachments": "Only with attachments",
+    "when": "When",
+    "period": {
+      "any": "Any time",
+      "week": "Past week",
+      "month": "Past month",
+      "year": "Past year"
+    },
+    "hint": "Type some words, or choose a filter.",
+    "searching": "Searching…",
+    "none": "No messages match.",
+    "count_one": "{{count}} message",
+    "count_other": "{{count}} messages",
+    "older": {
+      "intro": "Messages older than 90 days are not searched here yet.",
+      "start": "Search older messages here",
+      "running": "Reading and indexing older messages…",
+      "waiting_one": "{{count}} message indexed so far. On a phone the rest waits for Wi-Fi and charging.",
+      "waiting_other": "{{count}} messages indexed so far. On a phone the rest waits for Wi-Fi and charging.",
+      "now": "Go ahead now",
+      "done_one": "All of the history here is searchable: {{count}} message.",
+      "done_other": "All of the history here is searchable: {{count}} messages.",
+      "failed": "Older messages could not be read. Check your connection and try again."
+    },
+    "aChannel": "A channel",
+    "aConversation": "A conversation"
   }
 }

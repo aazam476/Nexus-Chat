@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { HttpsWarning } from "../../components/HttpsWarning";
 import { isolate } from "../../i18n/bidi";
+import { SearchHereLink } from "../search/SearchHereLink";
 
 /** The way back, the channel's name and topic, or why it cannot be shown. */
 export function ChannelHeader({
@@ -32,6 +33,7 @@ export function ChannelHeader({
         <>
           <Heading>{t("servers.textChannel", { name: isolate(channel.name) })}</Heading>
           {channel.topic === "" ? null : <Text tone="muted">{isolate(channel.topic)}</Text>}
+          <SearchHereLink id={channel.id} />
         </>
       )}
     </Stack>

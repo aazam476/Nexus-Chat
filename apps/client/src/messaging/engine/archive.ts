@@ -26,7 +26,7 @@ import { loadMessages, storeMessages } from "./history";
 import type { DecryptedMessage } from "./sync";
 
 /** History keys by epoch, base64. */
-type HistoryKeys = Record<string, string>;
+export type HistoryKeys = Record<string, string>;
 
 const blobOf = (conversationId: string): string => `history.${conversationId}`;
 const local = { collection: "history-keys", read: "history-read" } as const;
@@ -42,7 +42,7 @@ export async function keptHistoryKeys(context: EngineContext, conversationId: st
 }
 
 /** The keys in the backup; none if there is no blob or it cannot be opened. */
-async function backedUpKeys(context: EngineContext, conversationId: string): Promise<HistoryKeys> {
+export async function backedUpKeys(context: EngineContext, conversationId: string): Promise<HistoryKeys> {
   const name = blobOf(conversationId);
   const sealed = await context.api.getBlob(name);
   if (sealed === undefined) {

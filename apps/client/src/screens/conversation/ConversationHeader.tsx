@@ -9,6 +9,7 @@ import { conversationName } from "../../messaging/conversationName";
 import type { Messenger } from "../../messaging/messenger";
 import type { OpenConversation } from "../../messaging/useConversation";
 import { IdentityWarning } from "./IdentityWarning";
+import { SearchHereLink } from "../search/SearchHereLink";
 
 /** Props of {@link ConversationHeader}. */
 export interface ConversationHeaderProps {
@@ -16,7 +17,7 @@ export interface ConversationHeaderProps {
   messenger: Messenger | undefined;
 }
 
-/** The way back, the conversation's name, and any identity warning. */
+/** The way back, the conversation's name, searching in it, and any identity warning. */
 export function ConversationHeader({ open, messenger }: ConversationHeaderProps): ReactNode {
   const { t } = useTranslation();
   const { user } = useConnection();
@@ -43,6 +44,7 @@ export function ConversationHeader({ open, messenger }: ConversationHeaderProps)
           testID="open-group-settings"
         />
       ) : null}
+      {conversation === undefined ? null : <SearchHereLink id={conversation.id} />}
       {messenger === undefined || conversation === undefined ? null : (
         <IdentityWarning messenger={messenger} members={conversation.members} />
       )}

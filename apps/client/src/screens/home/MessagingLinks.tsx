@@ -43,6 +43,7 @@ const destinations = [
   { label: "home.messages", path: "/conversations", testID: "open-messages" },
   { label: "home.servers", path: "/servers", testID: "open-servers" },
   { label: "home.friends", path: "/friends", testID: "open-friends" },
+  { label: "home.search", path: "/search", testID: "open-search" },
 ] as const;
 
 /** The way to conversations, servers and friends, once encryption is set up on this device. */

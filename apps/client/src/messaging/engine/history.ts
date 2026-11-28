@@ -3,8 +3,10 @@
  * encrypted database (spec §5.3). Sync stores what it decrypts in the same
  * pass that moves the conversation's cursor, and a send stores the
  * device's own message, so the conversation reads the same after a
- * restart. Records sort by time, then message ID.
+ * restart. Records sort by time, then message ID. What is stored is also
+ * indexed for search on the device (spec §4.6).
  */
+import { indexMessages } from "../../search/indexer";
 import { utf8 } from "./bytes";
 import type { EngineContext } from "./context";
 import type { DecryptedMessage } from "./sync";
@@ -24,6 +26,7 @@ export async function storeMessages(
       utf8(JSON.stringify(message)),
     );
   }
+  await indexMessages(context.database, conversationId, messages);
 }
 
 /** Every stored message of a conversation, oldest first. */
